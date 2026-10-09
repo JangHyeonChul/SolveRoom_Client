@@ -110,19 +110,21 @@ export default function CommentSection({ cardId }: { cardId: number }) {
   );
 
   return (
-    <section className="mt-8">
-      <h2 className="mb-3 text-lg font-bold">댓글 {visibleCount}</h2>
+    <section className="panel reveal" aria-labelledby="comment-title">
+      <h2 className="panel__title" id="comment-title">
+        댓글 <small>{visibleCount}개</small>
+      </h2>
 
       <CommentForm isGuest={!user} onSubmit={(content, pw) => addComment(content, pw, null)} />
 
       {roots.length === 0 ? (
-        <p className="py-10 text-center text-sm text-slate-400">첫 댓글을 남겨보세요.</p>
+        <p className="hint py-6 text-center">첫 댓글을 남겨보세요.</p>
       ) : (
-        <ul className="mt-4 divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-white">
+        <ul className="comment-list">
           {roots.map((root) => (
-            <li key={root.id} className="p-4">
+            <li key={root.id} className="comment">
               {renderItem(root, false)}
-              <div className="mt-3 space-y-3 border-l-2 border-slate-100 pl-4">
+              <div className={repliesOf(root.id).length || replyTo === root.id ? "replies" : undefined}>
                 {repliesOf(root.id).map((reply) => renderItem(reply, true))}
                 {replyTo === root.id && (
                   <CommentForm
@@ -192,18 +194,18 @@ function CommentItem({
   const canManage = author.type === "guest" || author.userId === user?.id;
 
   if (comment.deleted) {
-    return <p className="text-sm text-slate-400">삭제된 댓글입니다.</p>;
+    return <p className="comment__deleted">삭제된 댓글입니다.</p>;
   }
 
   return (
     <div>
-      <div className="flex items-center gap-2 text-sm">
+      <div className="comment__head">
         {author.type === "member" ? (
           <Nickname nickname={author.nickname} score={author.score} color={author.nicknameColor} />
         ) : (
           <Nickname nickname={author.nickname} />
         )}
-        <span className="text-xs text-slate-400">{formatRelative(comment.createdAt)}</span>
+        <span className="comment__time">{formatRelative(comment.createdAt)}</span>
       </div>
 
       {editing ? (
@@ -215,30 +217,30 @@ function CommentItem({
           onCancel={onCancelEdit}
         />
       ) : (
-        <p className={`mt-1 whitespace-pre-wrap text-sm ${hidden ? "italic text-slate-400" : ""}`}>
+        <p className={`comment__body ${hidden ? "is-hidden" : ""}`}>
           {hidden ? "<신고로 인해 가려진 댓글 입니다>" : comment.content}
         </p>
       )}
 
       {!editing && (
-        <div className="mt-1.5 flex gap-3 text-xs text-slate-500">
+        <div className="comment__actions">
           {/* 대댓글의 대댓글은 기획 미정이라 1단계까지만 허용 */}
           {!isReply && (
-            <button onClick={onReply} className="hover:text-slate-800">
+            <button type="button" onClick={onReply} className="text-btn">
               답글
             </button>
           )}
           {!hidden && (
-            <button onClick={onReport} className="hover:text-rose-600">
+            <button type="button" onClick={onReport} className="text-btn text-btn--danger">
               신고
             </button>
           )}
           {canManage && !hidden && (
             <>
-              <button onClick={onEdit} className="hover:text-slate-800">
+              <button type="button" onClick={onEdit} className="text-btn">
                 수정
               </button>
-              <button onClick={onDelete} className="hover:text-slate-800">
+              <button type="button" onClick={onDelete} className="text-btn text-btn--danger">
                 삭제
               </button>
             </>
@@ -281,16 +283,17 @@ function CommentForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mt-2 rounded-xl border border-slate-200 bg-white p-3">
+    <form onSubmit={handleSubmit} className="comment-form">
       {isGuest && (
-        <div className="mb-2 flex items-center gap-2 text-xs text-slate-500">
+        <div className="comment-form__guest">
           <span>비로그인 시 '익명인N'으로 표시됩니다</span>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="비밀번호"
-            className="ml-auto w-28 rounded-md border border-slate-300 px-2 py-1 outline-none focus:border-indigo-500"
+            aria-label="댓글 비밀번호"
+            className="input input--sm"
           />
         </div>
       )}
@@ -299,19 +302,16 @@ function CommentForm({
         onChange={(e) => setContent(e.target.value)}
         placeholder={placeholder}
         rows={2}
-        className="w-full resize-none text-sm outline-none"
+        aria-label={placeholder}
       />
-      <div className="flex items-center justify-end gap-2">
-        {error && <span className="mr-auto text-xs text-rose-600">{error}</span>}
+      <div className="comment-form__actions">
+        {error && <span className="error mr-auto">{error}</span>}
         {onCancel && (
-          <button type="button" onClick={onCancel} className="rounded-md px-3 py-1.5 text-xs hover:bg-slate-100">
+          <button type="button" onClick={onCancel} className="btn btn--outline btn--sm">
             취소
           </button>
         )}
-        <button
-          type="submit"
-          className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
-        >
+        <button type="submit" className="btn btn--primary btn--sm">
           {submitLabel}
         </button>
       </div>

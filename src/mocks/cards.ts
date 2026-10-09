@@ -1,14 +1,11 @@
 import type { Card } from "../types/card";
 
-const thumb = (seed: string) => `https://picsum.photos/seed/${seed}/480/300`;
-
 export const mockCards: Card[] = [
   {
     id: 1,
     title: "포켓몬 이름 맞추기",
     content: "이미지에 표시된 포켓몬스터의 이름을 맞춰보세요.",
     category: "게임",
-    thumbnailUrl: thumb("pokemon"),
     questionCount: 42,
     viewCount: 12840,
     likeCount: 883,
@@ -21,7 +18,6 @@ export const mockCards: Card[] = [
     title: "전주 3초 듣고 노래 맞추기",
     content: "노래 전주를 듣고 제목을 맞춰보세요. 2010년대 가요 위주입니다.",
     category: "음악",
-    thumbnailUrl: thumb("music"),
     questionCount: 30,
     viewCount: 9310,
     likeCount: 1204,
@@ -34,12 +30,12 @@ export const mockCards: Card[] = [
     title: "초성으로 맞추는 한국 음식",
     content: "초성 힌트를 보고 음식 이름을 맞춰보세요. 예) ㄱㅊㅉㄱ → 김치찌개",
     category: "음식",
-    thumbnailUrl: thumb("food"),
     questionCount: 12,
     viewCount: 2210,
     likeCount: 145,
     isPublic: true,
     authorNickname: "익명인",
+    guestPassword: "1234",
     createdAt: "2026-10-05T09:12:00",
   },
   {
@@ -47,7 +43,6 @@ export const mockCards: Card[] = [
     title: "국기 보고 나라 맞추기",
     content: "국기 이미지를 보고 어느 나라인지 맞춰보세요.",
     category: "상식",
-    thumbnailUrl: thumb("flag"),
     questionCount: 100,
     viewCount: 30122,
     likeCount: 2981,
@@ -60,7 +55,6 @@ export const mockCards: Card[] = [
     title: "명대사로 맞추는 드라마",
     content: "드라마 속 명대사를 읽고 작품 제목을 맞춰보세요.",
     category: "방송",
-    thumbnailUrl: thumb("drama"),
     questionCount: 25,
     viewCount: 5120,
     likeCount: 402,
@@ -73,7 +67,6 @@ export const mockCards: Card[] = [
     title: "원피스 캐릭터 실루엣",
     content: "실루엣만 보고 원피스 캐릭터를 맞춰보세요.",
     category: "만화",
-    thumbnailUrl: thumb("onepiece"),
     questionCount: 50,
     viewCount: 7730,
     likeCount: 690,
@@ -86,7 +79,6 @@ export const mockCards: Card[] = [
     title: "얼굴 보고 축구선수 맞추기",
     content: "선수 사진을 보고 이름을 맞춰보세요. 해외 리그 위주입니다.",
     category: "스포츠",
-    thumbnailUrl: thumb("soccer"),
     questionCount: 35,
     viewCount: 4410,
     likeCount: 233,
@@ -99,7 +91,6 @@ export const mockCards: Card[] = [
     title: "이게 뭐게? 병맛 사진 퀴즈",
     content: "확대된 사진 일부를 보고 정체를 맞춰보세요.",
     category: "병맛",
-    thumbnailUrl: thumb("weird"),
     questionCount: 18,
     viewCount: 15020,
     likeCount: 1550,
@@ -112,7 +103,6 @@ export const mockCards: Card[] = [
     title: "조선 왕 순서 맞추기",
     content: "설명을 읽고 해당하는 조선의 왕을 맞춰보세요.",
     category: "인물",
-    thumbnailUrl: thumb("joseon"),
     questionCount: 27,
     viewCount: 1980,
     likeCount: 98,
@@ -125,7 +115,6 @@ export const mockCards: Card[] = [
     title: "명화 제목 맞추기",
     content: "유명한 그림을 보고 제목을 맞춰보세요.",
     category: "문화",
-    thumbnailUrl: thumb("art"),
     questionCount: 40,
     viewCount: 3650,
     likeCount: 310,
@@ -139,12 +128,38 @@ export const mockCards: Card[] = [
     title: "작성 중인 카드",
     content: "아직 문제를 등록하는 중입니다.",
     category: "게임",
-    thumbnailUrl: thumb("draft"),
     questionCount: 4,
     viewCount: 0,
     likeCount: 0,
     isPublic: false,
     authorNickname: "솔브러",
+    authorUserId: 1,
     createdAt: "2026-10-09T09:00:00",
   },
 ];
+
+// API 연동 전까지 쓰는 메모리 저장소. 새로고침하면 처음 상태로 돌아간다.
+export const cardStore = {
+  find: (id: number) => mockCards.find((c) => c.id === id),
+  create(input: Omit<Card, "id" | "questionCount" | "viewCount" | "likeCount" | "isPublic" | "createdAt">) {
+    const card: Card = {
+      ...input,
+      id: Math.max(0, ...mockCards.map((c) => c.id)) + 1,
+      questionCount: 0,
+      viewCount: 0,
+      likeCount: 0,
+      isPublic: false,
+      createdAt: new Date().toISOString(),
+    };
+    mockCards.push(card);
+    return card;
+  },
+  update(id: number, patch: Partial<Card>) {
+    const card = mockCards.find((c) => c.id === id);
+    if (card) Object.assign(card, patch);
+  },
+  remove(id: number) {
+    const idx = mockCards.findIndex((c) => c.id === id);
+    if (idx >= 0) mockCards.splice(idx, 1);
+  },
+};

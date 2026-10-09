@@ -2,7 +2,6 @@ import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../app/auth";
 import CardItem from "../components/CardItem";
 import { mockCards } from "../mocks/cards";
-import { CATEGORIES } from "../types/card";
 
 const SORTS = {
   popular: { label: "인기순", key: "viewCount" },
@@ -24,7 +23,7 @@ export default function HomePage() {
     const next = new URLSearchParams(params);
     if (value) next.set(name, value);
     else next.delete(name);
-    setParams(next);
+    setParams(next, { preventScrollReset: true });
   };
 
   const sortKey = SORTS[sort].key;
@@ -34,55 +33,56 @@ export default function HomePage() {
     .filter((c) => !q || c.title.includes(q) || c.content.includes(q))
     .sort((a, b) => (a[sortKey] < b[sortKey] ? 1 : a[sortKey] > b[sortKey] ? -1 : 0));
 
+  const heading = q
+    ? `'${q}' 검색 결과 ${cards.length}건`
+    : category
+      ? `${category} 문제 카드`
+      : "지금 인기 있는 문제 카드";
+
   return (
-    <div>
-      {q && (
-        <p className="mb-4 text-lg">
-          <b>'{q}'</b> 검색 결과 {cards.length}건
-        </p>
-      )}
-
-      <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
-        {["", ...CATEGORIES].map((c) => (
-          <button
-            key={c || "all"}
-            onClick={() => setParam("category", c)}
-            className={`shrink-0 rounded-full px-4 py-1.5 text-sm ${
-              category === c
-                ? "bg-slate-900 text-white"
-                : "border border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            {c || "전체"}
-          </button>
-        ))}
-      </div>
-
-      <div className="mb-4 flex justify-end gap-3 text-sm">
-        {(Object.keys(SORTS) as SortKey[]).map((key) => (
-          <button
-            key={key}
-            onClick={() => setParam("sort", key === "popular" ? "" : key)}
-            className={sort === key ? "font-bold text-slate-900" : "text-slate-400 hover:text-slate-700"}
-          >
-            {SORTS[key].label}
-          </button>
-        ))}
-      </div>
-
-      {cards.length === 0 ? (
-        <p className="py-20 text-center text-slate-400">조건에 맞는 문제 카드가 없습니다.</p>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {cards.map((card) => (
-            <CardItem
-              key={card.id}
-              card={card}
-              conquered={!!user?.conqueredCardIds.includes(card.id)}
-            />
-          ))}
+    <main className="wrap home">
+      <section id="cards" className="section reveal" aria-labelledby="list-title">
+        <div className="section__head">
+          <div>
+            <p className="crumb">홈 / {q ? "검색" : category || "전체"}</p>
+            <h1 id="list-title" className="display home-title">
+              {heading}
+            </h1>
+          </div>
+          <div className="sorts" role="group" aria-label="정렬">
+            {(Object.keys(SORTS) as SortKey[]).map((key) => (
+              <button
+                key={key}
+                type="button"
+                className="sort-btn"
+                aria-pressed={sort === key}
+                onClick={() => setParam("sort", key === "popular" ? "" : key)}
+              >
+                {SORTS[key].label}
+              </button>
+            ))}
+          </div>
         </div>
-      )}
-    </div>
+
+        {cards.length === 0 ? (
+          <div className="empty">
+            <span className="empty__title">조건에 맞는 문제 카드가 없어요</span>
+            <span>다른 카테고리나 검색어로 찾아보세요.</span>
+          </div>
+        ) : (
+          // 조건이 바뀌면 key가 바뀌어 등장 애니메이션을 다시 재생한다
+          <div className="cards" key={`${q}|${category}|${sort}`}>
+            {cards.map((card, i) => (
+              <CardItem
+                key={card.id}
+                card={card}
+                index={i}
+                conquered={!!user?.conqueredCardIds.includes(card.id)}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+    </main>
   );
 }

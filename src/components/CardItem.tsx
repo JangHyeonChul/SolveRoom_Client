@@ -1,38 +1,40 @@
+import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import type { Card } from "../types/card";
 import { formatCount } from "../utils/format";
+import CardCover from "./CardCover";
+import Icon from "./Icon";
 
 interface Props {
   card: Card;
   conquered: boolean;
+  index?: number; // 목록 안 순서. 순서대로 조금씩 늦게 등장한다
 }
 
-export default function CardItem({ card, conquered }: Props) {
+export default function CardItem({ card, conquered, index = 0 }: Props) {
   return (
     <Link
       to={`/cards/${card.id}`}
-      className={`group overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
-        conquered ? "border-amber-400 ring-2 ring-amber-200" : "border-slate-200"
-      }`}
+      className={`card pop-in ${conquered ? "card--conquered" : ""}`}
+      style={{ "--delay": `${Math.min(index * 55, 450)}ms` } as CSSProperties}
     >
-      <div className="relative aspect-[8/5] bg-slate-200">
-        <img src={card.thumbnailUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
-        <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-xs text-white">
-          {card.category}
-        </span>
-        {conquered && (
-          <span className="absolute right-2 top-2 rounded-full bg-amber-400 px-2 py-0.5 text-xs font-bold text-amber-950">
-            정복 완료
+      <CardCover id={card.id} title={card.title} thumbnailUrl={card.thumbnailUrl} className="card__cover">
+        {conquered && <span className="badge badge--gold card__tag">정복 완료</span>}
+      </CardCover>
+      <div className="card__body">
+        <span className="card__cat">{card.category}</span>
+        <span className="card__title">{card.title}</span>
+        <div className="card__meta">
+          <span>{card.questionCount}문제</span>
+          <span>
+            <Icon name="eye" size={14} strokeWidth={2.5} />
+            {formatCount(card.viewCount)}
           </span>
-        )}
-      </div>
-      <div className="p-3">
-        <h3 className="truncate font-bold group-hover:text-indigo-600">{card.title}</h3>
-        <p className="mt-1 flex gap-3 text-xs text-slate-500">
-          <span>문제 {card.questionCount}</span>
-          <span>조회 {formatCount(card.viewCount)}</span>
-          <span>♥ {formatCount(card.likeCount)}</span>
-        </p>
+          <span>
+            <Icon name="heart" size={14} strokeWidth={2.5} />
+            {formatCount(card.likeCount)}
+          </span>
+        </div>
       </div>
     </Link>
   );

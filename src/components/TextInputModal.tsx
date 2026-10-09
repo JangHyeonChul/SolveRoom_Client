@@ -4,6 +4,7 @@ import Modal from "./Modal";
 interface Props {
   title: string;
   description?: string;
+  label?: string;
   placeholder: string;
   inputType?: "text" | "password";
   submitLabel: string;
@@ -17,6 +18,7 @@ interface Props {
 export default function TextInputModal({
   title,
   description,
+  label,
   placeholder,
   inputType = "text",
   submitLabel,
@@ -26,12 +28,14 @@ export default function TextInputModal({
 }: Props) {
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     const message = validate(value);
     if (message) {
       setError(message);
+      setAttempt((n) => n + 1);
       return;
     }
     onSubmit(value);
@@ -39,28 +43,35 @@ export default function TextInputModal({
 
   return (
     <Modal title={title} onClose={onClose}>
-      <form onSubmit={handleSubmit}>
-        {description && <p className="mb-3 text-sm text-slate-500">{description}</p>}
-        <input
-          autoFocus
-          type={inputType}
-          value={value}
-          onChange={(e) => {
-            setValue(e.target.value);
-            setError(null);
-          }}
-          placeholder={placeholder}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-indigo-500"
-        />
-        {error && <p className="mt-2 text-sm text-rose-600">{error}</p>}
-        <div className="mt-5 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-lg px-4 py-2 text-sm hover:bg-slate-100">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+        {description && <p className="panel__desc">{description}</p>}
+        {/* 틀릴 때마다 key를 바꿔 흔들림 애니메이션을 다시 재생한다 */}
+        <div key={attempt} className={`field ${error ? "is-invalid shake" : ""}`}>
+          {label && (
+            <label className="label" htmlFor="modal-input">
+              {label}
+            </label>
+          )}
+          <input
+            id="modal-input"
+            autoFocus
+            type={inputType}
+            value={value}
+            onChange={(e) => {
+              setValue(e.target.value);
+              setError(null);
+            }}
+            placeholder={placeholder}
+            aria-label={label ? undefined : placeholder}
+            className="input"
+          />
+          {error && <p className="error">{error}</p>}
+        </div>
+        <div className="modal__actions">
+          <button type="button" onClick={onClose} className="btn btn--outline btn--sm">
             취소
           </button>
-          <button
-            type="submit"
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
-          >
+          <button type="submit" className="btn btn--primary btn--sm">
             {submitLabel}
           </button>
         </div>

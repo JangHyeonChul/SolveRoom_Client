@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
 interface Props {
   title: string;
@@ -7,19 +7,27 @@ interface Props {
 }
 
 export default function Modal({ title, onClose, children }: Props) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
-    <div
-      className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 px-4"
-      onClick={onClose}
-    >
+    <div className="modal-backdrop" onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"
-        className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+        aria-label={title}
+        className="modal"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-4 text-lg font-bold">{title}</h2>
-        {children}
+        <div className="modal__body">
+          <h2 className="modal__title">{title}</h2>
+          {children}
+        </div>
       </div>
     </div>
   );

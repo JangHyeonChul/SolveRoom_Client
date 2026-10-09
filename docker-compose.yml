@@ -1,0 +1,8 @@
+services:
+  client:
+    build: .
+    image: solveroom-web
+    container_name: solveroom-web
+    ports:
+      - "80:80"
+    restart: unless-stopped

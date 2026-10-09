@@ -20,11 +20,16 @@ export interface Card {
   title: string;
   content: string; // 카드 설명
   category: Category;
-  thumbnailUrl: string;
+  thumbnailUrl?: string; // 없으면 이름 초성으로 표지를 만든다
   questionCount: number;
   viewCount: number;
   likeCount: number;
   isPublic: boolean;
   authorNickname: string;
+  authorUserId?: number; // 회원이 만든 카드
+  guestPassword?: string; // 비회원이 만든 카드. 목 데이터 전용 (서버는 해시로 저장하고 내려주지 않는다)
   createdAt: string;
 }
+
+// 문제를 10개 넘게 등록해야 공개할 수 있다
+export const PUBLIC_MIN_QUESTIONS = 11;
