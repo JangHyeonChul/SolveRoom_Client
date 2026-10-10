@@ -6,3 +6,10 @@ services:
     ports:
       - "80:80"
     restart: unless-stopped
+    networks:
+      - solveroom
+
+networks:
+  solveroom:
+    name: solveroom
+    external: true
