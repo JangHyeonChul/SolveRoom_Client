@@ -139,6 +139,7 @@
 
   /* 문제 카드 */
   .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+  .more { display: flex; justify-content: center; }
   .card { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: var(--white); color: var(--ink); text-decoration: none; transition: border-color .2s, box-shadow .2s; }
   a.card:hover { color: var(--ink); border-color: var(--line-strong); box-shadow: 0 4px 16px rgba(0, 0, 0, .06); }
   .card--conquered { border-color: #ead49c; }

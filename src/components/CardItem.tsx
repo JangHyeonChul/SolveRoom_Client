@@ -1,12 +1,12 @@
 import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
-import type { Card } from "../types/card";
+import type { CardSummary } from "../types/card";
 import { formatCount } from "../utils/format";
 import CardCover from "./CardCover";
 import Icon from "./Icon";
 
 interface Props {
-  card: Card;
+  card: CardSummary;
   conquered: boolean;
   index?: number; // 목록 안 순서. 순서대로 조금씩 늦게 등장한다
 }
