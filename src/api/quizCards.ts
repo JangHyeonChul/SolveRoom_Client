@@ -16,10 +16,10 @@ interface QuizCardSummaryResponse {
   createdAt: string;
 }
 
-// 서버 QuizCardListResponse. nextCursor가 null이면 마지막 페이지다
-interface QuizCardListResponse {
-  cards: QuizCardSummaryResponse[];
-  nextCursor: string | null;
+// 서버 공통 목록 응답 CursorPageResponse. hasNext가 false면 nextCursor는 null이다
+interface CursorPageResponse<T> {
+  results: T[];
+  pageInfo: { nextCursor: string | null; hasNext: boolean };
 }
 
 export interface QuizCardPage {
@@ -39,15 +39,15 @@ interface FetchQuizCardsParams {
 export async function fetchQuizCards({ category, q, sort, cursor, signal }: FetchQuizCardsParams): Promise<QuizCardPage> {
   const params = new URLSearchParams({ sort });
   if (category) params.set("category", CATEGORY_CODES[category]);
-  if (q) params.set("q", q);
+  if (q) params.set("keyword", q); // 화면 주소는 ?q=, API는 ?keyword=
   if (cursor) params.set("cursor", cursor);
 
   const res = await fetch(`/api/main/quiz-cards?${params}`, { signal });
   if (!res.ok) throw new Error(`카드 목록 조회 실패 (${res.status})`);
-  const body: QuizCardListResponse = await res.json();
+  const body: CursorPageResponse<QuizCardSummaryResponse> = await res.json();
 
   return {
-    cards: body.cards.map((c) => ({
+    cards: body.results.map((c) => ({
       id: c.id,
       title: c.title,
       category: isCategory(c.categoryName) ? c.categoryName : "게임",
@@ -57,6 +57,6 @@ export async function fetchQuizCards({ category, q, sort, cursor, signal }: Fetc
       likeCount: c.likeCount,
       createdAt: c.createdAt,
     })),
-    nextCursor: body.nextCursor,
+    nextCursor: body.pageInfo.hasNext ? body.pageInfo.nextCursor : null,
   };
 }
