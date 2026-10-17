@@ -1,4 +1,11 @@
-import { CATEGORY_CODES, isCategory, type CardSummary, type Category, type ManagedCard } from "../types/card";
+import {
+  CATEGORY_CODES,
+  isCategory,
+  type CardDetail,
+  type CardSummary,
+  type Category,
+  type ManagedCard,
+} from "../types/card";
 import { readApiResponse } from "./apiResponse";
 import { manageTokens } from "./manageTokens";
 import { request } from "./request";
@@ -68,6 +75,39 @@ export async function fetchQuizCards({ category, q, sort, cursor, signal }: Fetc
       body.pageInfo?.hasNext && body.pageInfo.nextCursor && body.pageInfo.lastId != null
         ? { cursor: body.pageInfo.nextCursor, lastId: body.pageInfo.lastId }
         : null,
+  };
+}
+
+// 서버 QuizCardDetailResponse
+interface QuizCardDetailResponse {
+  id: number;
+  title: string;
+  description: string | null;
+  categoryName: string;
+  thumbnailUrl: string | null;
+  questionCount: number;
+  viewCount: number;
+  likeCount: number;
+  authorNickname: string | null;
+  createdAt: string;
+}
+
+// 문제 카드 상세(Q-01). 공개 카드만 오고, 비공개·삭제된 카드는 404(CARD_NOT_FOUND)다.
+// 조회수는 서버가 같은 IP의 6시간 안 첫 조회만 올린다
+export async function fetchCardDetail(cardId: number, signal?: AbortSignal): Promise<CardDetail> {
+  const res = await fetch(`/api/main/quiz-cards/${cardId}`, { signal });
+  const { data: c } = await readApiResponse<QuizCardDetailResponse>(res, "문제 카드 조회");
+  return {
+    id: c.id,
+    title: c.title,
+    description: c.description ?? "",
+    category: isCategory(c.categoryName) ? c.categoryName : "게임",
+    thumbnailUrl: c.thumbnailUrl ?? undefined,
+    questionCount: c.questionCount,
+    viewCount: c.viewCount,
+    likeCount: c.likeCount,
+    authorNickname: c.authorNickname ?? "",
+    createdAt: c.createdAt,
   };
 }
 

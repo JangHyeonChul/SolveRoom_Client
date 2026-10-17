@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { hasErrorCode } from "../api/apiResponse";
+import { fetchCardDetail } from "../api/quizCards";
 import { useAuth } from "../app/auth";
 import CardCover from "../components/CardCover";
 import CommentSection from "../components/CommentSection";
 import Icon from "../components/Icon";
 import TextInputModal from "../components/TextInputModal";
-import { mockCards } from "../mocks/cards";
+import type { CardDetail } from "../types/card";
 import { formatCount } from "../utils/format";
 import NotFoundPage from "./NotFoundPage";
 
@@ -13,19 +15,73 @@ const PRESET_COUNTS = [10, 20, 30] as const;
 
 type PlayCount = number | "all";
 
+type LoadState = { status: "loading" } | { status: "error" } | { status: "notFound" } | { status: "done"; card: CardDetail };
+
 // Q-01 카드 상세
 export default function CardDetailPage() {
   const { cardId } = useParams();
-  const card = mockCards.find((c) => c.id === Number(cardId) && c.isPublic);
+  return <CardDetailLoader key={cardId} cardId={Number(cardId)} />;
+}
+
+// 카드를 읽을 때 서버가 조회수를 센다(같은 IP는 6시간에 한 번)
+function CardDetailLoader({ cardId }: { cardId: number }) {
+  const [state, setState] = useState<LoadState>({ status: "loading" });
+  const [retry, setRetry] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchCardDetail(cardId, controller.signal)
+      .then((card) => setState({ status: "done", card }))
+      .catch((e) => {
+        if (controller.signal.aborted) return;
+        if (hasErrorCode(e, "CARD_NOT_FOUND")) {
+          setState({ status: "notFound" });
+        } else {
+          console.error(e);
+          setState({ status: "error" });
+        }
+      });
+    return () => controller.abort();
+  }, [cardId, retry]);
+
+  if (state.status === "notFound") return <NotFoundPage message="존재하지 않거나 비공개인 문제 카드예요." />;
+  if (state.status === "done") return <CardDetailView card={state.card} />;
+  return (
+    <main className="wrap page page--narrow">
+      {state.status === "error" ? (
+        <div className="empty" role="alert">
+          <span className="empty__title">문제 카드를 불러오지 못했어요</span>
+          <button
+            type="button"
+            className="btn btn--outline btn--sm"
+            onClick={() => {
+              setState({ status: "loading" });
+              setRetry((n) => n + 1);
+            }}
+          >
+            다시 시도
+          </button>
+        </div>
+      ) : (
+        <div className="empty" aria-busy="true">
+          <span>문제 카드를 불러오고 있어요.</span>
+        </div>
+      )}
+    </main>
+  );
+}
+
+function CardDetailView({ card }: { card: CardDetail }) {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  // 좋아요는 로그인 전용 기능이라 아직 서버에 저장하지 않는다 (로그인 연동 때 붙인다)
   const [liked, setLiked] = useState(false);
-  const [playCount, setPlayCount] = useState<PlayCount>(10);
+  // 문제가 10개보다 적은 카드(공개 기준 5개)는 기본으로 모두 푼다
+  const defaultCount: PlayCount = card.questionCount >= 10 ? 10 : "all";
+  const [playCount, setPlayCount] = useState<PlayCount>(defaultCount);
   const [customInput, setCustomInput] = useState("");
   const [askNickname, setAskNickname] = useState(false);
-
-  if (!card) return <NotFoundPage message="존재하지 않거나 비공개인 문제 카드예요." />;
 
   const conquered = !!user?.conqueredCardIds.includes(card.id);
   const resolvedCount = playCount === "all" ? card.questionCount : playCount;
@@ -50,7 +106,7 @@ export default function CardDetailPage() {
 
         <div className="flex flex-col gap-3">
           <h1 className="display detail-title">{card.title}</h1>
-          {card.content && <p className="panel__desc">{card.content}</p>}
+          {card.description && <p className="panel__desc">{card.description}</p>}
           <div className="flex flex-wrap items-center gap-2.5">
             <div className="stats">
               <span className="stat">{card.questionCount}문제</span>
@@ -124,7 +180,7 @@ export default function CardDetailPage() {
             value={customInput}
             onChange={(e) => {
               setCustomInput(e.target.value);
-              setPlayCount(e.target.value === "" ? 10 : Number(e.target.value));
+              setPlayCount(e.target.value === "" ? defaultCount : Number(e.target.value));
             }}
             placeholder="직접 입력"
             aria-label="풀이 개수 직접 입력"

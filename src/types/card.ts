@@ -45,6 +45,20 @@ export interface Card {
   createdAt: string;
 }
 
+// 문제 카드 상세(Q-01)의 카드 (GET /api/main/quiz-cards/{cardId})
+export interface CardDetail {
+  id: number;
+  title: string;
+  description: string;
+  category: Category;
+  thumbnailUrl?: string;
+  questionCount: number;
+  viewCount: number;
+  likeCount: number;
+  authorNickname: string;
+  createdAt: string;
+}
+
 // 문제 관리(M-02)·정보 수정(M-01) 화면의 카드 (GET /api/main/quiz-cards/{cardId}/manage)
 export interface ManagedCard {
   id: number;
