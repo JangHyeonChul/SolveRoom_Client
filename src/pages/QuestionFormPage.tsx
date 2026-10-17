@@ -4,6 +4,7 @@ import { UPLOADABLE_ACCEPT, UPLOADABLE_TYPES, uploadImage } from "../api/images"
 import { createQuestion, fetchManagedQuestions, updateQuestion } from "../api/questions";
 import { fetchManagedCard } from "../api/quizCards";
 import Icon from "../components/Icon";
+import ImageSlides from "../components/ImageSlides";
 import { useToast } from "../components/Toast";
 import { useManagedData } from "../components/useManagedData";
 import type { ManagedCard } from "../types/card";
@@ -583,34 +584,7 @@ function PlayPreview(props: PreviewProps) {
           {images.length === 0 ? (
             <span className="stage__empty">이미지를 올리면 여기에 보여요</span>
           ) : (
-            <>
-              <img key={images[idx]} src={images[idx]} alt="" />
-              {images.length > 1 && (
-                <>
-                  <button
-                    type="button"
-                    className="stage__nav stage__nav--prev"
-                    aria-label="이전 이미지"
-                    onClick={() => setImgIdx((idx - 1 + images.length) % images.length)}
-                  >
-                    <Icon name="left" size={16} strokeWidth={3} />
-                  </button>
-                  <button
-                    type="button"
-                    className="stage__nav stage__nav--next"
-                    aria-label="다음 이미지"
-                    onClick={() => setImgIdx((idx + 1) % images.length)}
-                  >
-                    <Icon name="right" size={16} strokeWidth={3} />
-                  </button>
-                  <span className="stage__dots">
-                    {images.map((url, i) => (
-                      <span key={url} className={i === idx ? "is-on" : ""} />
-                    ))}
-                  </span>
-                </>
-              )}
-            </>
+            <ImageSlides images={images} index={idx} onChange={setImgIdx} />
           )}
         </div>
       ) : (

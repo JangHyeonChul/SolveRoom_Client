@@ -5,6 +5,8 @@ import CardDetailPage from "../pages/CardDetailPage";
 import CardFormPage from "../pages/CardFormPage";
 import QuestionFormPage from "../pages/QuestionFormPage";
 import QuestionManagePage from "../pages/QuestionManagePage";
+import PlayPage from "../pages/PlayPage";
+import ResultPage from "../pages/ResultPage";
 import PlaceholderPage from "../pages/PlaceholderPage";
 import NotFoundPage from "../pages/NotFoundPage";
 
@@ -16,8 +18,8 @@ export const router = createBrowserRouter([
       { path: "/", element: <HomePage /> }, // H-01
       { path: "/cards/new", element: <CardFormPage /> }, // M-01
       { path: "/cards/:cardId", element: <CardDetailPage /> }, // Q-01
-      { path: "/cards/:cardId/play", element: <PlaceholderPage screenId="Q-03" title="문제 풀이" /> },
-      { path: "/cards/:cardId/result", element: <PlaceholderPage screenId="Q-05" title="결과·랭킹" /> },
+      { path: "/cards/:cardId/play", element: <PlayPage /> }, // Q-03
+      { path: "/cards/:cardId/result", element: <ResultPage /> }, // Q-05
       { path: "/cards/:cardId/edit", element: <CardFormPage /> }, // M-01
       { path: "/cards/:cardId/questions", element: <QuestionManagePage /> }, // M-02
       { path: "/cards/:cardId/questions/new", element: <QuestionFormPage /> }, // M-03
