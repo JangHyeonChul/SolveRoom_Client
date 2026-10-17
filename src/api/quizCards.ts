@@ -18,16 +18,22 @@ interface QuizCardSearchResponse {
   createdAt: string;
 }
 
+// 다음 페이지 위치. 서버가 준 값을 해석하지 않고 그대로 돌려보낸다
+export interface PageCursor {
+  cursor: string;
+  lastId: number;
+}
+
 export interface QuizCardPage {
   cards: CardSummary[];
-  nextCursor: string | null;
+  nextCursor: PageCursor | null; // 마지막 페이지면 null
 }
 
 interface FetchQuizCardsParams {
   category?: Category;
   q?: string;
   sort: QuizCardSort;
-  cursor?: string | null;
+  cursor?: PageCursor | null;
   signal?: AbortSignal;
 }
 
@@ -37,7 +43,10 @@ export async function fetchQuizCards({ category, q, sort, cursor, signal }: Fetc
   const params = new URLSearchParams({ sort: sort.toUpperCase() });
   if (category) params.set("category", CATEGORY_CODES[category]);
   if (q) params.set("keyword", q); // 화면 주소는 ?q=, API는 ?keyword=
-  if (cursor) params.set("cursor", cursor);
+  if (cursor) {
+    params.set("cursor", cursor.cursor);
+    params.set("lastId", String(cursor.lastId));
+  }
 
   const res = await fetch(`/api/main/quiz-cards?${params}`, { signal });
   const body = await readApiResponse<QuizCardSearchResponse[]>(res, "카드 목록 조회");
@@ -53,6 +62,9 @@ export async function fetchQuizCards({ category, q, sort, cursor, signal }: Fetc
       likeCount: c.likeCount,
       createdAt: c.createdAt,
     })),
-    nextCursor: body.pageInfo?.hasNext ? body.pageInfo.nextCursor : null,
+    nextCursor:
+      body.pageInfo?.hasNext && body.pageInfo.nextCursor && body.pageInfo.lastId != null
+        ? { cursor: body.pageInfo.nextCursor, lastId: body.pageInfo.lastId }
+        : null,
   };
 }

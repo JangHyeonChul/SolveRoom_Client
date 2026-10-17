@@ -8,9 +8,11 @@ export interface ApiResponse<T> {
   pageInfo?: PageInfo; // 목록 API에서만 온다
 }
 
-// hasNext가 false면 nextCursor는 null이다
+// hasNext가 false면 nextCursor·lastId는 null이다.
+// 다음 요청에 nextCursor는 cursor로, lastId는 lastId로 함께 돌려보낸다.
 export interface PageInfo {
   nextCursor: string | null;
+  lastId: number | null;
   hasNext: boolean;
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { fetchQuizCards, type QuizCardSort } from "../api/quizCards";
+import { fetchQuizCards, type PageCursor, type QuizCardSort } from "../api/quizCards";
 import { useAuth } from "../app/auth";
 import CardItem from "../components/CardItem";
 import { isCategory, type CardSummary } from "../types/card";
@@ -24,7 +24,7 @@ export default function HomePage() {
   const sort: QuizCardSort = isSort(sortParam) ? sortParam : "popular";
 
   const [cards, setCards] = useState<CardSummary[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<PageCursor | null>(null);
   const [status, setStatus] = useState<"loading" | "error" | "done">("loading");
   const [loadingMore, setLoadingMore] = useState(false);
   const [retry, setRetry] = useState(0);
