@@ -1,20 +1,9 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-  type DragEvent,
-  type FormEvent,
-  type KeyboardEvent,
-  type ReactNode,
-  type RefObject,
-} from "react";
+import { useEffect, useRef, useState, type DragEvent, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { UPLOADABLE_ACCEPT, UPLOADABLE_TYPES, uploadImage } from "../api/images";
 import { createQuestion, fetchManagedQuestions, updateQuestion } from "../api/questions";
 import { fetchManagedCard } from "../api/quizCards";
 import Icon from "../components/Icon";
-import QuestionTypeIcon from "../components/QuestionTypeIcon";
-import Steps from "../components/Steps";
 import { useToast } from "../components/Toast";
 import { useManagedData } from "../components/useManagedData";
 import type { ManagedCard } from "../types/card";
@@ -29,29 +18,16 @@ import {
 } from "../types/question";
 import NotFoundPage from "./NotFoundPage";
 
-const MAX_AUDIO_MB = 10;
-
-// 소리형은 서버에 오디오 업로드를 붙이기 전이라 고를 수 없게 막아 둔다
-const TYPES: { type: QuestionType; desc: string; iconClass: string; disabled?: boolean }[] = [
-  { type: "image", desc: `이미지를 보고 맞혀요. 최대 ${MAX_IMAGES}장까지 넘겨 볼 수 있어요.`, iconClass: "q__type--image" },
-  { type: "text", desc: "글로 된 설명이나 초성만 보고 맞혀요.", iconClass: "q__type--text" },
-  {
-    type: "sound",
-    desc: "준비 중이에요. 노래, 효과음, 목소리를 듣고 맞히는 문제는 곧 만들 수 있어요.",
-    iconClass: "q__type--sound",
-    disabled: true,
-  },
+// 소리형은 오디오 업로드를 서버에 붙인 뒤에 넣는다
+const TYPES: QuestionType[] = ["image", "text"];
+const MODES: { mode: AnswerMode; label: string }[] = [
+  { mode: "short", label: "주관식" },
+  { mode: "choice", label: "객관식" },
 ];
 
 const TYPE_BADGE: Record<QuestionType, string> = { image: "badge--gold", text: "badge--blue", sound: "badge--purple" };
 
-type FieldKey = "images" | "audio" | "text" | "answer" | "options";
-
-interface Audio {
-  url: string;
-  name: string;
-  size?: number;
-}
+type FieldKey = "images" | "text" | "answer" | "options";
 
 // 새로 고른 파일은 저장할 때 줄여서 올리고, 이미 올린 이미지는 key를 그대로 보낸다
 type ImageItem = { id: string; url: string } & ({ file: File } | { key: string });
@@ -103,7 +79,6 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
   const [images, setImages] = useState<ImageItem[]>(
     () => original?.images.map((image) => ({ id: image.key, url: image.url, key: image.key })) ?? [],
   );
-  const [audio, setAudio] = useState<Audio | null>(null);
   const [prompt, setPrompt] = useState(original?.prompt ?? "");
   const [text, setText] = useState(original?.text ?? "");
   const [answer, setAnswer] = useState(original?.mode === "short" ? original.answer : "");
@@ -116,17 +91,11 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
   const [order, setOrder] = useState(initialOrder);
   const [formKey, setFormKey] = useState(0);
   const [saving, setSaving] = useState(false);
-  const audioEl = useRef<HTMLAudioElement>(null);
   const fieldRefs = useRef<Partial<Record<FieldKey, HTMLElement | null>>>({});
 
   // 이 화면에서 만든 미리보기 URL은 화면을 떠날 때 정리한다. 저장한 이미지는 CDN 주소로 다시 보인다
   const created = useRef(new Set<string>());
   useEffect(() => () => created.current.forEach((url) => URL.revokeObjectURL(url)), []);
-  const makeUrl = (file: File) => {
-    const url = URL.createObjectURL(file);
-    created.current.add(url);
-    return url;
-  };
 
   const clearError = (key: FieldKey) => setErrors((prev) => ({ ...prev, [key]: undefined }));
 
@@ -139,19 +108,12 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
     if (list.length > room) toast(`이미지는 최대 ${MAX_IMAGES}장까지예요. ${room}장만 추가했어요`);
     if (list.length === 0) return;
     const added = list.slice(0, room).map((file): ImageItem => {
-      const url = makeUrl(file);
+      const url = URL.createObjectURL(file);
+      created.current.add(url);
       return { id: url, url, file };
     });
     setImages((prev) => [...prev, ...added]);
     clearError("images");
-  };
-
-  const pickAudio = (file?: File) => {
-    if (!file) return;
-    if (!file.type.startsWith("audio/")) return toast("소리 파일만 올릴 수 있어요");
-    if (file.size > MAX_AUDIO_MB * 1024 * 1024) return toast(`${MAX_AUDIO_MB}MB 이하 파일만 올릴 수 있어요`);
-    setAudio({ url: makeUrl(file), name: file.name, size: file.size });
-    clearError("audio");
   };
 
   const onAliasKey = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -176,7 +138,6 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
   const validate = () => {
     const next: Partial<Record<FieldKey, string>> = {};
     if (type === "image" && images.length === 0) next.images = "이미지를 1장 이상 올려 주세요.";
-    if (type === "sound" && !audio) next.audio = "소리 파일을 올려 주세요.";
     if (type === "text" && !text.trim()) next.text = "문제 내용을 입력해 주세요.";
     if (mode === "short" && !answer.trim()) next.answer = "정답을 입력해 주세요.";
     if (mode === "choice") {
@@ -189,7 +150,6 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
 
   const resetForm = () => {
     setImages([]);
-    setAudio(null);
     setPrompt("");
     setText("");
     setAnswer("");
@@ -244,7 +204,7 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
     setSaving(false);
 
     if (goNext) {
-      toast(`${order}번 문제를 저장했어요. 다음 문제를 만들어요`);
+      toast(`${order}번 문제를 저장했어요`);
       if (editing) {
         navigate(`/cards/${card.id}/questions/new`);
         return;
@@ -265,154 +225,102 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
   };
 
   return (
-    <main className="wrap page">
-      <Steps current={1} />
-
+    <main className="wrap page page--wide">
       <div className="page-head reveal">
         <Link to={`/cards/${card.id}/questions`} className="back">
           <Icon name="left" strokeWidth={3} />
           {card.title}
         </Link>
-        <h1 className="display">{editing ? "문제 수정" : "문제 등록"}</h1>
-        <p>
-          {order}번째 문제를 {editing ? "고치고" : "만들고"} 있어요. 문제 유형을 고르고 내용과 정답을 입력해 주세요.
-        </p>
+        <h1 className="display">
+          {order}번 문제 {editing ? "수정" : "등록"}
+        </h1>
       </div>
 
       <div className="layout">
         <form key={formKey} className="layout__main swap-in" onSubmit={onSubmit} noValidate>
-          <section className="panel reveal" aria-labelledby="type-title">
-            <h2 className="panel__title" id="type-title">
-              1. 문제 유형
-            </h2>
-            <div className="types" role="radiogroup" aria-labelledby="type-title">
-              {TYPES.map((t) => (
-                <button
-                  key={t.type}
-                  type="button"
-                  className="type"
-                  role="radio"
-                  aria-checked={type === t.type}
-                  disabled={t.disabled}
-                  onClick={() => setType(t.type)}
-                >
-                  <span className="type__check" aria-hidden="true">
-                    <Icon name="check" size={14} strokeWidth={4} />
-                  </span>
-                  <span className={`type__icon ${t.iconClass}`}>
-                    <QuestionTypeIcon type={t.type} size={28} />
-                  </span>
-                  <span className="type__name">{QUESTION_TYPE_LABEL[t.type]}</span>
-                  <span className="type__desc">{t.desc}</span>
-                </button>
-              ))}
+          <section className="panel reveal" aria-labelledby="question-title">
+            <div className="panel__head">
+              <h2 className="panel__title" id="question-title">
+                문제
+              </h2>
+              <div className="seg" role="radiogroup" aria-labelledby="question-title">
+                {TYPES.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    className="seg__btn"
+                    role="radio"
+                    aria-checked={type === t}
+                    onClick={() => setType(t)}
+                  >
+                    {QUESTION_TYPE_LABEL[t]}
+                  </button>
+                ))}
+              </div>
             </div>
-          </section>
 
-          <section className="panel reveal" aria-labelledby="content-title">
-            <h2 className="panel__title" id="content-title">
-              2. 문제 내용
-            </h2>
-
-            {type === "image" && (
-              <div key={`images-${attempt}`} ref={fieldRef("images")} className={`${fieldClass("images")} swap-in`}>
-                <div className="field__row">
-                  <span className="label">
-                    이미지<span className="req" aria-hidden="true">*</span>
-                  </span>
-                  <span className="counter">
-                    {images.length} / {MAX_IMAGES}
-                  </span>
-                </div>
-                <div className="slots">
-                  {images.map((image, i) => (
-                    <div key={image.id} className="slot">
-                      <img src={image.url} alt={`${i + 1}번째 이미지`} />
-                      <span className={`slot__no ${i === 0 ? "slot__no--cover" : ""}`}>{i === 0 ? "대표" : i + 1}</span>
-                      <button
-                        type="button"
-                        className="slot__del"
-                        aria-label={`${i + 1}번째 이미지 지우기`}
-                        onClick={() => setImages(images.filter((x) => x.id !== image.id))}
-                      >
-                        <Icon name="close" size={14} strokeWidth={3} />
-                      </button>
-                    </div>
-                  ))}
-                  {images.length < MAX_IMAGES && (
-                    <DropLabel className="slot slot--add" onFiles={addImages}>
-                      <input
-                        type="file"
-                        accept={UPLOADABLE_ACCEPT}
-                        multiple
-                        onChange={(e) => {
-                          addImages(e.target.files);
-                          e.target.value = "";
-                        }}
-                      />
-                      <Icon name="plus" size={26} strokeWidth={2.6} />
-                      이미지 추가
-                    </DropLabel>
-                  )}
-                </div>
-                <p className="hint">첫 번째 이미지가 먼저 보여요. 풀이 화면에서 좌우 버튼으로 넘겨 볼 수 있어요.</p>
-                {errors.images && <p className="error">{errors.images}</p>}
-              </div>
-            )}
-
-            {type === "sound" && (
-              <div key={`audio-${attempt}`} ref={fieldRef("audio")} className={`${fieldClass("audio")} swap-in`}>
-                <span className="label">
-                  소리 파일<span className="req" aria-hidden="true">*</span>
-                </span>
-                {audio ? (
-                  <div className="audio-file">
-                    <span className="audio-file__icon">
-                      <Icon name="music" size={22} strokeWidth={2.2} />
+            {type === "image" ? (
+              <>
+                <div key={`images-${attempt}`} ref={fieldRef("images")} className={`${fieldClass("images")} swap-in`}>
+                  <div className="field__row">
+                    <span className="label">
+                      이미지<span className="req" aria-hidden="true">*</span>
                     </span>
-                    <span className="audio-file__name">
-                      <span>{audio.name}</span>
-                      {audio.size !== undefined && <span className="hint">{(audio.size / 1024 / 1024).toFixed(1)}MB</span>}
+                    <span className="counter">
+                      {images.length} / {MAX_IMAGES}
                     </span>
-                    <label className="btn btn--outline btn--sm">
-                      바꾸기
-                      <input
-                        type="file"
-                        accept="audio/*"
-                        className="sr-only"
-                        onChange={(e) => {
-                          pickAudio(e.target.files?.[0]);
-                          e.target.value = "";
-                        }}
-                      />
-                    </label>
-                    <button type="button" className="btn btn--danger btn--sm" onClick={() => setAudio(null)}>
-                      지우기
-                    </button>
-                    {audio.url && <audio controls ref={audioEl} src={audio.url} />}
                   </div>
-                ) : (
-                  <DropLabel className="dropzone min-h-40" onFiles={(files) => pickAudio(files?.[0])}>
-                    <input
-                      type="file"
-                      accept="audio/*"
-                      onChange={(e) => {
-                        pickAudio(e.target.files?.[0]);
-                        e.target.value = "";
-                      }}
-                    />
-                    <span className="dropzone__icon" style={{ color: "var(--purple)" }}>
-                      <Icon name="sound" size={26} strokeWidth={2.2} />
-                    </span>
-                    <span className="dropzone__title">소리 파일을 끌어다 놓거나 눌러서 올려 주세요</span>
-                    <span className="hint">MP3 · WAV · M4A, 최대 {MAX_AUDIO_MB}MB</span>
-                  </DropLabel>
-                )}
-                {errors.audio && <p className="error">{errors.audio}</p>}
-              </div>
-            )}
-
-            {type === "text" ? (
+                  <div className="slots">
+                    {images.map((image, i) => (
+                      <div key={image.id} className="slot">
+                        <img src={image.url} alt={`${i + 1}번째 이미지`} />
+                        <span className={`slot__no ${i === 0 ? "slot__no--cover" : ""}`}>{i === 0 ? "대표" : i + 1}</span>
+                        <button
+                          type="button"
+                          className="slot__del"
+                          aria-label={`${i + 1}번째 이미지 지우기`}
+                          onClick={() => setImages(images.filter((x) => x.id !== image.id))}
+                        >
+                          <Icon name="close" size={14} strokeWidth={3} />
+                        </button>
+                      </div>
+                    ))}
+                    {images.length < MAX_IMAGES && (
+                      <DropLabel className="slot slot--add" onFiles={addImages}>
+                        <input
+                          type="file"
+                          accept={UPLOADABLE_ACCEPT}
+                          multiple
+                          onChange={(e) => {
+                            addImages(e.target.files);
+                            e.target.value = "";
+                          }}
+                        />
+                        <Icon name="plus" size={26} strokeWidth={2.6} />
+                        이미지 추가
+                      </DropLabel>
+                    )}
+                  </div>
+                  {errors.images && <p className="error">{errors.images}</p>}
+                </div>
+                <div className="field">
+                  <div className="field__row">
+                    <label className="label" htmlFor="q-prompt">
+                      질문 문구 <small>선택</small>
+                    </label>
+                    <Counter value={prompt} max={60} />
+                  </div>
+                  <input
+                    id="q-prompt"
+                    className="input"
+                    maxLength={60}
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    placeholder="예: 이 포켓몬의 이름은?"
+                  />
+                </div>
+              </>
+            ) : (
               <div key={`text-${attempt}`} ref={fieldRef("text")} className={`${fieldClass("text")} swap-in`}>
                 <div className="field__row">
                   <label className="label" htmlFor="q-text">
@@ -430,44 +338,28 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
                 />
                 {errors.text && <p className="error">{errors.text}</p>}
               </div>
-            ) : (
-              // 텍스트형은 문제 내용이 본문이라 질문 문구 칸을 숨긴다
-              <div className="field">
-                <div className="field__row">
-                  <label className="label" htmlFor="q-prompt">
-                    질문 문구 <small>선택</small>
-                  </label>
-                  <Counter value={prompt} max={60} />
-                </div>
-                <input
-                  id="q-prompt"
-                  className="input"
-                  maxLength={60}
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="예: 이 포켓몬의 이름은?"
-                />
-              </div>
             )}
           </section>
 
           <section className="panel reveal" aria-labelledby="answer-title">
-            <h2 className="panel__title" id="answer-title">
-              3. 정답
-            </h2>
-            <div className="seg" role="radiogroup" aria-labelledby="answer-title">
-              {(["short", "choice"] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  className="seg__btn"
-                  role="radio"
-                  aria-checked={mode === m}
-                  onClick={() => setMode(m)}
-                >
-                  {m === "short" ? "주관식 · 직접 입력" : "객관식 · 보기 선택"}
-                </button>
-              ))}
+            <div className="panel__head">
+              <h2 className="panel__title" id="answer-title">
+                정답
+              </h2>
+              <div className="seg" role="radiogroup" aria-labelledby="answer-title">
+                {MODES.map((m) => (
+                  <button
+                    key={m.mode}
+                    type="button"
+                    className="seg__btn"
+                    role="radio"
+                    aria-checked={mode === m.mode}
+                    onClick={() => setMode(m.mode)}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {mode === "short" ? (
@@ -488,7 +380,7 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
                 </div>
                 <div className="field">
                   <label className="label" htmlFor="q-alias">
-                    같이 인정할 답 <small>선택</small>
+                    같이 인정할 답 <small>선택 · 띄어쓰기와 대소문자는 구분하지 않아요</small>
                   </label>
                   <div className="tags">
                     {aliases.map((a) => (
@@ -505,25 +397,21 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
                       value={aliasInput}
                       onChange={(e) => setAliasInput(e.target.value)}
                       onKeyDown={onAliasKey}
-                      placeholder="입력하고 Enter"
+                      placeholder="예: Pikachu 입력 후 Enter"
                     />
                   </div>
-                  <p className="hint">다르게 써도 맞게 처리할 답을 넣어 주세요. 예: Pikachu, 피카추</p>
                 </div>
               </div>
             ) : (
               <div
                 key={`options-${attempt}`}
                 ref={fieldRef("options")}
-                className={`flex flex-col gap-3.5 swap-in ${errors.options ? "shake" : ""}`}
+                className={`flex flex-col gap-3 swap-in ${errors.options ? "shake" : ""}`}
               >
-                <p className="hint text-sm">
-                  왼쪽 동그라미를 눌러 <b>정답인 보기</b>를 골라 주세요. 보기는 {MIN_OPTIONS}~{MAX_OPTIONS}개까지 넣을 수 있어요.
-                </p>
                 <ol className="options">
                   {options.map((o, i) => (
                     <li key={i} className={`option ${i === correct ? "is-correct" : ""}`}>
-                      <label className="option__radio">
+                      <label className="option__radio" title="정답으로 고르기">
                         <input
                           type="radio"
                           name="correct"
@@ -556,15 +444,18 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
                     </li>
                   ))}
                 </ol>
-                <button
-                  type="button"
-                  className="btn btn--outline btn--sm self-start"
-                  disabled={options.length >= MAX_OPTIONS}
-                  onClick={() => setOptions([...options, ""])}
-                >
-                  <Icon name="plus" size={16} strokeWidth={3} />
-                  보기 추가 {options.length} / {MAX_OPTIONS}
-                </button>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="hint">번호를 눌러 정답을 골라 주세요.</span>
+                  <button
+                    type="button"
+                    className="btn btn--outline btn--sm"
+                    disabled={options.length >= MAX_OPTIONS}
+                    onClick={() => setOptions([...options, ""])}
+                  >
+                    <Icon name="plus" size={16} strokeWidth={3} />
+                    보기 추가 {options.length} / {MAX_OPTIONS}
+                  </button>
+                </div>
                 {errors.options && <p className="error">{errors.options}</p>}
               </div>
             )}
@@ -584,14 +475,12 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
         </form>
 
         <aside className="layout__side reveal" aria-label="풀이 화면 미리보기">
-          <span className="preview-label">풀이 화면 미리보기 · 눌러서 풀어 볼 수 있어요</span>
+          <span className="preview-label">풀이 화면 미리보기</span>
           <PlayPreview
             cardTitle={card.title}
             type={type}
             mode={mode}
             images={images.map((image) => image.url)}
-            hasAudio={!!audio?.url}
-            audioEl={audioEl}
             prompt={prompt}
             text={text}
             answer={answer}
@@ -651,8 +540,6 @@ interface PreviewProps {
   type: QuestionType;
   mode: AnswerMode;
   images: string[];
-  hasAudio: boolean;
-  audioEl: RefObject<HTMLAudioElement | null>;
   prompt: string;
   text: string;
   answer: string;
@@ -665,13 +552,11 @@ const normalize = (s: string) => s.replace(/\s+/g, "").toLowerCase();
 
 // 실제 풀이 화면 모양의 미리보기. 직접 답을 넣어 채점해 볼 수 있다
 function PlayPreview(props: PreviewProps) {
-  const { cardTitle, type, mode, images, hasAudio, audioEl, prompt, text, answer, aliases, options, correct } = props;
-  const toast = useToast();
+  const { cardTitle, type, mode, images, prompt, text, answer, aliases, options, correct } = props;
   const [imgIdx, setImgIdx] = useState(0);
   const [guess, setGuess] = useState("");
   const [picked, setPicked] = useState<number | null>(null);
   const [result, setResult] = useState<boolean | null>(null);
-  const [playing, setPlaying] = useState(false);
 
   // 유형·정답 방식이 바뀌거나 정답이 바뀌면 채점 결과를 지운다
   const resetKey = `${type}|${mode}|${answer}|${correct}|${options.join("|")}`;
@@ -683,34 +568,8 @@ function PlayPreview(props: PreviewProps) {
   }
   const idx = Math.min(imgIdx, Math.max(images.length - 1, 0));
 
-  useEffect(() => {
-    const el = audioEl.current;
-    if (!el) return;
-    const on = () => setPlaying(true);
-    const off = () => setPlaying(false);
-    el.addEventListener("play", on);
-    el.addEventListener("pause", off);
-    el.addEventListener("ended", off);
-    return () => {
-      el.removeEventListener("play", on);
-      el.removeEventListener("pause", off);
-      el.removeEventListener("ended", off);
-    };
-  }, [audioEl, hasAudio, type]);
-
-  const togglePlay = () => {
-    const el = audioEl.current;
-    if (!hasAudio || !el) return toast("먼저 소리 파일을 올려 주세요");
-    if (el.paused) {
-      el.currentTime = 0;
-      void el.play();
-    } else {
-      el.pause();
-    }
-  };
-
   const correctAnswer = mode === "short" ? answer.trim() : options[correct]?.trim() ?? "";
-  const shownPrompt = type === "text" ? "" : prompt.trim() || (type === "image" ? "이 그림은 무엇일까요?" : "소리를 듣고 맞혀 보세요");
+  const shownPrompt = type === "text" ? "" : prompt.trim() || "이 그림은 무엇일까요?";
 
   return (
     <div className="play">
@@ -718,11 +577,8 @@ function PlayPreview(props: PreviewProps) {
         <span>{cardTitle}</span>
         <span className={`badge ${TYPE_BADGE[type]}`}>{QUESTION_TYPE_LABEL[type]}</span>
       </div>
-      <div className="play__bar">
-        <span />
-      </div>
 
-      {type === "image" && (
+      {type === "image" ? (
         <div key="image" className="stage">
           {images.length === 0 ? (
             <span className="stage__empty">이미지를 올리면 여기에 보여요</span>
@@ -757,28 +613,13 @@ function PlayPreview(props: PreviewProps) {
             </>
           )}
         </div>
-      )}
-      {type === "text" && (
+      ) : (
         <div key="text" className="stage stage--text">
           <span className="stage__text">{text.trim() || "문제 내용을 입력하면 여기에 보여요"}</span>
         </div>
       )}
-      {type === "sound" && (
-        <div key="sound" className="stage stage--sound">
-          <button type="button" className="play-btn" aria-label={playing ? "소리 멈춤" : "소리 재생"} onClick={togglePlay}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              {playing ? <path d="M7 5h4v14H7zM13 5h4v14h-4z" /> : <path d="M7 4l13 8-13 8z" />}
-            </svg>
-          </button>
-          <span className={`wave ${playing ? "is-playing" : ""}`}>
-            {Array.from({ length: 18 }, (_, i) => (
-              <span key={i} style={{ animationDelay: `${i * -90}ms` }} />
-            ))}
-          </span>
-        </div>
-      )}
 
-      <p className="play__prompt">{shownPrompt}</p>
+      {shownPrompt && <p className="play__prompt">{shownPrompt}</p>}
 
       {mode === "short" ? (
         <form
@@ -800,7 +641,7 @@ function PlayPreview(props: PreviewProps) {
             placeholder="정답을 입력하세요"
             autoComplete="off"
           />
-          <button type="submit" className="btn btn--primary btn--sm h-12">
+          <button type="submit" className="btn btn--primary btn--sm h-10">
             확인
           </button>
         </form>

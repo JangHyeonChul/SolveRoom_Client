@@ -1,21 +1,20 @@
 import { useState, type CSSProperties, type ReactNode } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { deleteQuestion, fetchManagedQuestions } from "../api/questions";
 import { changeCardVisibility, deleteQuizCard, fetchManagedCard } from "../api/quizCards";
 import CardCover from "../components/CardCover";
 import ConfirmModal from "../components/ConfirmModal";
 import Icon from "../components/Icon";
-import PublishMeter from "../components/PublishMeter";
 import QuestionTypeIcon from "../components/QuestionTypeIcon";
-import Steps from "../components/Steps";
 import { useToast } from "../components/Toast";
 import { useManagedData } from "../components/useManagedData";
 import { PUBLIC_MIN_QUESTIONS, type ManagedCard } from "../types/card";
 import { QUESTION_TYPE_LABEL, type Question } from "../types/question";
+import { copyText } from "../utils/clipboard";
 
 type PendingDelete = { kind: "card" } | { kind: "question"; question: Question; no: number };
 
-// M-02 문제 카드 관리 (등록한 문제 목록 + 공개 설정)
+// M-02 문제 카드 관리 (카드 요약 + 공개 설정 + 등록한 문제 목록)
 export default function QuestionManagePage() {
   const { cardId } = useParams();
   return <QuestionManageLoader key={cardId} cardId={Number(cardId)} />;
@@ -39,16 +38,22 @@ interface ViewProps {
 
 function QuestionManageView({ initialCard, initialQuestions, gate, onError }: ViewProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   const [card, setCard] = useState(initialCard);
   const [questions, setQuestions] = useState(initialQuestions);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const [busy, setBusy] = useState(false);
+  // 카드를 막 만들고 왔으면 관리 주소를 저장해 두라고 한 번 알린다
+  const [showLink, setShowLink] = useState(() => (location.state as { created?: boolean } | null)?.created === true);
 
   const count = questions.length;
   const canPublish = count >= PUBLIC_MIN_QUESTIONS;
-  const countBy = <K extends "type" | "mode">(key: K, value: Question[K]) =>
-    questions.filter((q) => q[key] === value).length;
+  const publishHint = card.isPublic
+    ? "메인에 공개 중이에요"
+    : canPublish
+      ? "켜면 메인에 보여요"
+      : `문제를 ${PUBLIC_MIN_QUESTIONS - count}개 더 등록하면 공개할 수 있어요`;
 
   const togglePublic = async () => {
     if (!canPublish || busy) return;
@@ -80,7 +85,7 @@ function QuestionManageView({ initialCard, initialQuestions, gate, onError }: Vi
       setQuestions(questions.filter((q) => q.id !== target.question.id));
       setCard({ ...card, isPublic: result.isPublic, questionCount: result.questionCount });
       // 공개 기준 아래로 내려가면 서버가 비공개로 돌린다
-      toast(result.unpublished ? `문제가 ${PUBLIC_MIN_QUESTIONS - 1}개 이하가 되어 비공개로 바뀌었어요` : "문제를 삭제했어요");
+      toast(result.unpublished ? `문제가 ${PUBLIC_MIN_QUESTIONS}개보다 적어져 비공개로 바뀌었어요` : "문제를 삭제했어요");
     } catch (e) {
       onError(e);
     } finally {
@@ -89,31 +94,15 @@ function QuestionManageView({ initialCard, initialQuestions, gate, onError }: Vi
   };
 
   return (
-    <main className="wrap page">
-      <Steps current={card.isPublic ? 3 : 1} />
-
+    <main className="wrap page page--wide">
       <section className="panel reveal">
         <div className="hero-card">
           <CardCover id={card.id} title={card.title} thumbnailUrl={card.thumbnailUrl} className="hero-card__cover" />
           <div className="hero-card__info">
-            <div className="hero-card__badges">
-              <span className="badge badge--blue">{card.category}</span>
-              <span className={`badge ${card.isPublic ? "badge--green" : "badge--gray"}`}>
-                {card.isPublic ? "공개" : "비공개"}
-              </span>
-            </div>
+            <span className="badge badge--blue self-start">{card.category}</span>
             <h1 className="hero-card__title">{card.title}</h1>
             {card.description && <p className="panel__desc">{card.description}</p>}
-            <p className="hint">
-              만든 사람: {card.authorNickname}
-              {card.guestCard && " (비로그인) · 수정·삭제할 때 비밀번호가 필요해요"}
-            </p>
             <div className="hero-card__actions">
-              {card.isPublic && (
-                <Link to={`/cards/${card.id}`} className="btn btn--outline btn--sm">
-                  풀이 화면 보기
-                </Link>
-              )}
               <Link to={`/cards/${card.id}/edit`} className="btn btn--outline btn--sm">
                 <Icon name="edit" size={16} />
                 카드 정보 수정
@@ -129,114 +118,57 @@ function QuestionManageView({ initialCard, initialQuestions, gate, onError }: Vi
               </button>
             </div>
           </div>
-        </div>
-      </section>
-
-      <div className="layout">
-        <div className="layout__main">
-          <section className="panel reveal" aria-labelledby="q-title">
-            <div className="panel__head">
-              <h2 className="panel__title" id="q-title">
-                등록한 문제 <small>{count}개</small>
-              </h2>
-              <Link to={`/cards/${card.id}/questions/new`} className="btn btn--primary">
-                <Icon name="plus" strokeWidth={3} />
-                문제 추가
-              </Link>
-            </div>
-
-            {count === 0 ? (
-              <div className="empty">
-                <span className="empty__title">아직 등록한 문제가 없어요</span>
-                <span>첫 문제를 등록해 보세요. 이미지형과 텍스트형 중에서 골라 만들 수 있어요.</span>
-              </div>
-            ) : (
-              <ol className="q-list">
-                {questions.map((q, i) => (
-                  <QuestionRow
-                    key={q.id}
-                    question={q}
-                    no={i + 1}
-                    onEdit={() => navigate(`/cards/${card.id}/questions/${q.id}/edit`)}
-                    onDelete={() => setPendingDelete({ kind: "question", question: q, no: i + 1 })}
-                  />
-                ))}
-              </ol>
-            )}
-
-            <Link to={`/cards/${card.id}/questions/new`} className="add-btn">
-              <Icon name="plus" size={20} strokeWidth={3} />새 문제 등록하기
-            </Link>
-          </section>
-        </div>
-
-        <aside className="layout__side reveal">
-          <section className="panel" aria-labelledby="pub-title">
-            <h2 className="panel__title" id="pub-title">
-              공개 설정
-            </h2>
+          <div className="publish">
             <div className="publish__row">
-              <div className="publish__text">
-                <span className="publish__state">{card.isPublic ? "공개 중" : "비공개"}</span>
-                <span className="publish__sub">
-                  {card.isPublic ? "누구나 메인에서 보고 풀 수 있어요" : "나만 볼 수 있어요"}
-                </span>
-              </div>
+              <span className="publish__state" id="publish-state">
+                {card.isPublic ? "공개" : "비공개"}
+              </span>
               <button
                 type="button"
                 className="switch"
                 role="switch"
                 aria-checked={card.isPublic}
-                aria-labelledby="pub-title"
+                aria-labelledby="publish-state"
                 disabled={!canPublish || busy}
                 onClick={togglePublic}
               />
             </div>
-            <PublishMeter count={count} />
-            {canPublish ? (
-              <div className="callout callout--green">
-                <Icon name="check" size={20} strokeWidth={2.6} />
-                <span>
-                  <b>이제 공개할 수 있어요!</b> 스위치를 켜면 메인과 카테고리에 이 문제 카드가 보여요.
-                </span>
-              </div>
-            ) : (
-              <div className="callout">
-                <Icon name="lock" size={20} strokeWidth={2.2} />
-                <span>
-                  문제를 <b>{PUBLIC_MIN_QUESTIONS - count}개 더</b> 등록하면 공개로 바꿀 수 있어요.
-                </span>
-              </div>
-            )}
-          </section>
+            <span className="publish__hint">{publishHint}</span>
+          </div>
+        </div>
+      </section>
 
-          <section className="panel" aria-labelledby="sum-title">
-            <h2 className="panel__title" id="sum-title">
-              문제 구성
-            </h2>
-            <div className="flex flex-col gap-2.5">
-              <div className="summary-row">
-                <span>이미지형</span>
-                <b>{countBy("type", "image")}</b>
-              </div>
-              <div className="summary-row">
-                <span>텍스트형</span>
-                <b>{countBy("type", "text")}</b>
-              </div>
-              <div className="summary-row">
-                <span>소리형</span>
-                <b>{countBy("type", "sound")}</b>
-              </div>
-              <div className="summary-row">
-                <span>객관식 / 주관식</span>
-                <b>
-                  {countBy("mode", "choice")} / {countBy("mode", "short")}
-                </b>
-              </div>
-            </div>
-          </section>
-        </aside>
-      </div>
+      {showLink && <ManageLinkNotice cardId={card.id} onClose={() => setShowLink(false)} />}
+
+      <section className="panel reveal" aria-labelledby="q-title">
+        <div className="panel__head">
+          <h2 className="panel__title" id="q-title">
+            문제 <small>{count}개</small>
+          </h2>
+          <Link to={`/cards/${card.id}/questions/new`} className="btn btn--primary btn--sm">
+            <Icon name="plus" size={16} strokeWidth={3} />
+            문제 추가
+          </Link>
+        </div>
+
+        {count === 0 ? (
+          <div className="empty">
+            <span className="empty__title">아직 등록한 문제가 없어요</span>
+          </div>
+        ) : (
+          <ol className="q-list">
+            {questions.map((q, i) => (
+              <QuestionRow
+                key={q.id}
+                question={q}
+                no={i + 1}
+                onEdit={() => navigate(`/cards/${card.id}/questions/${q.id}/edit`)}
+                onDelete={() => setPendingDelete({ kind: "question", question: q, no: i + 1 })}
+              />
+            ))}
+          </ol>
+        )}
+      </section>
 
       {gate}
       {pendingDelete && (
@@ -245,7 +177,7 @@ function QuestionManageView({ initialCard, initialQuestions, gate, onError }: Vi
           description={
             pendingDelete.kind === "card"
               ? `"${card.title}" 문제 카드와 안에 있는 문제 ${count}개가 모두 삭제돼요. 되돌릴 수 없어요.`
-              : `${pendingDelete.no}번 문제 "${questionTitle(pendingDelete.question)}" (정답: ${pendingDelete.question.answer})를 삭제해요. 삭제한 문제는 되돌릴 수 없어요.`
+              : `${pendingDelete.no}번 문제 "${questionTitle(pendingDelete.question)}"를 삭제해요. 되돌릴 수 없어요.`
           }
           confirmLabel="삭제"
           danger
@@ -257,13 +189,41 @@ function QuestionManageView({ initialCard, initialQuestions, gate, onError }: Vi
   );
 }
 
-const questionTitle = (q: Question) => q.prompt || q.text || "(질문 없음)";
+// 비회원 카드는 내 카드 목록이 없어 이 주소와 비밀번호로 다시 찾아온다. 카드를 만든 직후 한 번 보여 준다
+function ManageLinkNotice({ cardId, onClose }: { cardId: number; onClose: () => void }) {
+  const toast = useToast();
+  const url = `${window.location.origin}/cards/${cardId}/questions`;
 
-function questionExtra(q: Question) {
-  if (q.mode === "choice") return `보기 ${q.options.length}개`;
-  if (q.type === "image") return `이미지 ${q.images.length}장`;
-  return undefined;
+  const copy = async () => {
+    toast((await copyText(url)) ? "관리 주소를 복사했어요" : "주소를 직접 선택해 복사해 주세요");
+  };
+
+  return (
+    <section className="callout callout--blue notice reveal" aria-labelledby="notice-title">
+      <div className="notice__body">
+        <b id="notice-title">관리 주소를 저장해 두세요</b>
+        <span>이 주소와 비밀번호로 언제든, 다른 기기에서도 이어서 만들 수 있어요. 비밀번호를 잊으면 되찾을 수 없어요.</span>
+        <div className="copy-row">
+          <input
+            className="input input--sm"
+            value={url}
+            readOnly
+            onFocus={(e) => e.currentTarget.select()}
+            aria-label="관리 주소"
+          />
+          <button type="button" className="btn btn--outline btn--sm" onClick={copy}>
+            복사
+          </button>
+        </div>
+      </div>
+      <button type="button" className="icon-btn notice__close" aria-label="안내 닫기" onClick={onClose}>
+        <Icon name="close" size={14} strokeWidth={3} />
+      </button>
+    </section>
+  );
 }
+
+const questionTitle = (q: Question) => q.prompt || q.text || "(질문 없음)";
 
 interface RowProps {
   question: Question;
@@ -273,7 +233,6 @@ interface RowProps {
 }
 
 function QuestionRow({ question: q, no, onEdit, onDelete }: RowProps) {
-  const extra = questionExtra(q);
   return (
     <li className="q pop-in" style={{ "--delay": `${Math.min((no - 1) * 60, 480)}ms` } as CSSProperties}>
       <span className="q__no">{no}</span>
@@ -283,19 +242,7 @@ function QuestionRow({ question: q, no, onEdit, onDelete }: RowProps) {
       <span className="q__body">
         <span className="q__prompt">{questionTitle(q)}</span>
         <span className="q__meta">
-          <span className="badge badge--gray">{QUESTION_TYPE_LABEL[q.type]}</span>
-          <span className={`badge ${q.mode === "choice" ? "badge--blue" : "badge--gold"}`}>
-            {q.mode === "choice" ? "객관식" : "주관식"}
-          </span>
-          {extra && (
-            <>
-              <span>{extra}</span>
-              <span aria-hidden="true">·</span>
-            </>
-          )}
-          <span>
-            정답 <span className="q__answer">{q.answer}</span>
-          </span>
+          {q.mode === "choice" ? "객관식" : "주관식"} · 정답 <span className="q__answer">{q.answer}</span>
         </span>
       </span>
       <span className="q__actions">

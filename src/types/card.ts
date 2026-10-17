@@ -65,5 +65,5 @@ export type CardSummary = Pick<
   "id" | "title" | "category" | "thumbnailUrl" | "questionCount" | "viewCount" | "likeCount" | "createdAt"
 >;
 
-// 문제를 10개 넘게 등록해야 공개할 수 있다
-export const PUBLIC_MIN_QUESTIONS = 11;
+// 문제가 이만큼 있어야 공개할 수 있다 (서버 QuizCard.PUBLISHABLE_QUESTION_COUNT와 같은 값)
+export const PUBLIC_MIN_QUESTIONS = 5;
