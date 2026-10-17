@@ -1,34 +1,55 @@
-import { useEffect, useRef, useState, type DragEvent, type FormEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useAuth } from "../app/auth";
+import { errorMessage } from "../api/apiResponse";
+import { UPLOADABLE_ACCEPT, UPLOADABLE_TYPES, uploadImage } from "../api/images";
+import { changeCardVisibility, createQuizCard, fetchManagedCard, updateQuizCard } from "../api/quizCards";
 import CardCover from "../components/CardCover";
 import Icon from "../components/Icon";
 import PublishMeter from "../components/PublishMeter";
 import Steps from "../components/Steps";
 import { useToast } from "../components/Toast";
-import { cardStore } from "../mocks/cards";
-import { CATEGORIES, PUBLIC_MIN_QUESTIONS, type Category } from "../types/card";
-import { getTier } from "../utils/tier";
-import NotFoundPage from "./NotFoundPage";
+import { useManagedData } from "../components/useManagedData";
+import { CATEGORIES, PUBLIC_MIN_QUESTIONS, type Category, type ManagedCard } from "../types/card";
 
 const MAX_THUMB_MB = 5;
 
 type FieldKey = "title" | "nickname" | "password" | "password2";
 
-// M-01 문제 카드 만들기 / 수정
+// 새로 고른 파일은 저장할 때 줄여서 올리고, 이미 올린 썸네일은 key를 그대로 보낸다
+type Thumb = { url: string; file: File } | { url: string; key: string };
+
+// M-01 문제 카드 만들기 / 정보 수정
 export default function CardFormPage() {
   const { cardId } = useParams();
-  const editing = cardId !== undefined;
-  const card = editing ? cardStore.find(Number(cardId)) : undefined;
-  const { user } = useAuth();
+  if (cardId === undefined) return <CardForm />;
+  return <CardEditLoader key={cardId} cardId={Number(cardId)} />;
+}
+
+// 정보 수정은 본인 확인을 거친 뒤 지금 카드 정보를 읽어 폼에 채운다
+function CardEditLoader({ cardId }: { cardId: number }) {
+  const { data, gate, fallback, handleError } = useManagedData(cardId, () => fetchManagedCard(cardId));
+  if (!data) return fallback;
+  return <CardForm card={data} gate={gate} onError={handleError} />;
+}
+
+interface FormProps {
+  card?: ManagedCard; // 없으면 새로 만들기
+  gate?: ReactNode;
+  onError?: (e: unknown) => void;
+}
+
+function CardForm({ card, gate, onError }: FormProps) {
+  const editing = card !== undefined;
   const toast = useToast();
   const navigate = useNavigate();
 
-  const [thumbnailUrl, setThumbnailUrl] = useState(card?.thumbnailUrl);
+  const [thumb, setThumb] = useState<Thumb | null>(
+    card?.thumbnailUrl && card.thumbnailKey ? { url: card.thumbnailUrl, key: card.thumbnailKey } : null,
+  );
   const [dragging, setDragging] = useState(false);
   const [title, setTitle] = useState(card?.title ?? "");
   const [category, setCategory] = useState<Category>(card?.category ?? "게임");
-  const [content, setContent] = useState(card?.content ?? "");
+  const [content, setContent] = useState(card?.description ?? "");
   const [isPublic, setIsPublic] = useState(card?.isPublic ?? false);
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
@@ -36,41 +57,42 @@ export default function CardFormPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<FieldKey, boolean>>>({});
   const [attempt, setAttempt] = useState(0);
+  const [saving, setSaving] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const fieldRefs = useRef<Partial<Record<FieldKey, HTMLDivElement | null>>>({});
 
-  // 새로 올린 썸네일 URL은 화면을 떠날 때 정리한다 (저장된 카드의 URL은 유지)
-  const savedThumb = useRef(card?.thumbnailUrl);
+  // 새로 고른 파일의 미리보기 URL은 다른 이미지로 바꾸거나 화면을 떠날 때 정리한다
   useEffect(
     () => () => {
-      if (thumbnailUrl && thumbnailUrl !== savedThumb.current) URL.revokeObjectURL(thumbnailUrl);
+      if (thumb && "file" in thumb) URL.revokeObjectURL(thumb.url);
     },
-    [thumbnailUrl],
+    [thumb],
   );
-
-  if (editing && !card) return <NotFoundPage />;
 
   const questionCount = card?.questionCount ?? 0;
   const canPublish = questionCount >= PUBLIC_MIN_QUESTIONS;
-  const asGuest = !editing && !user;
+  // 로그인 연동 전이라 새 카드는 모두 비회원(닉네임·비밀번호)으로 만든다
+  const asGuest = !editing;
 
-  const setThumb = (file?: File) => {
+  const pickThumb = (file?: File) => {
     if (!file) return;
-    if (!file.type.startsWith("image/")) return toast("이미지 파일만 올릴 수 있어요");
+    if (file.type === "image/gif") return toast("GIF는 아직 올릴 수 없어요. JPG·PNG·WEBP로 올려 주세요");
+    if (!UPLOADABLE_TYPES.includes(file.type)) return toast("JPG·PNG·WEBP 이미지만 올릴 수 있어요");
     if (file.size > MAX_THUMB_MB * 1024 * 1024) return toast(`${MAX_THUMB_MB}MB 이하 이미지만 올릴 수 있어요`);
-    setThumbnailUrl(URL.createObjectURL(file));
+    setThumb({ url: URL.createObjectURL(file), file });
   };
 
   const onDrop = (e: DragEvent) => {
     e.preventDefault();
     setDragging(false);
-    setThumb(e.dataTransfer.files[0]);
+    pickThumb(e.dataTransfer.files[0]);
   };
 
   const clearError = (key: FieldKey) => setErrors((prev) => ({ ...prev, [key]: false }));
 
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (saving) return;
     const next: Partial<Record<FieldKey, boolean>> = { title: !title.trim() };
     if (asGuest) {
       next.nickname = nickname.trim().length < 2;
@@ -90,22 +112,27 @@ export default function CardFormPage() {
       return;
     }
 
-    const fields = { title: title.trim(), content: content.trim(), category, thumbnailUrl };
-    savedThumb.current = thumbnailUrl;
-    if (card) {
-      cardStore.update(card.id, { ...fields, isPublic: canPublish && isPublic });
-      toast("문제 카드 정보를 저장했어요");
-      navigate(`/cards/${card.id}/questions`);
-      return;
+    setSaving(true);
+    try {
+      // 새로 고른 썸네일만 줄여서 올린다. 지웠으면 key 없이 보내 썸네일을 지운다
+      const thumbnailKey = thumb && ("file" in thumb ? await uploadImage(thumb.file, "THUMBNAIL") : thumb.key);
+      const input = { title: title.trim(), category, description: content.trim(), thumbnailKey: thumbnailKey || undefined };
+      if (card) {
+        await updateQuizCard(card.id, input);
+        const nextPublic = canPublish && isPublic;
+        if (nextPublic !== card.isPublic) await changeCardVisibility(card.id, nextPublic);
+        toast("문제 카드 정보를 저장했어요");
+        navigate(`/cards/${card.id}/questions`);
+        return;
+      }
+      const createdId = await createQuizCard({ ...input, nickname: nickname.trim(), password });
+      toast("문제 카드를 만들었어요. 이제 문제를 등록해 볼까요?");
+      navigate(`/cards/${createdId}/questions`);
+    } catch (err) {
+      if (onError) onError(err);
+      else toast(errorMessage(err));
+      setSaving(false);
     }
-    const created = cardStore.create({
-      ...fields,
-      authorNickname: user ? user.nickname : nickname.trim(),
-      authorUserId: user?.id,
-      guestPassword: user ? undefined : password,
-    });
-    toast("문제 카드를 만들었어요. 이제 문제를 등록해 볼까요?");
-    navigate(`/cards/${created.id}/questions`);
   };
 
   const fieldClass = (key: FieldKey) => `field ${errors[key] ? "is-invalid shake" : ""}`;
@@ -144,12 +171,12 @@ export default function CardFormPage() {
               <h2 className="panel__title" id="thumb-title">
                 썸네일 <small>선택</small>
               </h2>
-              {thumbnailUrl && (
+              {thumb && (
                 <div className="flex gap-2">
                   <button type="button" className="btn btn--outline btn--sm" onClick={() => fileInput.current?.click()}>
                     다른 이미지로 바꾸기
                   </button>
-                  <button type="button" className="btn btn--danger btn--sm" onClick={() => setThumbnailUrl(undefined)}>
+                  <button type="button" className="btn btn--danger btn--sm" onClick={() => setThumb(null)}>
                     지우기
                   </button>
                 </div>
@@ -165,9 +192,9 @@ export default function CardFormPage() {
               <input
                 ref={fileInput}
                 type="file"
-                accept="image/png, image/jpeg, image/webp"
+                accept={UPLOADABLE_ACCEPT}
                 onChange={(e) => {
-                  setThumb(e.target.files?.[0]);
+                  pickThumb(e.target.files?.[0]);
                   e.target.value = "";
                 }}
               />
@@ -176,7 +203,7 @@ export default function CardFormPage() {
               </span>
               <span className="dropzone__title">이미지를 끌어다 놓거나 눌러서 올려 주세요</span>
               <span className="hint">JPG · PNG · WEBP, 최대 {MAX_THUMB_MB}MB · 가로로 긴 16:9 이미지가 가장 잘 보여요</span>
-              {thumbnailUrl && <img className="dropzone__img" src={thumbnailUrl} alt="" />}
+              {thumb && <img className="dropzone__img" src={thumb.url} alt="" />}
             </label>
             <p className="hint">썸네일이 없으면 문제 카드 이름의 초성으로 표지를 만들어 드려요.</p>
           </section>
@@ -287,97 +314,82 @@ export default function CardFormPage() {
             )}
           </section>
 
-          {!editing && (
+          {asGuest && (
             <section className="panel reveal" aria-labelledby="author-title">
               <h2 className="panel__title" id="author-title">
                 만든 사람
               </h2>
-              {user ? (
-                <div className="author">
-                  <span className="avatar">{user.nickname.slice(0, 1)}</span>
-                  <span className="flex flex-1 flex-col gap-0.5">
-                    <span className="author__name">
-                      {user.nickname}
-                      <span className={`badge badge--sm ${getTier(user.score).className}`}>
-                        {getTier(user.score).label}
-                      </span>
-                    </span>
-                    <span className="author__sub">로그인한 계정으로 만들어요. 수정·삭제는 이 계정으로 할 수 있어요.</span>
+              <div className="flex flex-col gap-4">
+                <div className="callout callout--blue">
+                  <Icon name="info" size={20} strokeWidth={2.2} />
+                  <span>
+                    로그인하지 않아도 만들 수 있어요. 나중에 이 문제 카드를 <b>수정하거나 삭제할 때</b> 아래 닉네임과
+                    비밀번호가 필요해요.
                   </span>
                 </div>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  <div className="callout callout--blue">
-                    <Icon name="info" size={20} strokeWidth={2.2} />
-                    <span>
-                      로그인하지 않아도 만들 수 있어요. 나중에 이 문제 카드를 <b>수정하거나 삭제할 때</b> 아래 닉네임과
-                      비밀번호가 필요해요.
-                    </span>
+                <div key={fieldKey("nickname")} {...fieldProps("nickname")}>
+                  <div className="field__row">
+                    <label className="label" htmlFor="nickname">
+                      닉네임<span className="req" aria-hidden="true">*</span>
+                    </label>
+                    <Counter value={nickname} max={12} />
                   </div>
-                  <div key={fieldKey("nickname")} {...fieldProps("nickname")}>
-                    <div className="field__row">
-                      <label className="label" htmlFor="nickname">
-                        닉네임<span className="req" aria-hidden="true">*</span>
-                      </label>
-                      <Counter value={nickname} max={12} />
-                    </div>
-                    <input
-                      id="nickname"
-                      className="input"
-                      maxLength={12}
-                      value={nickname}
-                      onChange={(e) => (setNickname(e.target.value), clearError("nickname"))}
-                      placeholder="2~12자"
-                      autoComplete="nickname"
-                    />
-                    {errors.nickname && <p className="error">닉네임은 2자 이상 입력해 주세요.</p>}
-                  </div>
-                  <div className="grid-2">
-                    <div key={fieldKey("password")} {...fieldProps("password")}>
-                      <label className="label" htmlFor="password">
-                        비밀번호<span className="req" aria-hidden="true">*</span>
-                      </label>
-                      <div className="input-wrap">
-                        <input
-                          id="password"
-                          className="input"
-                          type={showPassword ? "text" : "password"}
-                          maxLength={20}
-                          value={password}
-                          onChange={(e) => (setPassword(e.target.value), clearError("password"))}
-                          placeholder="4자 이상"
-                          autoComplete="new-password"
-                        />
-                        <button
-                          type="button"
-                          className="input-wrap__btn"
-                          onClick={() => setShowPassword(!showPassword)}
-                          aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
-                        >
-                          <Icon name="eye" size={20} strokeWidth={2.2} />
-                        </button>
-                      </div>
-                      {errors.password && <p className="error">비밀번호는 4자 이상이어야 해요.</p>}
-                    </div>
-                    <div key={fieldKey("password2")} {...fieldProps("password2")}>
-                      <label className="label" htmlFor="password2">
-                        비밀번호 확인<span className="req" aria-hidden="true">*</span>
-                      </label>
+                  <input
+                    id="nickname"
+                    className="input"
+                    maxLength={12}
+                    value={nickname}
+                    onChange={(e) => (setNickname(e.target.value), clearError("nickname"))}
+                    placeholder="2~12자"
+                    autoComplete="nickname"
+                  />
+                  {errors.nickname && <p className="error">닉네임은 2자 이상 입력해 주세요.</p>}
+                </div>
+                <div className="grid-2">
+                  <div key={fieldKey("password")} {...fieldProps("password")}>
+                    <label className="label" htmlFor="password">
+                      비밀번호<span className="req" aria-hidden="true">*</span>
+                    </label>
+                    <div className="input-wrap">
                       <input
-                        id="password2"
+                        id="password"
                         className="input"
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         maxLength={20}
-                        value={password2}
-                        onChange={(e) => (setPassword2(e.target.value), clearError("password2"))}
-                        placeholder="한 번 더 입력"
+                        value={password}
+                        onChange={(e) => (setPassword(e.target.value), clearError("password"))}
+                        placeholder="4자 이상"
                         autoComplete="new-password"
                       />
-                      {errors.password2 && <p className="error">비밀번호가 서로 달라요.</p>}
+                      <button
+                        type="button"
+                        className="input-wrap__btn"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
+                      >
+                        <Icon name="eye" size={20} strokeWidth={2.2} />
+                      </button>
                     </div>
+                    {errors.password && <p className="error">비밀번호는 4자 이상이어야 해요.</p>}
+                  </div>
+                  <div key={fieldKey("password2")} {...fieldProps("password2")}>
+                    <label className="label" htmlFor="password2">
+                      비밀번호 확인<span className="req" aria-hidden="true">*</span>
+                    </label>
+                    <input
+                      id="password2"
+                      className="input"
+                      type="password"
+                      maxLength={20}
+                      value={password2}
+                      onChange={(e) => (setPassword2(e.target.value), clearError("password2"))}
+                      placeholder="한 번 더 입력"
+                      autoComplete="new-password"
+                    />
+                    {errors.password2 && <p className="error">비밀번호가 서로 달라요.</p>}
                   </div>
                 </div>
-              )}
+              </div>
             </section>
           )}
 
@@ -385,8 +397,8 @@ export default function CardFormPage() {
             <Link to={card ? `/cards/${card.id}/questions` : "/"} className="btn btn--outline">
               취소
             </Link>
-            <button type="submit" className="btn btn--primary">
-              {editing ? "저장" : "문제 카드 만들기"}
+            <button type="submit" className="btn btn--primary" disabled={saving}>
+              {saving ? "저장하고 있어요..." : editing ? "저장" : "문제 카드 만들기"}
             </button>
           </div>
         </form>
@@ -394,12 +406,7 @@ export default function CardFormPage() {
         <aside className="layout__side reveal" aria-label="미리보기">
           <span className="preview-label">메인에 이렇게 보여요</span>
           <div className="card" aria-hidden="true">
-            <CardCover
-              id={card?.id ?? 1}
-              title={title}
-              thumbnailUrl={thumbnailUrl}
-              className="card__cover card__cover--lg"
-            >
+            <CardCover id={card?.id ?? 1} title={title} thumbnailUrl={thumb?.url} className="card__cover card__cover--lg">
               <span className={`badge card__tag ${canPublish && isPublic ? "badge--green" : "badge--gray"}`}>
                 {canPublish && isPublic ? "공개" : "비공개"}
               </span>
@@ -409,18 +416,23 @@ export default function CardFormPage() {
               <span className="card__title">{title.trim() || "문제 카드 이름"}</span>
               <div className="card__meta">
                 <span>{questionCount}문제</span>
-                <span>조회 {card?.viewCount ?? 0}</span>
-                <span>좋아요 {card?.likeCount ?? 0}</span>
+                {!editing && (
+                  <>
+                    <span>조회 0</span>
+                    <span>좋아요 0</span>
+                  </>
+                )}
               </div>
             </div>
           </div>
           <ul className="tips">
             <li>이름은 무엇을 맞히는지 바로 알 수 있게 지어 주세요.</li>
             <li>카드를 만든 다음 화면에서 문제를 등록해요.</li>
-            <li>이미지형·텍스트형·소리형 문제를 섞어서 넣을 수 있어요.</li>
+            <li>이미지형·텍스트형 문제를 섞어서 넣을 수 있어요. 소리형은 준비 중이에요.</li>
           </ul>
         </aside>
       </div>
+      {gate}
     </main>
   );
 }

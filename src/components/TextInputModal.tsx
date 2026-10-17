@@ -8,8 +8,8 @@ interface Props {
   placeholder: string;
   inputType?: "text" | "password";
   submitLabel: string;
-  // 통과하면 null, 실패하면 에러 문구를 돌려준다
-  validate: (value: string) => string | null;
+  // 통과하면 null, 실패하면 에러 문구를 돌려준다. 서버에 물어봐야 하면(비밀번호 확인) Promise를 돌려준다
+  validate: (value: string) => string | null | Promise<string | null>;
   onSubmit: (value: string) => void;
   onClose: () => void;
 }
@@ -29,10 +29,14 @@ export default function TextInputModal({
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [checking, setChecking] = useState(false);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const message = validate(value);
+    if (checking) return;
+    setChecking(true);
+    const message = await validate(value);
+    setChecking(false);
     if (message) {
       setError(message);
       setAttempt((n) => n + 1);
@@ -71,8 +75,8 @@ export default function TextInputModal({
           <button type="button" onClick={onClose} className="btn btn--outline btn--sm">
             취소
           </button>
-          <button type="submit" className="btn btn--primary btn--sm">
-            {submitLabel}
+          <button type="submit" className="btn btn--primary btn--sm" disabled={checking}>
+            {checking ? "확인 중..." : submitLabel}
           </button>
         </div>
       </form>

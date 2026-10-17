@@ -9,12 +9,15 @@ import {
   type RefObject,
 } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { UPLOADABLE_ACCEPT, UPLOADABLE_TYPES, uploadImage } from "../api/images";
+import { createQuestion, fetchManagedQuestions, updateQuestion } from "../api/questions";
+import { fetchManagedCard } from "../api/quizCards";
 import Icon from "../components/Icon";
 import QuestionTypeIcon from "../components/QuestionTypeIcon";
 import Steps from "../components/Steps";
 import { useToast } from "../components/Toast";
-import { cardStore } from "../mocks/cards";
-import { questionStore } from "../mocks/questions";
+import { useManagedData } from "../components/useManagedData";
+import type { ManagedCard } from "../types/card";
 import {
   MAX_IMAGES,
   MAX_OPTIONS,
@@ -28,10 +31,16 @@ import NotFoundPage from "./NotFoundPage";
 
 const MAX_AUDIO_MB = 10;
 
-const TYPES: { type: QuestionType; desc: string; iconClass: string }[] = [
+// 소리형은 서버에 오디오 업로드를 붙이기 전이라 고를 수 없게 막아 둔다
+const TYPES: { type: QuestionType; desc: string; iconClass: string; disabled?: boolean }[] = [
   { type: "image", desc: `이미지를 보고 맞혀요. 최대 ${MAX_IMAGES}장까지 넘겨 볼 수 있어요.`, iconClass: "q__type--image" },
   { type: "text", desc: "글로 된 설명이나 초성만 보고 맞혀요.", iconClass: "q__type--text" },
-  { type: "sound", desc: "노래, 효과음, 목소리를 듣고 맞혀요.", iconClass: "q__type--sound" },
+  {
+    type: "sound",
+    desc: "준비 중이에요. 노래, 효과음, 목소리를 듣고 맞히는 문제는 곧 만들 수 있어요.",
+    iconClass: "q__type--sound",
+    disabled: true,
+  },
 ];
 
 const TYPE_BADGE: Record<QuestionType, string> = { image: "badge--gold", text: "badge--blue", sound: "badge--purple" };
@@ -44,21 +53,57 @@ interface Audio {
   size?: number;
 }
 
+// 새로 고른 파일은 저장할 때 줄여서 올리고, 이미 올린 이미지는 key를 그대로 보낸다
+type ImageItem = { id: string; url: string } & ({ file: File } | { key: string });
+
 // M-03 문제 등록 / 수정
 export default function QuestionFormPage() {
   const { cardId, questionId } = useParams();
-  const card = cardStore.find(Number(cardId));
-  const editing = questionId !== undefined;
-  const original = editing ? questionStore.find(Number(questionId)) : undefined;
+  // 수정하다 "저장하고 다음 문제"로 등록 화면에 오면 입력이 비도록 문제마다 새로 그린다
+  return (
+    <QuestionFormLoader
+      key={`${cardId}/${questionId ?? "new"}`}
+      cardId={Number(cardId)}
+      questionId={questionId === undefined ? undefined : Number(questionId)}
+    />
+  );
+}
+
+// 몇 번째 문제인지 정하고 수정할 문제를 찾으려고 카드와 문제 목록을 함께 읽는다
+function QuestionFormLoader({ cardId, questionId }: { cardId: number; questionId?: number }) {
+  const { data, gate, fallback, handleError } = useManagedData(cardId, () =>
+    Promise.all([fetchManagedCard(cardId), fetchManagedQuestions(cardId)]),
+  );
+  if (!data) return fallback;
+
+  const [card, questions] = data;
+  if (questionId === undefined) {
+    return <QuestionForm card={card} order={questions.length + 1} gate={gate} onError={handleError} />;
+  }
+  const index = questions.findIndex((q) => q.id === questionId);
+  if (index < 0) return <NotFoundPage message="존재하지 않거나 삭제된 문제예요." />;
+  return <QuestionForm card={card} original={questions[index]} order={index + 1} gate={gate} onError={handleError} />;
+}
+
+interface FormProps {
+  card: ManagedCard;
+  original?: Question; // 없으면 새로 등록
+  order: number;
+  gate: ReactNode;
+  onError: (e: unknown) => void;
+}
+
+function QuestionForm({ card, original, order: initialOrder, gate, onError }: FormProps) {
+  const editing = original !== undefined;
   const navigate = useNavigate();
   const toast = useToast();
 
   const [type, setType] = useState<QuestionType>(original?.type ?? "image");
   const [mode, setMode] = useState<AnswerMode>(original?.mode ?? "short");
-  const [images, setImages] = useState<string[]>(original?.imageUrls ?? []);
-  const [audio, setAudio] = useState<Audio | null>(
-    original?.audioName ? { url: original.audioUrl ?? "", name: original.audioName } : null,
+  const [images, setImages] = useState<ImageItem[]>(
+    () => original?.images.map((image) => ({ id: image.key, url: image.url, key: image.key })) ?? [],
   );
+  const [audio, setAudio] = useState<Audio | null>(null);
   const [prompt, setPrompt] = useState(original?.prompt ?? "");
   const [text, setText] = useState(original?.text ?? "");
   const [answer, setAnswer] = useState(original?.mode === "short" ? original.answer : "");
@@ -68,37 +113,36 @@ export default function QuestionFormPage() {
   const [correct, setCorrect] = useState(original?.correctIndex ?? 0);
   const [errors, setErrors] = useState<Partial<Record<FieldKey, string>>>({});
   const [attempt, setAttempt] = useState(0);
-  const [order, setOrder] = useState(() =>
-    card ? (original ? questionStore.listByCard(card.id).indexOf(original) + 1 : card.questionCount + 1) : 1,
-  );
+  const [order, setOrder] = useState(initialOrder);
   const [formKey, setFormKey] = useState(0);
+  const [saving, setSaving] = useState(false);
   const audioEl = useRef<HTMLAudioElement>(null);
   const fieldRefs = useRef<Partial<Record<FieldKey, HTMLElement | null>>>({});
 
-  // 이 화면에서 만든 파일 URL은 저장하지 않은 채 떠나면 정리한다
+  // 이 화면에서 만든 미리보기 URL은 화면을 떠날 때 정리한다. 저장한 이미지는 CDN 주소로 다시 보인다
   const created = useRef(new Set<string>());
-  const saved = useRef(new Set<string>());
-  useEffect(
-    () => () => created.current.forEach((url) => !saved.current.has(url) && URL.revokeObjectURL(url)),
-    [],
-  );
+  useEffect(() => () => created.current.forEach((url) => URL.revokeObjectURL(url)), []);
   const makeUrl = (file: File) => {
     const url = URL.createObjectURL(file);
     created.current.add(url);
     return url;
   };
 
-  if (!card || (editing && !original)) return <NotFoundPage />;
-
   const clearError = (key: FieldKey) => setErrors((prev) => ({ ...prev, [key]: undefined }));
 
   const addImages = (files: FileList | null) => {
     if (!files) return;
+    const picked = [...files];
+    if (picked.some((f) => f.type === "image/gif")) toast("GIF는 아직 올릴 수 없어요. JPG·PNG·WEBP로 올려 주세요");
+    const list = picked.filter((f) => UPLOADABLE_TYPES.includes(f.type));
     const room = MAX_IMAGES - images.length;
-    const list = [...files].filter((f) => f.type.startsWith("image/"));
     if (list.length > room) toast(`이미지는 최대 ${MAX_IMAGES}장까지예요. ${room}장만 추가했어요`);
     if (list.length === 0) return;
-    setImages((prev) => [...prev, ...list.slice(0, room).map(makeUrl)]);
+    const added = list.slice(0, room).map((file): ImageItem => {
+      const url = makeUrl(file);
+      return { id: url, url, file };
+    });
+    setImages((prev) => [...prev, ...added]);
     clearError("images");
   };
 
@@ -131,7 +175,7 @@ export default function QuestionFormPage() {
 
   const validate = () => {
     const next: Partial<Record<FieldKey, string>> = {};
-    if (type === "image" && images.length === 0 && !original?.imageCount) next.images = "이미지를 1장 이상 올려 주세요.";
+    if (type === "image" && images.length === 0) next.images = "이미지를 1장 이상 올려 주세요.";
     if (type === "sound" && !audio) next.audio = "소리 파일을 올려 주세요.";
     if (type === "text" && !text.trim()) next.text = "문제 내용을 입력해 주세요.";
     if (mode === "short" && !answer.trim()) next.answer = "정답을 입력해 주세요.";
@@ -157,8 +201,9 @@ export default function QuestionFormPage() {
     setFormKey((k) => k + 1);
   };
 
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (saving) return;
     const goNext = (e.nativeEvent as SubmitEvent).submitter?.getAttribute("data-next") === "1";
     const next = validate();
     setErrors(next);
@@ -169,26 +214,34 @@ export default function QuestionFormPage() {
       return;
     }
 
-    const trimmedOptions = options.map((o) => o.trim());
-    const question: Omit<Question, "id"> & { id?: number } = {
-      id: original?.id,
-      cardId: card.id,
-      type,
-      mode,
-      prompt: type === "text" ? "" : prompt.trim(),
-      imageUrls: type === "image" ? images : [],
-      imageCount: type === "image" && images.length === 0 ? original?.imageCount : undefined,
-      text: type === "text" ? text.trim() : undefined,
-      audioUrl: type === "sound" ? audio?.url : undefined,
-      audioName: type === "sound" ? audio?.name : undefined,
-      answer: mode === "short" ? answer.trim() : trimmedOptions[correct],
-      aliases: mode === "short" ? aliases : [],
-      options: mode === "choice" ? trimmedOptions : [],
-      correctIndex: mode === "choice" ? correct : 0,
-    };
-    images.forEach((url) => saved.current.add(url));
-    if (audio) saved.current.add(audio.url);
-    questionStore.save(question);
+    setSaving(true);
+    try {
+      // 새로 고른 이미지만 줄여서 올린다. 저장이 실패해 다시 누를 때 또 올리지 않도록 받은 key를 기억해 둔다
+      const imageKeys =
+        type === "image"
+          ? await Promise.all(images.map((image) => ("key" in image ? image.key : uploadImage(image.file, "QUESTION"))))
+          : [];
+      if (type === "image") setImages(images.map((image, i) => ({ id: image.id, url: image.url, key: imageKeys[i] })));
+
+      const input = {
+        type,
+        mode,
+        prompt: prompt.trim(),
+        text: text.trim(),
+        imageKeys,
+        answer: answer.trim(),
+        aliases,
+        options: options.map((o) => o.trim()),
+        correctIndex: correct,
+      };
+      if (original) await updateQuestion(card.id, original.id, input);
+      else await createQuestion(card.id, input);
+    } catch (err) {
+      onError(err);
+      setSaving(false);
+      return;
+    }
+    setSaving(false);
 
     if (goNext) {
       toast(`${order}번 문제를 저장했어요. 다음 문제를 만들어요`);
@@ -240,6 +293,7 @@ export default function QuestionFormPage() {
                   className="type"
                   role="radio"
                   aria-checked={type === t.type}
+                  disabled={t.disabled}
                   onClick={() => setType(t.type)}
                 >
                   <span className="type__check" aria-hidden="true">
@@ -271,20 +325,15 @@ export default function QuestionFormPage() {
                   </span>
                 </div>
                 <div className="slots">
-                  {images.length === 0 && original?.imageCount ? (
-                    <div className="slot slot--placeholder">
-                      <span className="hint">기존 이미지 {original.imageCount}장</span>
-                    </div>
-                  ) : null}
-                  {images.map((url, i) => (
-                    <div key={url} className="slot">
-                      <img src={url} alt={`${i + 1}번째 이미지`} />
+                  {images.map((image, i) => (
+                    <div key={image.id} className="slot">
+                      <img src={image.url} alt={`${i + 1}번째 이미지`} />
                       <span className={`slot__no ${i === 0 ? "slot__no--cover" : ""}`}>{i === 0 ? "대표" : i + 1}</span>
                       <button
                         type="button"
                         className="slot__del"
                         aria-label={`${i + 1}번째 이미지 지우기`}
-                        onClick={() => setImages(images.filter((u) => u !== url))}
+                        onClick={() => setImages(images.filter((x) => x.id !== image.id))}
                       >
                         <Icon name="close" size={14} strokeWidth={3} />
                       </button>
@@ -294,7 +343,7 @@ export default function QuestionFormPage() {
                     <DropLabel className="slot slot--add" onFiles={addImages}>
                       <input
                         type="file"
-                        accept="image/png, image/jpeg, image/webp, image/gif"
+                        accept={UPLOADABLE_ACCEPT}
                         multiple
                         onChange={(e) => {
                           addImages(e.target.files);
@@ -525,11 +574,11 @@ export default function QuestionFormPage() {
             <Link to={`/cards/${card.id}/questions`} className="btn btn--outline">
               취소
             </Link>
-            <button type="submit" className="btn btn--outline" data-next="1">
+            <button type="submit" className="btn btn--outline" data-next="1" disabled={saving}>
               저장하고 다음 문제
             </button>
-            <button type="submit" className="btn btn--primary">
-              저장
+            <button type="submit" className="btn btn--primary" disabled={saving}>
+              {saving ? "저장하고 있어요..." : "저장"}
             </button>
           </div>
         </form>
@@ -540,7 +589,7 @@ export default function QuestionFormPage() {
             cardTitle={card.title}
             type={type}
             mode={mode}
-            images={images}
+            images={images.map((image) => image.url)}
             hasAudio={!!audio?.url}
             audioEl={audioEl}
             prompt={prompt}
@@ -552,6 +601,7 @@ export default function QuestionFormPage() {
           />
         </aside>
       </div>
+      {gate}
     </main>
   );
 }

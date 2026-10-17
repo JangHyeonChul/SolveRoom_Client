@@ -1,5 +1,7 @@
-import { useState, type CSSProperties } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { deleteQuestion, fetchManagedQuestions } from "../api/questions";
+import { changeCardVisibility, deleteQuizCard, fetchManagedCard } from "../api/quizCards";
 import CardCover from "../components/CardCover";
 import ConfirmModal from "../components/ConfirmModal";
 import Icon from "../components/Icon";
@@ -7,69 +9,88 @@ import PublishMeter from "../components/PublishMeter";
 import QuestionTypeIcon from "../components/QuestionTypeIcon";
 import Steps from "../components/Steps";
 import { useToast } from "../components/Toast";
-import { useOwnerGuard } from "../components/useOwnerGuard";
-import { cardStore } from "../mocks/cards";
-import { questionStore } from "../mocks/questions";
-import { PUBLIC_MIN_QUESTIONS } from "../types/card";
+import { useManagedData } from "../components/useManagedData";
+import { PUBLIC_MIN_QUESTIONS, type ManagedCard } from "../types/card";
 import { QUESTION_TYPE_LABEL, type Question } from "../types/question";
-import NotFoundPage from "./NotFoundPage";
 
 type PendingDelete = { kind: "card" } | { kind: "question"; question: Question; no: number };
 
 // M-02 문제 카드 관리 (등록한 문제 목록 + 공개 설정)
 export default function QuestionManagePage() {
   const { cardId } = useParams();
-  const card = cardStore.find(Number(cardId));
+  return <QuestionManageLoader key={cardId} cardId={Number(cardId)} />;
+}
+
+// 문제 목록에 정답이 들어 있어 들어올 때 본인 확인(M-04)을 받고 카드와 문제를 함께 읽는다
+function QuestionManageLoader({ cardId }: { cardId: number }) {
+  const { data, gate, fallback, handleError } = useManagedData(cardId, () =>
+    Promise.all([fetchManagedCard(cardId), fetchManagedQuestions(cardId)]),
+  );
+  if (!data) return fallback;
+  return <QuestionManageView initialCard={data[0]} initialQuestions={data[1]} gate={gate} onError={handleError} />;
+}
+
+interface ViewProps {
+  initialCard: ManagedCard;
+  initialQuestions: Question[];
+  gate: ReactNode;
+  onError: (e: unknown) => void;
+}
+
+function QuestionManageView({ initialCard, initialQuestions, gate, onError }: ViewProps) {
   const navigate = useNavigate();
   const toast = useToast();
-  const { guard, modal: passwordModal } = useOwnerGuard(card);
-  const [questions, setQuestions] = useState(() => (card ? questionStore.listByCard(card.id) : []));
-  const [isPublic, setIsPublic] = useState(card?.isPublic ?? false);
+  const [card, setCard] = useState(initialCard);
+  const [questions, setQuestions] = useState(initialQuestions);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
-
-  if (!card) return <NotFoundPage />;
+  const [busy, setBusy] = useState(false);
 
   const count = questions.length;
   const canPublish = count >= PUBLIC_MIN_QUESTIONS;
   const countBy = <K extends "type" | "mode">(key: K, value: Question[K]) =>
     questions.filter((q) => q[key] === value).length;
 
-  const togglePublic = () => {
-    if (!canPublish) return;
-    guard("공개 설정을 바꾸려면 비밀번호를 입력해 주세요.", () => {
-      const next = !isPublic;
-      setIsPublic(next);
-      cardStore.update(card.id, { isPublic: next });
-      toast(next ? "문제 카드를 공개했어요" : "문제 카드를 비공개로 바꿨어요");
-    });
+  const togglePublic = async () => {
+    if (!canPublish || busy) return;
+    setBusy(true);
+    try {
+      const isPublic = await changeCardVisibility(card.id, !card.isPublic);
+      setCard({ ...card, isPublic });
+      toast(isPublic ? "문제 카드를 공개했어요" : "문제 카드를 비공개로 바꿨어요");
+    } catch (e) {
+      onError(e);
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const confirmDelete = () => {
-    if (!pendingDelete) return;
+  const confirmDelete = async () => {
+    if (!pendingDelete || busy) return;
+    const target = pendingDelete;
     setPendingDelete(null);
-    if (pendingDelete.kind === "card") {
-      questionStore.removeByCard(card.id);
-      cardStore.remove(card.id);
-      toast("문제 카드를 삭제했어요");
-      navigate("/");
-      return;
-    }
-    questionStore.remove(pendingDelete.question.id);
-    const rest = questionStore.listByCard(card.id);
-    setQuestions(rest);
-    // 공개 기준 아래로 내려가면 비공개로 돌린다
-    if (isPublic && rest.length < PUBLIC_MIN_QUESTIONS) {
-      setIsPublic(false);
-      cardStore.update(card.id, { isPublic: false });
-      toast(`문제가 ${PUBLIC_MIN_QUESTIONS - 1}개 이하가 되어 비공개로 바뀌었어요`);
-    } else {
-      toast("문제를 삭제했어요");
+    setBusy(true);
+    try {
+      if (target.kind === "card") {
+        await deleteQuizCard(card.id);
+        toast("문제 카드를 삭제했어요");
+        navigate("/");
+        return;
+      }
+      const result = await deleteQuestion(card.id, target.question.id);
+      setQuestions(questions.filter((q) => q.id !== target.question.id));
+      setCard({ ...card, isPublic: result.isPublic, questionCount: result.questionCount });
+      // 공개 기준 아래로 내려가면 서버가 비공개로 돌린다
+      toast(result.unpublished ? `문제가 ${PUBLIC_MIN_QUESTIONS - 1}개 이하가 되어 비공개로 바뀌었어요` : "문제를 삭제했어요");
+    } catch (e) {
+      onError(e);
+    } finally {
+      setBusy(false);
     }
   };
 
   return (
     <main className="wrap page">
-      <Steps current={isPublic ? 3 : 1} />
+      <Steps current={card.isPublic ? 3 : 1} />
 
       <section className="panel reveal">
         <div className="hero-card">
@@ -77,38 +98,31 @@ export default function QuestionManagePage() {
           <div className="hero-card__info">
             <div className="hero-card__badges">
               <span className="badge badge--blue">{card.category}</span>
-              <span className={`badge ${isPublic ? "badge--green" : "badge--gray"}`}>{isPublic ? "공개" : "비공개"}</span>
+              <span className={`badge ${card.isPublic ? "badge--green" : "badge--gray"}`}>
+                {card.isPublic ? "공개" : "비공개"}
+              </span>
             </div>
             <h1 className="hero-card__title">{card.title}</h1>
-            {card.content && <p className="panel__desc">{card.content}</p>}
+            {card.description && <p className="panel__desc">{card.description}</p>}
             <p className="hint">
               만든 사람: {card.authorNickname}
-              {card.guestPassword && " (비로그인) · 수정·삭제할 때 비밀번호가 필요해요"}
+              {card.guestCard && " (비로그인) · 수정·삭제할 때 비밀번호가 필요해요"}
             </p>
             <div className="hero-card__actions">
-              {isPublic && (
+              {card.isPublic && (
                 <Link to={`/cards/${card.id}`} className="btn btn--outline btn--sm">
                   풀이 화면 보기
                 </Link>
               )}
-              <button
-                type="button"
-                className="btn btn--outline btn--sm"
-                onClick={() =>
-                  guard("문제 카드 정보를 수정하려면 비밀번호를 입력해 주세요.", () =>
-                    navigate(`/cards/${card.id}/edit`),
-                  )
-                }
-              >
+              <Link to={`/cards/${card.id}/edit`} className="btn btn--outline btn--sm">
                 <Icon name="edit" size={16} />
                 카드 정보 수정
-              </button>
+              </Link>
               <button
                 type="button"
                 className="btn btn--danger btn--sm"
-                onClick={() =>
-                  guard("문제 카드를 삭제하려면 비밀번호를 입력해 주세요.", () => setPendingDelete({ kind: "card" }))
-                }
+                disabled={busy}
+                onClick={() => setPendingDelete({ kind: "card" })}
               >
                 <Icon name="trash" size={16} />
                 카드 삭제
@@ -134,7 +148,7 @@ export default function QuestionManagePage() {
             {count === 0 ? (
               <div className="empty">
                 <span className="empty__title">아직 등록한 문제가 없어요</span>
-                <span>첫 문제를 등록해 보세요. 이미지·텍스트·소리 중에서 골라 만들 수 있어요.</span>
+                <span>첫 문제를 등록해 보세요. 이미지형과 텍스트형 중에서 골라 만들 수 있어요.</span>
               </div>
             ) : (
               <ol className="q-list">
@@ -143,16 +157,8 @@ export default function QuestionManagePage() {
                     key={q.id}
                     question={q}
                     no={i + 1}
-                    onEdit={() =>
-                      guard("문제를 수정하려면 비밀번호를 입력해 주세요.", () =>
-                        navigate(`/cards/${card.id}/questions/${q.id}/edit`),
-                      )
-                    }
-                    onDelete={() =>
-                      guard("문제를 삭제하려면 비밀번호를 입력해 주세요.", () =>
-                        setPendingDelete({ kind: "question", question: q, no: i + 1 }),
-                      )
-                    }
+                    onEdit={() => navigate(`/cards/${card.id}/questions/${q.id}/edit`)}
+                    onDelete={() => setPendingDelete({ kind: "question", question: q, no: i + 1 })}
                   />
                 ))}
               </ol>
@@ -171,18 +177,18 @@ export default function QuestionManagePage() {
             </h2>
             <div className="publish__row">
               <div className="publish__text">
-                <span className="publish__state">{isPublic ? "공개 중" : "비공개"}</span>
+                <span className="publish__state">{card.isPublic ? "공개 중" : "비공개"}</span>
                 <span className="publish__sub">
-                  {isPublic ? "누구나 메인에서 보고 풀 수 있어요" : "나만 볼 수 있어요"}
+                  {card.isPublic ? "누구나 메인에서 보고 풀 수 있어요" : "나만 볼 수 있어요"}
                 </span>
               </div>
               <button
                 type="button"
                 className="switch"
                 role="switch"
-                aria-checked={isPublic}
+                aria-checked={card.isPublic}
                 aria-labelledby="pub-title"
-                disabled={!canPublish}
+                disabled={!canPublish || busy}
                 onClick={togglePublic}
               />
             </div>
@@ -232,7 +238,7 @@ export default function QuestionManagePage() {
         </aside>
       </div>
 
-      {passwordModal}
+      {gate}
       {pendingDelete && (
         <ConfirmModal
           title="삭제할까요?"
@@ -255,8 +261,7 @@ const questionTitle = (q: Question) => q.prompt || q.text || "(질문 없음)";
 
 function questionExtra(q: Question) {
   if (q.mode === "choice") return `보기 ${q.options.length}개`;
-  if (q.type === "image") return `이미지 ${q.imageUrls.length || q.imageCount || 0}장`;
-  if (q.type === "sound") return q.audioName;
+  if (q.type === "image") return `이미지 ${q.images.length}장`;
   return undefined;
 }
 

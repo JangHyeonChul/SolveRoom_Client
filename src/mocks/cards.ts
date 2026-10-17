@@ -35,7 +35,6 @@ export const mockCards: Card[] = [
     likeCount: 145,
     isPublic: true,
     authorNickname: "익명인",
-    guestPassword: "1234",
     createdAt: "2026-10-05T09:12:00",
   },
   {
@@ -137,29 +136,3 @@ export const mockCards: Card[] = [
     createdAt: "2026-10-09T09:00:00",
   },
 ];
-
-// API 연동 전까지 쓰는 메모리 저장소. 새로고침하면 처음 상태로 돌아간다.
-export const cardStore = {
-  find: (id: number) => mockCards.find((c) => c.id === id),
-  create(input: Omit<Card, "id" | "questionCount" | "viewCount" | "likeCount" | "isPublic" | "createdAt">) {
-    const card: Card = {
-      ...input,
-      id: Math.max(0, ...mockCards.map((c) => c.id)) + 1,
-      questionCount: 0,
-      viewCount: 0,
-      likeCount: 0,
-      isPublic: false,
-      createdAt: new Date().toISOString(),
-    };
-    mockCards.push(card);
-    return card;
-  },
-  update(id: number, patch: Partial<Card>) {
-    const card = mockCards.find((c) => c.id === id);
-    if (card) Object.assign(card, patch);
-  },
-  remove(id: number) {
-    const idx = mockCards.findIndex((c) => c.id === id);
-    if (idx >= 0) mockCards.splice(idx, 1);
-  },
-};

@@ -29,8 +29,7 @@ export const CATEGORY_CODES: Record<Category, string> = {
 
 export const isCategory = (value: string): value is Category => (CATEGORIES as readonly string[]).includes(value);
 
-// 서버 CardResponse에는 아직 id, title, content, createdAt, updatedAt만 있다.
-// 나머지 필드는 화면 기획 기준으로 정의했으며 서버에 추가가 필요하다.
+// 카드 상세(Q-01)와 사이드바 카테고리 수가 아직 쓰는 목 데이터 모양. 문제 맞추기 API가 생기면 바꾼다.
 export interface Card {
   id: number;
   title: string;
@@ -43,8 +42,21 @@ export interface Card {
   isPublic: boolean;
   authorNickname: string;
   authorUserId?: number; // 회원이 만든 카드
-  guestPassword?: string; // 비회원이 만든 카드. 목 데이터 전용 (서버는 해시로 저장하고 내려주지 않는다)
   createdAt: string;
+}
+
+// 문제 관리(M-02)·정보 수정(M-01) 화면의 카드 (GET /api/main/quiz-cards/{cardId}/manage)
+export interface ManagedCard {
+  id: number;
+  title: string;
+  description: string;
+  category: Category;
+  thumbnailKey?: string; // 정보를 수정할 때 썸네일을 그대로 두려면 다시 보낸다
+  thumbnailUrl?: string;
+  isPublic: boolean;
+  questionCount: number;
+  authorNickname: string;
+  guestCard: boolean; // 비회원 카드면 수정·삭제할 때 비밀번호가 필요하다
 }
 
 // 목록의 카드 한 장에 필요한 값 (GET /api/main/quiz-cards)
