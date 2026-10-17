@@ -1,20 +1,22 @@
 import { useEffect, useRef, useState, type DragEvent, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { errorMessage } from "../api/apiResponse";
-import { UPLOADABLE_ACCEPT, UPLOADABLE_TYPES, uploadImage } from "../api/images";
+import { prepareImage, UPLOADABLE_ACCEPT, UPLOADABLE_TYPES, uploadPrepared, type CropArea } from "../api/images";
 import { createQuizCard, fetchManagedCard, updateQuizCard } from "../api/quizCards";
 import CardCover from "../components/CardCover";
 import Icon from "../components/Icon";
+import ImageCropModal from "../components/ImageCropModal";
 import { useToast } from "../components/Toast";
 import { useManagedData } from "../components/useManagedData";
-import { CATEGORIES, type Category, type ManagedCard } from "../types/card";
+import { CATEGORIES, THUMBNAIL_ASPECT, type Category, type ManagedCard } from "../types/card";
 
 const MAX_THUMB_MB = 5;
 
 type FieldKey = "title" | "nickname" | "password" | "password2";
 
-// 새로 고른 파일은 저장할 때 줄여서 올리고, 이미 올린 썸네일은 key를 그대로 보낸다
-type Thumb = { url: string; file: File } | { url: string; key: string };
+// 새로 고른 이미지는 고른 16:9 영역을 잘라 줄인 결과(blob)를 저장할 때 올리고, 이미 올린 썸네일은 key를 그대로 보낸다.
+// 원본(file)과 영역(area)은 영역을 다시 조정할 때 쓴다
+type Thumb = { url: string; key: string } | { url: string; blob: Blob; file: File; area: CropArea };
 
 // M-01 문제 카드 만들기 / 정보 수정. 공개 여부는 문제 관리 화면(M-02)에서만 바꾼다
 export default function CardFormPage() {
@@ -55,12 +57,13 @@ function CardForm({ card, gate, onError }: FormProps) {
   const [errors, setErrors] = useState<Partial<Record<FieldKey, boolean>>>({});
   const [attempt, setAttempt] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [cropping, setCropping] = useState<{ file: File; area?: CropArea } | null>(null);
   const fieldRefs = useRef<Partial<Record<FieldKey, HTMLDivElement | null>>>({});
 
-  // 새로 고른 파일의 미리보기 URL은 다른 이미지로 바꾸거나 화면을 떠날 때 정리한다
+  // 잘라 낸 이미지의 미리보기 URL은 다른 이미지로 바꾸거나 화면을 떠날 때 정리한다
   useEffect(
     () => () => {
-      if (thumb && "file" in thumb) URL.revokeObjectURL(thumb.url);
+      if (thumb && "blob" in thumb) URL.revokeObjectURL(thumb.url);
     },
     [thumb],
   );
@@ -70,7 +73,20 @@ function CardForm({ card, gate, onError }: FormProps) {
     if (file.type === "image/gif") return toast("GIF는 아직 올릴 수 없어요. JPG·PNG·WEBP로 올려 주세요");
     if (!UPLOADABLE_TYPES.includes(file.type)) return toast("JPG·PNG·WEBP 이미지만 올릴 수 있어요");
     if (file.size > MAX_THUMB_MB * 1024 * 1024) return toast(`${MAX_THUMB_MB}MB 이하 이미지만 올릴 수 있어요`);
-    setThumb({ url: URL.createObjectURL(file), file });
+    setCropping({ file });
+  };
+
+  // 고른 영역을 바로 잘라 줄여 둔다. 미리보기에 그대로 쓰고, 저장할 때 이 결과를 올린다
+  const applyCrop = async (area: CropArea) => {
+    if (!cropping) return;
+    try {
+      const blob = await prepareImage(cropping.file, "THUMBNAIL", area);
+      setThumb({ url: URL.createObjectURL(blob), blob, file: cropping.file, area });
+      setCropping(null);
+    } catch (err) {
+      console.error(err);
+      toast("이미지를 처리하지 못했어요. 다른 이미지로 올려 주세요");
+    }
   };
 
   const onDrop = (e: DragEvent) => {
@@ -106,8 +122,8 @@ function CardForm({ card, gate, onError }: FormProps) {
 
     setSaving(true);
     try {
-      // 새로 고른 썸네일만 줄여서 올린다. 지웠으면 key 없이 보내 썸네일을 지운다
-      const thumbnailKey = thumb && ("file" in thumb ? await uploadImage(thumb.file, "THUMBNAIL") : thumb.key);
+      // 새로 고른 썸네일만 올린다. 지웠으면 key 없이 보내 썸네일을 지운다
+      const thumbnailKey = thumb && ("blob" in thumb ? await uploadPrepared(thumb.blob, "THUMBNAIL") : thumb.key);
       const input = { title: title.trim(), category, description: content.trim(), thumbnailKey: thumbnailKey || undefined };
       if (card) {
         await updateQuizCard(card.id, input);
@@ -155,13 +171,24 @@ function CardForm({ card, gate, onError }: FormProps) {
                   썸네일 <small>선택</small>
                 </span>
                 {thumb && (
-                  <button type="button" className="text-btn text-btn--danger" onClick={() => setThumb(null)}>
-                    지우기
-                  </button>
+                  <span className="flex gap-3">
+                    {"file" in thumb && (
+                      <button
+                        type="button"
+                        className="text-btn"
+                        onClick={() => setCropping({ file: thumb.file, area: thumb.area })}
+                      >
+                        영역 조정
+                      </button>
+                    )}
+                    <button type="button" className="text-btn text-btn--danger" onClick={() => setThumb(null)}>
+                      지우기
+                    </button>
+                  </span>
                 )}
               </div>
               <label
-                className={`dropzone ${dragging ? "is-drag" : ""}`}
+                className={`dropzone dropzone--cover ${dragging ? "is-drag" : ""}`}
                 onDragEnter={(e) => (e.preventDefault(), setDragging(true))}
                 onDragOver={(e) => (e.preventDefault(), setDragging(true))}
                 onDragLeave={() => setDragging(false)}
@@ -328,7 +355,7 @@ function CardForm({ card, gate, onError }: FormProps) {
         <aside className="layout__side reveal" aria-label="미리보기">
           <span className="preview-label">메인에 이렇게 보여요</span>
           <div className="card" aria-hidden="true">
-            <CardCover id={card?.id ?? 1} title={title} thumbnailUrl={thumb?.url} className="card__cover card__cover--lg" />
+            <CardCover id={card?.id ?? 1} title={title} thumbnailUrl={thumb?.url} className="card__cover" />
             <div className="card__body">
               <span className="card__cat">{category}</span>
               <span className="card__title">{title.trim() || "문제 카드 이름"}</span>
@@ -339,6 +366,15 @@ function CardForm({ card, gate, onError }: FormProps) {
           </div>
         </aside>
       </div>
+      {cropping && (
+        <ImageCropModal
+          file={cropping.file}
+          aspect={THUMBNAIL_ASPECT}
+          initialArea={cropping.area}
+          onApply={applyCrop}
+          onClose={() => setCropping(null)}
+        />
+      )}
       {gate}
     </main>
   );

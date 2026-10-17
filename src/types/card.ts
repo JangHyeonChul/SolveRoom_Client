@@ -65,5 +65,8 @@ export type CardSummary = Pick<
   "id" | "title" | "category" | "thumbnailUrl" | "questionCount" | "viewCount" | "likeCount" | "createdAt"
 >;
 
+// 카드 표지(목록·문제 관리)의 가로세로 비율. 썸네일은 올릴 때 이 비율로 영역을 골라 자른다
+export const THUMBNAIL_ASPECT = 16 / 9;
+
 // 문제가 이만큼 있어야 공개할 수 있다 (서버 QuizCard.PUBLISHABLE_QUESTION_COUNT와 같은 값)
 export const PUBLIC_MIN_QUESTIONS = 5;
