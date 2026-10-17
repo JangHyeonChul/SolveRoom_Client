@@ -62,7 +62,7 @@ export function useManagedData<T>(cardId: number, load: () => Promise<T>) {
   const gate = !verified && (
     <TextInputModal
       title="비밀번호 확인"
-      description="문제 카드를 만들 때 정한 비밀번호를 입력해 주세요. 확인하면 2시간 동안 다시 묻지 않아요."
+      description="문제 카드를 만들 때 정한 비밀번호를 입력해 주세요."
       label="비밀번호"
       placeholder="문제 카드를 만들 때 정한 비밀번호"
       inputType="password"
