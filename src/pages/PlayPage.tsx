@@ -154,20 +154,18 @@ function PlayView({ cardId, sessionId, title }: { cardId: number } & PlayLocatio
       </div>
 
       {/* 문제마다 새로 그려 입력이 비고 등장 애니메이션이 다시 나온다 */}
-      <div key={question.seq} className="layout swap-in">
-        <div className="layout__main">
-          {isImage ? (
-            <div className="stage stage--play">
-              <ImageSlides images={question.imageUrls} index={imageIndex} onChange={setImageIndex} />
-            </div>
-          ) : (
-            <div className="stage stage--play stage--text">
-              <span className="stage__text">{question.text}</span>
-            </div>
-          )}
-        </div>
+      <div key={question.seq} className="play-body swap-in">
+        {isImage ? (
+          <div className="stage stage--play">
+            <ImageSlides images={question.imageUrls} index={imageIndex} onChange={setImageIndex} />
+          </div>
+        ) : (
+          <div className="stage stage--play stage--text">
+            <span className="stage__text">{question.text}</span>
+          </div>
+        )}
 
-        <section className="layout__side play-side panel" aria-label="답하기">
+        <section className="play-side panel" aria-label="답하기">
           {prompt && <p className="play__prompt">{prompt}</p>}
 
           {question.mode === "short" ? (

@@ -389,13 +389,17 @@
   .progress { flex: 1; height: 6px; border-radius: 999px; background: var(--bg-soft); overflow: hidden; }
   .progress__bar { display: block; height: 100%; border-radius: inherit; background: var(--green); transition: width .4s var(--ease); }
   .progress-count { flex: none; color: var(--ink-sub); font-weight: 600; font-size: 13px; font-variant-numeric: tabular-nums; }
-  .stage--play { height: clamp(260px, 58vh, 580px); border-radius: 12px; }
-  .stage--play.stage--text { height: auto; min-height: 260px; padding: 32px; }
+  /* 문제 아래에 답하는 칸을 둔다 */
+  .play-body { display: flex; flex-direction: column; gap: 16px; }
+  .stage--play { height: clamp(240px, 48vh, 520px); border-radius: 12px; }
+  .stage--play.stage--text { height: auto; min-height: 200px; padding: 32px; }
   .stage--play .stage__text { font-size: 20px; }
-  .play-side { flex-basis: 380px; }
-  .play-side .play__prompt { text-align: left; font-size: 16px; }
+  .play-side { display: flex; flex-direction: column; gap: 14px; }
+  .play-side .play__prompt { text-align: center; font-size: 16px; }
+  .play-side .play__choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }
   .play-side .play__choice { min-height: 48px; font-size: 15px; }
-  .play__form { display: flex; flex-direction: column; gap: 10px; }
+  .play__form { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 480px; margin: 0 auto; }
+  .play-side > .result, .play-side > .error, .play-side > .btn { width: 100%; max-width: 480px; margin: 0 auto; }
   .input--lg { height: 48px; font-size: 16px; }
   .play__skip { align-self: center; padding: 4px 8px; }
 

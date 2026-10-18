@@ -48,7 +48,7 @@ export default function Sidebar() {
     <aside className="sidebar">
       <Link to="/" className="logo">
         <span className="logo__mark">S</span>
-        <span className="logo__text">SolveRoom</span>
+        <span className="logo__text">퀴즈 체크</span>
       </Link>
 
       <RankTicker />
