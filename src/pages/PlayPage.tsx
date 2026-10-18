@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { errorMessage, hasErrorCode } from "../api/apiResponse";
 import { fetchCurrentQuestion, submitAnswer } from "../api/plays";
+import CommentSection from "../components/CommentSection";
 import ConfirmModal from "../components/ConfirmModal";
 import ImageSlides from "../components/ImageSlides";
 import type { AnswerResult, PlayLocationState, PlayQuestion } from "../types/play";
@@ -238,6 +239,9 @@ function PlayView({ cardId, sessionId, title }: { cardId: number } & PlayLocatio
           )}
         </section>
       </div>
+
+      {/* 문제 블록(key=seq) 밖에 둬서 다음 문제로 넘어가도 댓글을 다시 불러오지 않는다 */}
+      <CommentSection cardId={cardId} />
 
       {quitting && (
         <ConfirmModal

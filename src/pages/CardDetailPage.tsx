@@ -4,6 +4,7 @@ import { errorMessage, hasErrorCode } from "../api/apiResponse";
 import { startPlay } from "../api/plays";
 import { fetchCardDetail } from "../api/quizCards";
 import CardCover from "../components/CardCover";
+import CommentSection from "../components/CommentSection";
 import Icon from "../components/Icon";
 import type { CardDetail } from "../types/card";
 import type { PlayLocationState } from "../types/play";
@@ -186,6 +187,8 @@ function CardDetailView({ card }: { card: CardDetail }) {
           </section>
         </aside>
       </div>
+
+      <CommentSection cardId={card.id} />
     </main>
   );
 }
