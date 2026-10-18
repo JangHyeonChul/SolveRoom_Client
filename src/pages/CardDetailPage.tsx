@@ -109,7 +109,7 @@ function CardDetailView({ card }: { card: CardDetail }) {
 
   return (
     <main className="wrap page page--wide">
-      <div className="layout">
+      <div className="layout layout--stack">
         <article className="layout__main panel reveal">
           <div className="detail">
             <CardCover id={card.id} title={card.title} thumbnailUrl={card.thumbnailUrl} className="detail-cover" />

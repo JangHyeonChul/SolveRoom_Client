@@ -183,6 +183,9 @@
   .layout { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
   .layout__main { flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
   .layout__side { flex: 1 1 300px; position: sticky; top: 24px; display: flex; flex-direction: column; gap: 14px; }
+  /* 옆 칸을 본문 아래로 내린다 */
+  .layout--stack { flex-direction: column; align-items: stretch; }
+  .layout--stack > .layout__main, .layout--stack > .layout__side { flex: none; position: static; }
   .form-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 
   /* 패널 */
