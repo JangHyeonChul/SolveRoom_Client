@@ -73,6 +73,9 @@ export default function Sidebar() {
           <Link to="/" className="side-link" aria-current={current(isHome)}>
             홈
           </Link>
+          <Link to="/multi" className="side-link" aria-current={current(pathname.startsWith("/multi"))}>
+            멀티플레이
+          </Link>
           <Link
             to="/cards/new"
             className="side-link"

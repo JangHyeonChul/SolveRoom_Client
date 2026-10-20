@@ -7,6 +7,8 @@ import QuestionFormPage from "../pages/QuestionFormPage";
 import QuestionManagePage from "../pages/QuestionManagePage";
 import PlayPage from "../pages/PlayPage";
 import ResultPage from "../pages/ResultPage";
+import MultiLobbyPage from "../pages/MultiLobbyPage";
+import MultiRoomPage from "../pages/MultiRoomPage";
 import PlaceholderPage from "../pages/PlaceholderPage";
 import NotFoundPage from "../pages/NotFoundPage";
 
@@ -24,6 +26,8 @@ export const router = createBrowserRouter([
       { path: "/cards/:cardId/questions", element: <QuestionManagePage /> }, // M-02
       { path: "/cards/:cardId/questions/new", element: <QuestionFormPage /> }, // M-03
       { path: "/cards/:cardId/questions/:questionId/edit", element: <QuestionFormPage /> }, // M-03
+      { path: "/multi", element: <MultiLobbyPage /> }, // MP-01
+      { path: "/multi/rooms/:roomNo", element: <MultiRoomPage /> }, // MP-02
       { path: "/login", element: <PlaceholderPage screenId="A-01" title="로그인" /> },
       { path: "*", element: <NotFoundPage /> },
     ],

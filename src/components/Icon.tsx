@@ -21,6 +21,14 @@ const PATHS = {
   right: <path d="M9 6l6 6-6 6" />,
   down: <path d="M6 9l6 6 6-6" />,
   trophy: <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3" />,
+  bolt: <path d="M13 2 4 14h7l-1 8 9-12h-7z" />,
+  hash: <path d="M5 9h15M4 15h15M10 3 8 21M16 3l-2 18" />,
+  clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+  list: <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />,
+  send: <><path d="m22 2-7 20-4-9-9-4z" /><path d="M22 2 11 13" /></>,
+  crown: <path d="m3 7 5 4 4-7 4 7 5-4-2 12H5z" />,
+  link: <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" />,
+  users: <><circle cx="9" cy="8" r="4" /><path d="M2 21a7 7 0 0 1 14 0M16 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6.3" /></>,
 };
 
 export type IconName = keyof typeof PATHS;
