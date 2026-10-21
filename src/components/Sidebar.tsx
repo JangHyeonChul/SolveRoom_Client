@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type MouseEvent } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../app/auth";
 import { mockCards } from "../mocks/cards";
@@ -6,6 +6,7 @@ import { CATEGORIES } from "../types/card";
 import Icon from "./Icon";
 import Nickname from "./Nickname";
 import RankTicker from "./RankTicker";
+import { useSceneNavigate } from "./SceneRoot";
 
 // 문제 풀이 쪽 화면(카드 상세·풀이·결과)이 아니면 문제 만들기 메뉴를 켠다
 const PLAY_PATH = /^\/cards\/\d+(\/play|\/result)?$/;
@@ -17,11 +18,19 @@ const publicCount = (category = "") =>
 export default function Sidebar() {
   const { user, login, logout } = useAuth();
   const navigate = useNavigate();
+  const sceneNavigate = useSceneNavigate();
   const { pathname } = useLocation();
   const [params] = useSearchParams();
   const [keyword, setKeyword] = useState(params.get("q") ?? "");
 
   useEffect(() => setKeyword(params.get("q") ?? ""), [params]);
+
+  // 멀티플레이는 화면 전체를 바꾸며 들어간다. 새 탭 열기 같은 보조 클릭은 그대로 둔다
+  const toMulti = (e: MouseEvent) => {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    sceneNavigate("/multi");
+  };
 
   const onSearch = (e: FormEvent) => {
     e.preventDefault();
@@ -73,7 +82,7 @@ export default function Sidebar() {
           <Link to="/" className="side-link" aria-current={current(isHome)}>
             홈
           </Link>
-          <Link to="/multi" className="side-link" aria-current={current(pathname.startsWith("/multi"))}>
+          <Link to="/multi" className="side-link" onClick={toMulti}>
             멀티플레이
           </Link>
           <Link

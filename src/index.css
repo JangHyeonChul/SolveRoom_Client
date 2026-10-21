@@ -49,6 +49,12 @@
   .app-main { min-width: 0; display: flex; flex-direction: column; }
   .app-main > .footer { margin-top: auto; }
 
+  /* 장면 전환: 화면 전체 페이드 아웃 → 로딩 → 페이드 인 */
+  .scene { transition: opacity .3s var(--ease); }
+  .scene.is-out, .scene.is-loading { opacity: 0; pointer-events: none; }
+  .scene-loader { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; animation: fade-in .2s var(--ease) both; }
+  .spinner { width: 36px; height: 36px; border: 3px solid var(--line); border-top-color: var(--green); border-radius: 50%; animation: spin .8s linear infinite; }
+
   /* 사이드바 (C-01) */
   .sidebar { position: sticky; top: 0; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; padding: 18px 12px; background: var(--bg-side); border-right: 1px solid var(--line); }
   .logo { display: flex; align-items: center; gap: 8px; padding: 2px 8px; text-decoration: none; }
@@ -492,8 +498,10 @@
   .mp-info dd { margin: 0; font-weight: 600; }
 
   /* 멀티플레이 로비 (MP-01). 끄투식 한 판: 위 도구줄 · 왼쪽 접속자 · 방 목록 · 아래 내 정보와 로비 채팅 */
-  .mp-lobby-page { max-width: 1600px; padding-top: 24px; padding-bottom: 32px; }
-  .mp-lobby { display: grid; grid-template-rows: auto minmax(0, 1fr) 250px; height: max(720px, calc(100vh - 56px)); border: 1px solid var(--line); border-radius: 14px; background: var(--white); overflow: hidden; }
+  .mp-lobby-page { max-width: 1600px; height: max(820px, 100vh); gap: 12px; padding-top: 16px; padding-bottom: 32px; }
+  .mp-lobby-page__head { display: flex; align-items: center; gap: 12px; }
+  .mp-lobby-page__head h1 { font-size: 18px; }
+  .mp-lobby { flex: 1; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) 250px; border: 1px solid var(--line); border-radius: 14px; background: var(--white); overflow: hidden; }
   .mp-lobby__tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--line); background: var(--bg-side); }
   .mp-lobby__sep { width: 1px; height: 24px; margin: 0 6px; background: var(--line-strong); }
   .mp-lobby__tools .seg { align-self: center; }
@@ -622,6 +630,7 @@
 @keyframes ticker-in { from { opacity: 0; transform: translateY(100%); } }
 @keyframes ticker-out { to { opacity: 0; transform: translateY(-100%); } }
 @keyframes blink { 50% { opacity: .3; } }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* 카드 한 줄 개수: 5개 → 4개 → 3개 (640px 이하는 2개) */
 @media (max-width: 1260px) {
@@ -647,7 +656,8 @@
 
 /* 사이드바를 위로 접는 폭 */
 @media (max-width: 860px) {
-  .mp-lobby { height: auto; grid-template-rows: auto auto auto; }
+  .mp-lobby-page { height: auto; }
+  .mp-lobby { grid-template-rows: auto auto auto; }
   .mp-lobby__body, .mp-lobby__foot { grid-template-columns: minmax(0, 1fr); }
   .mp-lobby__side, .mp-me { display: none; }
   .mp-lobby__search { width: 100%; margin-left: 0; }

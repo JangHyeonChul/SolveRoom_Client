@@ -6,6 +6,7 @@ import Icon from "../components/Icon";
 import Modal from "../components/Modal";
 import MultiAvatar from "../components/MultiAvatar";
 import Nickname from "../components/Nickname";
+import { useSceneNavigate } from "../components/SceneRoot";
 import { useToast } from "../components/Toast";
 import { mockCards } from "../mocks/cards";
 import { mockLobbyChat, mockOnlineUsers, mockRooms } from "../mocks/multi";
@@ -41,6 +42,7 @@ const clock = () => {
 export default function MultiLobbyPage() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
+  const sceneNavigate = useSceneNavigate();
   const toast = useToast();
   const [filter, setFilter] = useState<Filter>("all");
   const [keyword, setKeyword] = useState("");
@@ -64,6 +66,13 @@ export default function MultiLobbyPage() {
 
   return (
     <main className="wrap page mp-lobby-page">
+      <header className="mp-lobby-page__head">
+        <button type="button" className="btn btn--outline btn--sm" onClick={() => sceneNavigate("/")}>
+          <Icon name="left" size={15} />
+          나가기
+        </button>
+        <h1 className="display">멀티플레이</h1>
+      </header>
       <div className="mp-lobby reveal">
         <div className="mp-lobby__tools">
           <button type="button" className="btn btn--primary" onClick={() => setModal({ kind: "create" })}>

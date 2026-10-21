@@ -1,4 +1,4 @@
-import { Outlet, ScrollRestoration } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 
 export default function Layout() {
@@ -14,7 +14,6 @@ export default function Layout() {
           </div>
         </footer>
       </div>
-      <ScrollRestoration />
     </div>
   );
 }
