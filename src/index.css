@@ -537,7 +537,8 @@
   .mp-me__sub { color: var(--muted); font-size: 12px; }
 
   /* 멀티플레이 방 (MP-02). 왼쪽 문제 → 타이머 → 채팅(=정답 입력), 오른쪽 참가자 */
-  .mp-room-page { gap: 16px; padding-top: 24px; }
+  /* 로비와 같은 폭·위 여백이라 나가기 버튼이 같은 자리에 온다 */
+  .mp-room-page { max-width: 1600px; gap: 16px; padding-top: 16px; }
   .mp-room__head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
   .mp-room__heading { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; }
   .mp-room__heading b { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
