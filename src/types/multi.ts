@@ -26,6 +26,15 @@ export interface OnlineUser {
   location: string; // "로비" 또는 "281번 방"
 }
 
+// 로비 접속자. 멀티 서버 LobbyUserResponse. 회원은 key가 "u{회원 id}"라 탭을 여러 개 열어도 한 번만 나온다
+export interface LobbyUser {
+  key: string;
+  nickname: string;
+  score?: number; // 비로그인 사용자는 점수가 없다
+  nicknameColor?: string;
+  admin: boolean;
+}
+
 // 로비·방 채팅 한 줄. system은 입장·정답 안내처럼 사람이 쓰지 않은 줄
 export interface ChatLine {
   id: number;

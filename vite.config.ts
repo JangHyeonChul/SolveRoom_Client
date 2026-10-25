@@ -5,7 +5,11 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
-    // Spring 서버(SolveRoom) 연결 시 사용. 현재는 목 데이터만 사용한다.
-    proxy: { "/api": "http://localhost:8080" },
+    // /api/multi는 멀티 서버(SolveRoom_Multi, 8081, 웹소켓 포함), 나머지 /api는 Spring 서버(SolveRoom, 8080).
+    // 앞에 둔 규칙부터 맞춰 보므로 /api/multi를 먼저 둔다
+    proxy: {
+      "/api/multi": { target: "http://localhost:8081", ws: true },
+      "/api": "http://localhost:8080",
+    },
   },
 });

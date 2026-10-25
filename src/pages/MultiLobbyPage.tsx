@@ -1,5 +1,6 @@
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { useLobby, type LobbyStatus } from "../api/lobby";
 import { useAuth } from "../app/auth";
 import ChatBox from "../components/ChatBox";
 import Icon from "../components/Icon";
@@ -9,14 +10,14 @@ import Nickname from "../components/Nickname";
 import { useSceneNavigate } from "../components/SceneRoot";
 import { useToast } from "../components/Toast";
 import { mockCards } from "../mocks/cards";
-import { mockLobbyChat, mockOnlineUsers, mockRooms } from "../mocks/multi";
+import { mockRooms } from "../mocks/multi";
 import {
   MAX_PLAYER_OPTIONS,
   QUESTION_COUNT_OPTIONS,
   ROOM_BADGE_LABELS,
   TIME_LIMIT_OPTIONS,
   roomBadge,
-  type ChatLine,
+  type LobbyUser,
   type Room,
   type RoomLocationState,
 } from "../types/multi";
@@ -33,20 +34,28 @@ const matches = (room: Room, filter: Filter, keyword: string) =>
   (filter === "all" || (filter === "wait" ? room.status === "wait" : isOpen(room))) &&
   (!keyword || `${room.no} ${room.title} ${room.cardTitle}`.toLowerCase().includes(keyword.toLowerCase()));
 
-const clock = () => {
-  const d = new Date();
-  return `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
+const CHAT_PLACEHOLDER: Record<LobbyStatus, string> = {
+  connecting: "로비에 연결하는 중…",
+  open: "로비 채팅",
+  reconnecting: "연결이 끊겨 다시 연결하는 중…",
 };
 
-// MP-01 멀티플레이 로비. 시안 01_Design/multi-01-lobby.html #1(끄투 정리형)을 크게 키웠다
+// 회원은 포인트가 높은 순, 게스트는 그 뒤에 들어온 순서대로
+const byScore = (a: LobbyUser, b: LobbyUser) => (b.score ?? -1) - (a.score ?? -1);
+
+// MP-01 멀티플레이 로비. 시안 01_Design/multi-01-lobby.html #1(끄투 정리형)을 크게 키웠다.
+// 접속자 목록과 채팅은 멀티 서버 웹소켓으로 받고, 방 목록은 아직 목 데이터다
 export default function MultiLobbyPage() {
-  const { user } = useAuth();
+  const { user, ready } = useAuth();
   const navigate = useNavigate();
   const sceneNavigate = useSceneNavigate();
   const toast = useToast();
   const [filter, setFilter] = useState<Filter>("all");
   const [keyword, setKeyword] = useState("");
-  const [chat, setChat] = useState<ChatLine[]>(mockLobbyChat);
+  const lobby = useLobby({ userId: user?.id, ready, onError: toast });
+  const onlineUsers = useMemo(() => [...lobby.users].sort(byScore), [lobby.users]);
+  // 게스트는 서버가 지어 준 익명 닉네임을 쓴다
+  const myNickname = user?.nickname ?? lobby.me?.nickname ?? "익명의여우";
   const [modal, setModal] = useState<{ kind: "create" | "code" } | { kind: "join"; room: Room } | null>(null);
 
   const rooms = mockRooms.filter((r) => matches(r, filter, keyword.trim()));
@@ -61,8 +70,9 @@ export default function MultiLobbyPage() {
     enter(room);
   };
 
-  const sendChat = (message: string) =>
-    setChat((lines) => [...lines, { id: Date.now(), kind: "chat", nickname: user?.nickname ?? "익명의여우", message, time: clock() }]);
+  const sendChat = (message: string) => {
+    if (!lobby.sendChat(message)) toast("로비에 다시 연결하는 중이에요. 잠시 후 보내 주세요");
+  };
 
   return (
     <main className="wrap page mp-lobby-page">
@@ -102,16 +112,16 @@ export default function MultiLobbyPage() {
         <div className="mp-lobby__body">
           <aside className="mp-lobby__side" aria-label="접속자">
             <div className="mp-lobby__head">
-              접속자 <em>{mockOnlineUsers.length}명</em>
+              접속자 <em>{onlineUsers.length}명</em>
             </div>
             <ul className="mp-users">
-              {mockOnlineUsers.map((u) => (
-                <li key={u.nickname}>
+              {onlineUsers.map((u) => (
+                <li key={u.key}>
                   <MultiAvatar name={u.nickname} size="sm" />
                   <span className="mp-users__name">
-                    <Nickname nickname={u.nickname} score={u.score} />
+                    <Nickname nickname={u.nickname} score={u.score} color={u.nicknameColor} admin={u.admin} />
                   </span>
-                  <span className="mp-users__loc">{u.location}</span>
+                  <span className="mp-users__loc">{u.key === lobby.me?.key ? "나" : "로비"}</span>
                 </li>
               ))}
             </ul>
@@ -151,7 +161,7 @@ export default function MultiLobbyPage() {
             ) : (
               <>
                 <span className="mp-avatar mp-avatar--lg mp-avatar--guest" aria-hidden="true">?</span>
-                <b>익명의여우</b>
+                <b>{myNickname}</b>
                 <span className="mp-me__sub">로그인하면 닉네임 옆에 칭호가 보여요</span>
                 <button type="button" className="btn btn--outline btn--sm" onClick={() => sceneNavigate("/login?from=/multi")}>
                   로그인
@@ -159,13 +169,13 @@ export default function MultiLobbyPage() {
               </>
             )}
           </div>
-          <ChatBox lines={chat} placeholder="로비 채팅" onSend={sendChat} />
+          <ChatBox lines={lobby.chat} placeholder={CHAT_PLACEHOLDER[lobby.status]} onSend={sendChat} disabled={lobby.status !== "open"} />
         </div>
       </div>
 
       {modal?.kind === "create" && (
         <CreateRoomModal
-          host={user?.nickname ?? "익명의여우"}
+          host={myNickname}
           onClose={() => setModal(null)}
           onCreate={(room) => enter(room, { room })}
         />
