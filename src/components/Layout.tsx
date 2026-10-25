@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Link, Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 
 export default function Layout() {
@@ -10,7 +10,12 @@ export default function Layout() {
         <footer className="footer">
           <div className="wrap footer__inner">
             <span>© 퀴즈 체크</span>
-            <span>이용약관 · 개인정보처리방침 · 문의</span>
+            <span>
+              <Link to="/terms" className="footer__link">
+                이용약관
+              </Link>{" "}
+              · 저작권 침해 신고는 문제 카드의 신고 버튼으로 받아요
+            </span>
           </div>
         </footer>
       </div>

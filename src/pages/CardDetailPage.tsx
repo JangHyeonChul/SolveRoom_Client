@@ -8,6 +8,7 @@ import CardCover from "../components/CardCover";
 import CommentSection from "../components/CommentSection";
 import Icon from "../components/Icon";
 import Nickname from "../components/Nickname";
+import ReportCardModal from "../components/ReportCardModal";
 import { useToast } from "../components/Toast";
 import type { CardDetail } from "../types/card";
 import type { PlayLocationState } from "../types/play";
@@ -81,6 +82,7 @@ function CardDetailView({ card }: { card: CardDetail }) {
   const [customInput, setCustomInput] = useState("");
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  const [reporting, setReporting] = useState(false);
 
   const custom = customInput === "" ? null : Number(customInput);
   const resolvedCount = custom ?? (count === "all" ? card.questionCount : count);
@@ -132,9 +134,14 @@ function CardDetailView({ card }: { card: CardDetail }) {
                   by <Nickname nickname={card.authorNickname} admin={card.authorAdmin} />
                 </span>
               </p>
-              <Link to={`/cards/${card.id}/questions`} className="text-btn detail__manage">
-                문제 관리
-              </Link>
+              <div className="detail__links">
+                <Link to={`/cards/${card.id}/questions`} className="text-btn detail__manage">
+                  문제 관리
+                </Link>
+                <button type="button" className="text-btn text-btn--danger" onClick={() => setReporting(true)}>
+                  신고
+                </button>
+              </div>
             </div>
           </div>
         </article>
@@ -195,6 +202,8 @@ function CardDetailView({ card }: { card: CardDetail }) {
       </div>
 
       <CommentSection cardId={card.id} />
+
+      {reporting && <ReportCardModal cardId={card.id} onClose={() => setReporting(false)} />}
     </main>
   );
 }

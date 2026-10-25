@@ -175,6 +175,11 @@ function ProfilePanel({ user }: { user: AuthUser }) {
           <dd>{user.conqueredCardIds.length}장</dd>
         </div>
       </dl>
+      {user.role === "ADMIN" && (
+        <Link to="/admin/reports" className="btn btn--outline btn--sm btn--block">
+          신고 관리
+        </Link>
+      )}
       <p className="hint">
         {next === null
           ? "가장 높은 칭호예요."

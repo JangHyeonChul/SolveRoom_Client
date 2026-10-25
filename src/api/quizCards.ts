@@ -239,3 +239,37 @@ export function setCardLike(cardId: number, liked: boolean) {
   });
 }
 
+// 문제 카드 신고 사유 (서버 CardReportReason)
+export const CARD_REPORT_REASONS = [
+  { value: "COPYRIGHT", label: "저작권 침해" },
+  { value: "INAPPROPRIATE", label: "부적절한 내용" },
+  { value: "WRONG_ANSWER", label: "정답 오류" },
+  { value: "SPAM", label: "광고·도배" },
+  { value: "ETC", label: "기타" },
+] as const;
+export type CardReportReason = (typeof CARD_REPORT_REASONS)[number]["value"];
+
+// 문제 카드 신고. 같은 사람(IP)은 한 카드에 한 번만 신고하고, 다시 하면 ALREADY_REPORTED_CARD
+export function reportCard(cardId: number, reason: CardReportReason, detail: string) {
+  return request<null>(`/api/main/quiz-cards/${cardId}/reports`, "신고", {
+    method: "POST",
+    body: { reason, detail: detail.trim() || null },
+  });
+}
+
+// 서버 CardReportResponse (관리자 신고 목록)
+export interface CardReport {
+  id: number;
+  cardId: number;
+  cardTitle: string | null;
+  cardDeleted: boolean;
+  reason: CardReportReason;
+  reasonName: string;
+  detail: string | null;
+  createdAt: string;
+}
+
+// 관리자 신고 목록. 최근 100건, 관리자가 아니면 403(ACCESS_DENIED)
+export function fetchCardReports(signal?: AbortSignal) {
+  return request<CardReport[]>("/api/admin/quiz-cards/reports", "신고 목록 조회", { signal });
+}

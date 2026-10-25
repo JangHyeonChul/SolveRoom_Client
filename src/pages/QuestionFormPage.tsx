@@ -303,6 +303,10 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
                     )}
                   </div>
                   {errors.images && <p className="error">{errors.images}</p>}
+                  <p className="hint">
+                    직접 만들었거나 쓸 권리가 있는 이미지만 올려 주세요. 권리자가 신고하면 카드를 내릴 수 있어요.{" "}
+                    <Link to="/terms">이용약관</Link>
+                  </p>
                 </div>
                 <div className="field">
                   <div className="field__row">

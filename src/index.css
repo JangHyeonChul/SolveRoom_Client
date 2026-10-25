@@ -471,6 +471,27 @@
   .like-btn[aria-pressed="true"] { color: var(--red); border-color: var(--red-line); background: var(--red-soft); }
   .like-btn:disabled { cursor: default; opacity: .7; }
 
+  /* 문제 카드 신고·이용약관·관리자 신고 목록 */
+  .detail__links { display: flex; gap: 12px; align-self: flex-start; }
+  .report-form { display: flex; flex-direction: column; gap: 14px; }
+  .report-form__reasons { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; padding: 0; border: 0; }
+  .report-form__reasons legend { width: 100%; margin-bottom: 6px; padding: 0; }
+  .report-form__reason { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; }
+  .footer__link { color: inherit; }
+  .terms { display: flex; flex-direction: column; gap: 22px; line-height: 1.75; }
+  .terms h2 { margin: 0 0 6px; font-size: 16px; }
+  .terms p, .terms ol, .terms ul { margin: 0; color: var(--ink-sub); font-size: 14px; }
+  .terms ol, .terms ul { padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+  .report-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .report-list li { display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-top: 1px solid var(--line); }
+  .report-list li:first-child { border-top: 0; }
+  .report-list li.is-done { opacity: .55; }
+  .report-list__head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .report-list__title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .report-list__time { flex: none; color: var(--muted); font-size: 12px; }
+  .report-list__detail { margin: 0; color: var(--ink-sub); font-size: 13px; white-space: pre-wrap; }
+  .report-list__actions { display: flex; gap: 12px; }
+
   /* 공통 오류 화면 */
   .error-page--full { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
   .error-page__actions { display: flex; gap: 8px; margin-top: 6px; }
