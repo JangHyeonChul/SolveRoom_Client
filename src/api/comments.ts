@@ -28,8 +28,9 @@ export async function fetchComments(cardId: number, lastId: number | null, signa
   };
 }
 
-// 로그인 연동 전이라 비회원으로만 쓴다. 닉네임은 서버가 익명인N으로 붙인다. 같은 IP는 10분에 10개까지 쓸 수 있다
-export function createComment(cardId: number, body: { content: string; password: string; parentId: number | null }) {
+// 로그인해 있으면 회원 댓글로 쓰고 password는 빼고 보낸다. 비로그인은 비밀번호가 있어야 하고 닉네임은 서버가 익명인N으로 붙인다.
+// 같은 IP는 10분에 10개까지 쓸 수 있다
+export function createComment(cardId: number, body: { content: string; password?: string; parentId: number | null }) {
   return request<Comment>(`/api/main/quiz-cards/${cardId}/comments`, "댓글 쓰기", { method: "POST", body });
 }
 
@@ -41,12 +42,16 @@ export function checkCommentPassword(commentId: number, password: string) {
   });
 }
 
-export function updateComment(commentId: number, content: string, password: string) {
+// 회원 댓글은 password 없이 로그인으로 확인한다. 남의 회원 댓글이면 403(COMMENT_NOT_OWNER)
+export function updateComment(commentId: number, content: string, password?: string) {
   return request<Comment>(commentUrl(commentId), "댓글 수정", { method: "PUT", body: { content, password } });
 }
 
-export function deleteComment(commentId: number, password: string) {
-  return request<null>(commentUrl(commentId), "댓글 삭제", { method: "DELETE", body: { password } });
+export function deleteComment(commentId: number, password?: string) {
+  return request<null>(commentUrl(commentId), "댓글 삭제", {
+    method: "DELETE",
+    body: password === undefined ? undefined : { password },
+  });
 }
 
 // 한 사람(IP)은 한 댓글에 한 번만 신고한다. 다시 하면 ALREADY_REPORTED. 5번 쌓이면 blinded가 true다

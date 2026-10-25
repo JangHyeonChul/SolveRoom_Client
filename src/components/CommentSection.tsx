@@ -8,6 +8,7 @@ import {
   reportComment,
   updateComment,
 } from "../api/comments";
+import { useAuth } from "../app/auth";
 import type { Comment } from "../types/comment";
 import { formatRelative } from "../utils/format";
 import Nickname from "./Nickname";
@@ -20,11 +21,13 @@ type LoadState =
 
 type PendingAction = { kind: "edit" | "delete"; comment: Comment };
 
-// 수정 중인 댓글. 비밀번호 확인 모달에서 받은 비밀번호를 수정 요청에 다시 보낸다
-type Editing = { id: number; password: string };
+// 수정 중인 댓글. 비회원 댓글은 비밀번호 확인 모달에서 받은 비밀번호를 수정 요청에 다시 보내고, 내 회원 댓글은 비워 둔다
+type Editing = { id: number; password?: string };
 
-// 로그인 연동 전이라 서버는 비회원 댓글만 받는다. 헤더의 목 로그인과 상관없이 늘 비밀번호로 쓰고 고친다
+// 로그인해 있으면 회원 닉네임(앞에 칭호)으로 쓰고, 내 회원 댓글은 비밀번호 없이 고치고 지운다.
+// 비로그인이면 익명인N으로 쓰고 비밀번호로 고치고 지운다
 export default function CommentSection({ cardId }: { cardId: number }) {
+  const { user } = useAuth();
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [retry, setRetry] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -81,7 +84,7 @@ export default function CommentSection({ cardId }: { cardId: number }) {
 
   // 새 댓글은 다음 페이지가 남아 있어도 바로 보이도록 목록 끝에 붙인다
   const addComment = async (content: string, password: string, parentId: number | null) => {
-    const created = await createComment(cardId, { content, password, parentId });
+    const created = await createComment(cardId, user ? { content, parentId } : { content, password, parentId });
     patch(
       (roots) =>
         parentId === null
@@ -114,6 +117,26 @@ export default function CommentSection({ cardId }: { cardId: number }) {
         )
         .filter((root) => !(root.deleted && root.replies.length === 0));
     }, -1);
+
+  const isMine = (comment: Comment) => comment.member && user !== null && comment.authorId === user.id;
+
+  // 내 회원 댓글은 비밀번호 없이 바로 고치거나 지운다
+  const startEdit = (comment: Comment) =>
+    isMine(comment) ? setEditing({ id: comment.id }) : setPending({ kind: "edit", comment });
+
+  const startDelete = async (comment: Comment) => {
+    if (!isMine(comment)) {
+      setPending({ kind: "delete", comment });
+      return;
+    }
+    if (!confirm("댓글을 삭제할까요?")) return;
+    try {
+      await deleteComment(comment.id);
+      removeComment(comment);
+    } catch (e) {
+      alert(errorMessage(e));
+    }
+  };
 
   const report = async (target: Comment) => {
     if (reportedIds.has(target.id)) {
@@ -178,10 +201,12 @@ export default function CommentSection({ cardId }: { cardId: number }) {
       comment={comment}
       isReply={isReply}
       editing={editing?.id === comment.id}
+      // 남의 회원 댓글은 고치거나 지울 수 없다
+      canManage={!comment.member || isMine(comment)}
       onReply={() => setReplyTo(replyTo === comment.id ? null : comment.id)}
       onReport={() => report(comment)}
-      onEdit={() => setPending({ kind: "edit", comment })}
-      onDelete={() => setPending({ kind: "delete", comment })}
+      onEdit={() => startEdit(comment)}
+      onDelete={() => startDelete(comment)}
       onSaveEdit={saveEdit}
       onCancelEdit={() => setEditing(null)}
     />
@@ -193,7 +218,7 @@ export default function CommentSection({ cardId }: { cardId: number }) {
         댓글 <small>{state.totalCount}개</small>
       </h2>
 
-      <CommentForm withPassword onSubmit={(content, pw) => addComment(content, pw, null)} />
+      <CommentForm withPassword={!user} onSubmit={(content, pw) => addComment(content, pw, null)} />
 
       {state.roots.length === 0 ? (
         <p className="hint py-6 text-center">첫 댓글을 남겨보세요.</p>
@@ -206,7 +231,7 @@ export default function CommentSection({ cardId }: { cardId: number }) {
                 {root.replies.map((reply) => renderItem(reply, true))}
                 {replyTo === root.id && (
                   <CommentForm
-                    withPassword
+                    withPassword={!user}
                     placeholder="답글을 입력하세요"
                     onSubmit={(content, pw) => addComment(content, pw, root.id)}
                     onCancel={() => setReplyTo(null)}
@@ -252,6 +277,7 @@ interface CommentItemProps {
   comment: Comment;
   isReply: boolean;
   editing: boolean;
+  canManage: boolean;
   onReply: () => void;
   onReport: () => void;
   onEdit: () => void;
@@ -264,6 +290,7 @@ function CommentItem({
   comment,
   isReply,
   editing,
+  canManage,
   onReply,
   onReport,
   onEdit,
@@ -278,7 +305,12 @@ function CommentItem({
   return (
     <div>
       <div className="comment__head">
-        <Nickname nickname={comment.nickname} />
+        {/* 회원 댓글은 닉네임 앞에 칭호를 붙인다 */}
+        <Nickname
+          nickname={comment.nickname}
+          score={comment.point ?? undefined}
+          color={comment.nicknameColor ?? undefined}
+        />
         <span className="comment__time">{formatRelative(comment.createdAt)}</span>
       </div>
 
@@ -308,12 +340,16 @@ function CommentItem({
               <button type="button" onClick={onReport} className="text-btn text-btn--danger">
                 신고
               </button>
-              <button type="button" onClick={onEdit} className="text-btn">
-                수정
-              </button>
-              <button type="button" onClick={onDelete} className="text-btn text-btn--danger">
-                삭제
-              </button>
+              {canManage && (
+                <>
+                  <button type="button" onClick={onEdit} className="text-btn">
+                    수정
+                  </button>
+                  <button type="button" onClick={onDelete} className="text-btn text-btn--danger">
+                    삭제
+                  </button>
+                </>
+              )}
             </>
           )}
         </div>
