@@ -15,6 +15,22 @@ export function fetchPointRanking(signal?: AbortSignal) {
   return request<PointRank[]>("/api/main/users/ranking", "랭킹 조회", { signal });
 }
 
+// 서버 MyQuizCardResponse. 회원으로 만든 카드만, 최근에 만든 것부터. 비공개 카드도 온다
+export interface MyQuizCard {
+  cardId: number;
+  title: string;
+  categoryName: string;
+  thumbnailUrl: string | null;
+  isPublic: boolean;
+  questionCount: number;
+  likeCount: number;
+  createdAt: string;
+}
+
+export function fetchMyQuizCards(signal?: AbortSignal) {
+  return request<MyQuizCard[]>("/api/main/users/me/quiz-cards", "내가 만든 카드 조회", { signal });
+}
+
 // 서버 ConqueredCardResponse. 최근에 정복한 것부터, 정복한 뒤 지운 카드는 빠진다
 export interface ConqueredCard {
   cardId: number;

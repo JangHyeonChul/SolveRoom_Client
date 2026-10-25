@@ -5,8 +5,10 @@ import {
   changeNickname,
   changeNicknameColor,
   fetchConqueredCards,
+  fetchMyQuizCards,
   fetchPointHistories,
   type ConqueredCard,
+  type MyQuizCard,
   type PointHistory,
 } from "../api/users";
 import { useAuth, type AuthUser } from "../app/auth";
@@ -23,7 +25,7 @@ const DEFAULT_COLOR = "#1d2127";
 
 type Load<T> = { status: "loading" } | { status: "error" } | { status: "done"; data: T };
 
-// U-01 마이페이지. 내 칭호·포인트, 닉네임과 닉네임 색 바꾸기, 정복한 카드, 포인트 적립 내역
+// U-01 마이페이지. 내 칭호·포인트, 닉네임과 닉네임 색 바꾸기, 내가 만든 카드, 정복한 카드, 포인트 적립 내역
 export default function MyPage() {
   const { user, ready } = useAuth();
   const location = useLocation();
@@ -42,6 +44,7 @@ export default function MyPage() {
 }
 
 function MyPageView({ user }: { user: AuthUser }) {
+  const [myCards, setMyCards] = useState<Load<MyQuizCard[]>>({ status: "loading" });
   const [cards, setCards] = useState<Load<ConqueredCard[]>>({ status: "loading" });
   const [histories, setHistories] = useState<Load<PointHistory[]>>({ status: "loading" });
 
@@ -53,6 +56,9 @@ function MyPageView({ user }: { user: AuthUser }) {
       console.error(e);
       set({ status: "error" });
     };
+    fetchMyQuizCards(controller.signal)
+      .then((data) => setMyCards({ status: "done", data }))
+      .catch(fail(setMyCards));
     fetchConqueredCards(controller.signal)
       .then((data) => setCards({ status: "done", data }))
       .catch(fail(setCards));
@@ -71,6 +77,13 @@ function MyPageView({ user }: { user: AuthUser }) {
 
       <div className="layout">
         <div className="layout__main mypage__main">
+          <section className="panel reveal" aria-labelledby="my-cards-title">
+            <h2 className="panel__title" id="my-cards-title">
+              내가 만든 문제 카드 {myCards.status === "done" && <small>{myCards.data.length}장</small>}
+            </h2>
+            <MyQuizCards state={myCards} />
+          </section>
+
           <section className="panel reveal" aria-labelledby="conquered-title">
             <h2 className="panel__title" id="conquered-title">
               정복한 카드 {cards.status === "done" && <small>{cards.data.length}장</small>}
@@ -130,7 +143,7 @@ function ProfilePanel({ user }: { user: AuthUser }) {
         {next === null
           ? "가장 높은 칭호예요."
           : `다음 칭호까지 ${(next - user.score).toLocaleString()}P 남았어요.`}{" "}
-        모두 풀기로 카드의 문제를 모두 맞히면 처음 한 번 +20P를 받아요.
+        로그인하고 풀면 맞힌 문제마다 +1P, 모두 풀기로 다 맞혀 처음 정복하면 +20P를 더 받아요.
       </p>
     </section>
   );
@@ -262,6 +275,50 @@ function NicknameColorPanel({ user }: { user: AuthUser }) {
         </p>
       </div>
     </section>
+  );
+}
+
+// 비공개 카드는 상세 화면이 없어 문제 관리 화면으로 보낸다
+function MyQuizCards({ state }: { state: Load<MyQuizCard[]> }) {
+  if (state.status === "loading") return <p className="hint">불러오고 있어요.</p>;
+  if (state.status === "error") return <p className="error">내가 만든 카드를 불러오지 못했어요.</p>;
+  if (state.data.length === 0) {
+    return (
+      <div className="empty">
+        <span className="empty__title">아직 만든 문제 카드가 없어요</span>
+        <span>로그인한 채로 만든 카드가 여기에 모여요.</span>
+        <Link to="/cards/new" className="btn btn--outline btn--sm">
+          문제 만들기
+        </Link>
+      </div>
+    );
+  }
+  return (
+    <ul className="mypage-cards">
+      {state.data.map((card) => (
+        <li key={card.cardId}>
+          <Link to={card.isPublic ? `/cards/${card.cardId}` : `/cards/${card.cardId}/questions`} className="mypage-card">
+            <CardCover
+              id={card.cardId}
+              title={card.title}
+              thumbnailUrl={card.thumbnailUrl ?? undefined}
+              className="mypage-card__cover"
+            >
+              {!card.isPublic && <span className="badge badge--gray card__tag">비공개</span>}
+            </CardCover>
+            <span className="mypage-card__body">
+              <span className="mypage-card__title">{card.title}</span>
+              <span className="mypage-card__meta">
+                {card.categoryName} · {card.questionCount}문제 · 좋아요 {card.likeCount}
+              </span>
+            </span>
+          </Link>
+          <Link to={`/cards/${card.cardId}/questions`} className="text-btn mypage-card__manage">
+            문제 관리
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }
 

@@ -63,8 +63,8 @@ function ResultView({ initial, sessionId }: { initial: PlayResult; sessionId: st
 
   // 이번 판으로 포인트를 받았으면 사이드바의 포인트·정복 수와 목록의 정복 표시를 새로 읽는다
   useEffect(() => {
-    if (initial.earnedPoint > 0) void reloadMe();
-  }, [initial.earnedPoint, reloadMe]);
+    if (initial.playPoint + initial.conquestPoint > 0) void reloadMe();
+  }, [initial.playPoint, initial.conquestPoint, reloadMe]);
   const [nickname, setNickname] = useState("");
   const [nicknameError, setNicknameError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -86,19 +86,6 @@ function ResultView({ initial, sessionId }: { initial: PlayResult; sessionId: st
           mine: true,
         }
       : null;
-
-  // 회원 판은 닉네임을 묻지 않고 회원 닉네임으로 바로 등록한다
-  const registerAsMember = async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      setResult(await registerRanking(sessionId));
-    } catch (err) {
-      setNicknameError(errorMessage(err));
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const register = async (e: FormEvent) => {
     e.preventDefault();
@@ -193,19 +180,15 @@ function ResultView({ initial, sessionId }: { initial: PlayResult; sessionId: st
               <div className="callout callout--green" role="status">
                 <Icon name="trophy" size={20} strokeWidth={2.2} />
                 <span>
-                  <b>{result.myRank}위</b>로 랭킹에 등록했어요
+                  <b>{result.myRank}위</b>로 랭킹에 {result.memberPlay ? "올랐어요" : "등록했어요"}
                 </span>
               </div>
             ) : result.memberPlay ? (
-              <div className="flex flex-col gap-2">
-                <span className="label">
-                  <b>{result.nickname}</b> 닉네임으로 랭킹에 등록해요
-                </span>
-                {nicknameError && <p className="error">{nicknameError}</p>}
-                <button type="button" className="btn btn--primary btn--block" disabled={busy} onClick={registerAsMember}>
-                  랭킹 등록
-                </button>
-              </div>
+              // 회원은 다 풀면 자동으로 오르고, 더 높은 기존 기록이 있으면 그 기록을 둔다
+              <p className="hint">
+                기존 최고 기록 <b>{result.bestScore}점</b>
+                {result.bestRank !== null && ` (${result.bestRank}위)`}이 더 높아 랭킹은 그대로예요.
+              </p>
             ) : (
               <form className="flex flex-col gap-2" onSubmit={register} noValidate>
                 <label className="label" htmlFor="ranking-nickname">
@@ -275,20 +258,31 @@ function RankItem({ row }: { row: RankingRow }) {
   );
 }
 
-// 카드 정복과 포인트 안내. 회원이 모두 풀기로 모두 맞히면 처음 한 번만 +20P를 받는다
+// 포인트 안내. 회원은 맞힌 문제마다 +1P, 모두 풀기로 모두 맞혀 처음 정복하면 +20P를 더 받는다
 function ConquestNotice({ result, loggedIn }: { result: PlayResult; loggedIn: boolean }) {
-  if (result.earnedPoint > 0) {
-    return (
-      <div className="callout callout--gold" role="status">
-        <Icon name="crown" size={20} strokeWidth={2.2} />
-        <span>
-          카드 정복! <b>+{result.earnedPoint}P</b>를 받았어요
-        </span>
-      </div>
-    );
-  }
-  if (result.conquered) return <p className="hint">이미 정복한 카드예요. 다시 정복해도 포인트는 한 번만 받아요.</p>;
-  if (!loggedIn) return <p className="hint">로그인하고 모두 풀기로 다 맞히면 카드를 정복하고 포인트를 받아요.</p>;
-  if (!result.playAll) return <p className="hint">모두 풀기로 다 맞히면 카드를 정복하고 포인트를 받아요.</p>;
-  return null;
+  if (!loggedIn) return <p className="hint">로그인하고 풀면 맞힌 문제마다 포인트를 받고 랭킹에 자동으로 올라가요.</p>;
+  const total = result.playPoint + result.conquestPoint;
+  return (
+    <>
+      {result.conquestPoint > 0 ? (
+        <div className="callout callout--gold" role="status">
+          <Icon name="crown" size={20} strokeWidth={2.2} />
+          <span>
+            카드 정복! <b>+{total}P</b>를 받았어요 (정복 +{result.conquestPoint}, 문제 풀이 +{result.playPoint})
+          </span>
+        </div>
+      ) : (
+        total > 0 && (
+          <div className="callout callout--gold" role="status">
+            <Icon name="bolt" size={20} strokeWidth={2.2} />
+            <span>
+              문제 풀이로 <b>+{total}P</b>를 받았어요
+            </span>
+          </div>
+        )
+      )}
+      {result.conquestPoint === 0 && result.conquered && <p className="hint">이미 정복한 카드예요. 정복 포인트는 한 번만 받아요.</p>}
+      {!result.conquered && !result.playAll && <p className="hint">모두 풀기로 다 맞히면 카드를 정복하고 +20P를 더 받아요.</p>}
+    </>
+  );
 }

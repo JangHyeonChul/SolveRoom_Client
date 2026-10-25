@@ -43,7 +43,12 @@ export interface PlayResult {
   ranking: RankingRow[];
   playAll: boolean; // 모두 풀기로 시작한 판. 다시 풀기도 모두 풀기로 시작한다
   conquered: boolean; // 로그인 회원이 이 카드를 정복했는지(이번 판이든 전이든)
-  earnedPoint: number; // 이번 판으로 처음 정복해 받은 포인트. 못 받았으면 0
+  playPoint: number; // 이번 판으로 받은 풀이 포인트(회원, 맞힌 문제마다 +1)
+  conquestPoint: number; // 이번 판으로 처음 정복해 받은 포인트. 못 받았으면 0
+  // 회원 판은 다 풀면 자동으로 랭킹에 오르고 카드마다 가장 높은 기록 하나만 남는다.
+  // 기존 기록이 더 높아 이번 판이 오르지 않았으면 그 기록의 점수와 순위다
+  bestScore: number | null;
+  bestRank: number | null;
 }
 
 // 카드 상세(Q-01) → 풀이(Q-03) → 결과(Q-05)로 넘기는 값.

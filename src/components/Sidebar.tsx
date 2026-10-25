@@ -136,7 +136,6 @@ export default function Sidebar() {
         {user ? (
           <>
             <Link to="/me" className="side-me__link" aria-current={current(pathname === "/me")} title="마이페이지">
-              <span className="avatar">{user.nickname.slice(0, 1)}</span>
               <span className="side-me__info">
                 <Nickname
                   nickname={user.nickname}
@@ -145,9 +144,7 @@ export default function Sidebar() {
                   admin={user.role === "ADMIN"}
                   badgeAfter
                 />
-                <span className="side-me__sub">
-                  {user.score.toLocaleString()}P · 정복 {user.conqueredCardIds.length}장
-                </span>
+                <span className="side-me__sub">{user.score.toLocaleString()}P</span>
               </span>
             </Link>
             <button type="button" onClick={onLogout} className="account__logout">
