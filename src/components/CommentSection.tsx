@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { errorMessage, hasErrorCode } from "../api/apiResponse";
 import {
   checkCommentPassword,
@@ -13,25 +13,31 @@ import type { Comment } from "../types/comment";
 import { formatRelative } from "../utils/format";
 import Nickname from "./Nickname";
 import ConfirmModal from "./ConfirmModal";
+import Icon from "./Icon";
 import TextInputModal from "./TextInputModal";
 
 type LoadState =
   | { status: "loading" }
   | { status: "error" }
-  | { status: "done"; totalCount: number; roots: Comment[]; nextLastId: number | null };
+  | { status: "done"; totalCount: number; roots: Comment[]; totalPages: number };
+
+// 페이지 번호를 한 번에 몇 개까지 보일지
+const PAGER_WINDOW = 5;
 
 type PendingAction = { kind: "edit" | "delete"; comment: Comment };
 
 // 수정 중인 댓글. 비회원 댓글은 비밀번호 확인 모달에서 받은 비밀번호를 수정 요청에 다시 보내고, 내 회원 댓글은 비워 둔다
 type Editing = { id: number; password?: string };
 
-// 댓글은 최신순, 답글은 등록순이다. 로그인해 있으면 회원 닉네임(앞에 칭호)으로 쓰고, 내 회원 댓글은 비밀번호 없이 고치고 지운다.
+// 댓글은 최신순으로 10개씩 페이지를 나누고, 답글은 등록순이다. 로그인해 있으면 회원 닉네임(앞에 칭호)으로 쓰고, 내 회원 댓글은 비밀번호 없이 고치고 지운다.
 // 비로그인이면 익명인N으로 쓰고 비밀번호로 고치고 지운다. 관리자는 모든 댓글을 비밀번호 없이 지운다
 export default function CommentSection({ cardId }: { cardId: number }) {
   const { user } = useAuth();
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [retry, setRetry] = useState(0);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [paging, setPaging] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
   const [replyTo, setReplyTo] = useState<number | null>(null);
   const [editing, setEditing] = useState<Editing | null>(null);
   const [reportedIds, setReportedIds] = useState<Set<number>>(new Set());
@@ -40,17 +46,29 @@ export default function CommentSection({ cardId }: { cardId: number }) {
   const [confirmDelete, setConfirmDelete] = useState<Comment | null>(null);
   const isAdmin = user?.role === "ADMIN";
 
+  // 페이지를 옮기는 동안은 보던 목록을 그대로 두고, 다 읽으면 바꾼다
   useEffect(() => {
     const controller = new AbortController();
-    fetchComments(cardId, null, controller.signal)
-      .then((page) => setState({ status: "done", ...page, roots: page.comments }))
+    setPaging(true);
+    fetchComments(cardId, page, controller.signal)
+      .then((data) =>
+        setState({ status: "done", totalCount: data.totalCount, roots: data.comments, totalPages: data.totalPages }),
+      )
       .catch((e) => {
         if (controller.signal.aborted) return;
         console.error(e);
         setState({ status: "error" });
-      });
+      })
+      .finally(() => !controller.signal.aborted && setPaging(false));
     return () => controller.abort();
-  }, [cardId, retry]);
+  }, [cardId, page, retry]);
+
+  const goPage = (next: number) => {
+    setReplyTo(null);
+    setEditing(null);
+    setPage(next);
+    sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   // 불러온 목록을 고친다. 개수 변화(delta)는 제목의 "댓글 N개"에 더한다
   const patch = (change: (roots: Comment[]) => Comment[], delta = 0) =>
@@ -67,35 +85,18 @@ export default function CommentSection({ cardId }: { cardId: number }) {
       ),
     );
 
-  const loadMore = async () => {
-    if (state.status !== "done" || state.nextLastId === null || loadingMore) return;
-    setLoadingMore(true);
-    try {
-      const page = await fetchComments(cardId, state.nextLastId);
-      setState((prev) => {
-        if (prev.status !== "done") return prev;
-        // 더 오래된 댓글을 아래에 붙인다. 그사이 쓴 댓글과 겹치지 않게 뺀다
-        const known = new Set(prev.roots.map((c) => c.id));
-        const added = page.comments.filter((c) => !known.has(c.id));
-        return { status: "done", totalCount: page.totalCount, nextLastId: page.nextLastId, roots: [...prev.roots, ...added] };
-      });
-    } catch (e) {
-      alert(errorMessage(e));
-    } finally {
-      setLoadingMore(false);
-    }
-  };
-
-  // 새 댓글은 최신순이라 맨 위에, 새 답글은 그 댓글의 답글 끝에 붙인다
+  // 새 댓글은 최신순이라 첫 페이지 맨 위에 오므로 첫 페이지를 다시 읽는다. 새 답글은 그 댓글의 답글 끝에 붙인다
   const addComment = async (content: string, password: string, parentId: number | null) => {
     const created = await createComment(cardId, user ? { content, parentId } : { content, password, parentId });
-    patch(
-      (roots) =>
-        parentId === null
-          ? [created, ...roots]
-          : roots.map((root) => (root.id === parentId ? { ...root, replies: [...root.replies, created] } : root)),
-      1,
-    );
+    if (parentId === null) {
+      setPage(1);
+      setRetry((n) => n + 1);
+    } else {
+      patch(
+        (roots) => roots.map((root) => (root.id === parentId ? { ...root, replies: [...root.replies, created] } : root)),
+        1,
+      );
+    }
     setReplyTo(null);
   };
 
@@ -169,7 +170,7 @@ export default function CommentSection({ cardId }: { cardId: number }) {
 
   if (state.status !== "done") {
     return (
-      <section className="panel reveal" aria-labelledby="comment-title">
+      <section className="panel comments-panel reveal" aria-labelledby="comment-title">
         <h2 className="panel__title" id="comment-title">
           댓글
         </h2>
@@ -215,7 +216,7 @@ export default function CommentSection({ cardId }: { cardId: number }) {
   );
 
   return (
-    <section className="panel reveal" aria-labelledby="comment-title">
+    <section ref={sectionRef} className="panel comments-panel reveal" aria-labelledby="comment-title">
       <h2 className="panel__title" id="comment-title">
         댓글 <small>{state.totalCount}개</small>
       </h2>
@@ -225,7 +226,7 @@ export default function CommentSection({ cardId }: { cardId: number }) {
       {state.roots.length === 0 ? (
         <p className="hint py-6 text-center">첫 댓글을 남겨보세요.</p>
       ) : (
-        <ul className="comment-list">
+        <ul className="comment-list" aria-busy={paging}>
           {state.roots.map((root) => (
             <li key={root.id} className="comment">
               {renderItem(root, false)}
@@ -245,10 +246,8 @@ export default function CommentSection({ cardId }: { cardId: number }) {
         </ul>
       )}
 
-      {state.nextLastId !== null && (
-        <button type="button" onClick={loadMore} disabled={loadingMore} className="btn btn--outline btn--sm btn--block">
-          {loadingMore ? "불러오고 있어요..." : "댓글 더 보기"}
-        </button>
+      {state.totalPages > 1 && (
+        <Pager page={page} totalPages={state.totalPages} disabled={paging} onChange={goPage} />
       )}
 
       {pending && (
@@ -287,6 +286,56 @@ export default function CommentSection({ cardId }: { cardId: number }) {
         />
       )}
     </section>
+  );
+}
+
+// 댓글 페이지 번호. 지금 페이지를 가운데 두고 최대 PAGER_WINDOW개를 보인다
+function Pager({
+  page,
+  totalPages,
+  disabled,
+  onChange,
+}: {
+  page: number;
+  totalPages: number;
+  disabled: boolean;
+  onChange: (page: number) => void;
+}) {
+  const start = Math.max(1, Math.min(page - Math.floor(PAGER_WINDOW / 2), totalPages - PAGER_WINDOW + 1));
+  const pages = Array.from({ length: Math.min(PAGER_WINDOW, totalPages) }, (_, i) => start + i);
+  return (
+    <nav className="pager" aria-label="댓글 페이지">
+      <button
+        type="button"
+        className="pager__btn"
+        disabled={disabled || page === 1}
+        onClick={() => onChange(page - 1)}
+        aria-label="이전 페이지"
+      >
+        <Icon name="left" size={14} strokeWidth={2.6} />
+      </button>
+      {pages.map((n) => (
+        <button
+          key={n}
+          type="button"
+          className="pager__btn"
+          aria-current={n === page ? "page" : undefined}
+          disabled={disabled}
+          onClick={() => n !== page && onChange(n)}
+        >
+          {n}
+        </button>
+      ))}
+      <button
+        type="button"
+        className="pager__btn"
+        disabled={disabled || page === totalPages}
+        onClick={() => onChange(page + 1)}
+        aria-label="다음 페이지"
+      >
+        <Icon name="right" size={14} strokeWidth={2.6} />
+      </button>
+    </nav>
   );
 }
 

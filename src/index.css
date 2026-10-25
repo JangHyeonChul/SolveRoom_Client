@@ -422,6 +422,8 @@
   .progress-count { flex: none; color: var(--ink-sub); font-weight: 600; font-size: 13px; font-variant-numeric: tabular-nums; }
   /* 문제 아래에 답하는 칸을 둔다 */
   .play-body { display: flex; flex-direction: column; gap: 16px; }
+  /* 풀이 화면에서 문제 블록을 하나의 틀로 묶어 아래 댓글과 구분한다 */
+  .play-body { padding: 16px; border: 2px solid var(--green-line); border-radius: 14px; background: var(--white); box-shadow: 0 6px 20px rgba(47, 158, 68, .06); }
   .stage--play { height: clamp(240px, 48vh, 520px); border-radius: 12px; }
   .stage--play.stage--text { height: auto; min-height: 200px; padding: 32px; }
   .stage--play .stage__text { font-size: 20px; }
@@ -524,7 +526,16 @@
   .comment-form__guest .input { width: 130px; margin-left: auto; }
   .comment-form__actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
   .comment-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-  .comment { padding: 12px 14px; border-radius: 8px; background: var(--bg-soft); }
+  .comment { padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); }
+  /* 댓글 영역은 회색 바탕과 위쪽 구분선으로 문제·카드 영역과 나눈다 */
+  .comments-panel { position: relative; margin-top: 28px; background: var(--bg-soft); border-color: var(--line); }
+  .comments-panel::before { content: ""; position: absolute; top: -15px; left: 0; right: 0; border-top: 1px dashed var(--line-strong); }
+  .comment-list[aria-busy="true"] { opacity: .6; transition: opacity .15s; }
+  .pager { display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; }
+  .pager__btn { min-width: 32px; height: 32px; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--white); color: var(--ink-sub); font: inherit; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; cursor: pointer; transition: border-color .15s, background-color .15s, color .15s; }
+  .pager__btn:hover:not(:disabled) { border-color: #9aa0a7; }
+  .pager__btn:disabled { cursor: default; opacity: .45; }
+  .pager__btn[aria-current="page"] { border-color: var(--green); background: var(--green); color: var(--white); opacity: 1; }
   .comment__head { display: flex; align-items: center; gap: 6px; font-size: 13px; }
   .comment__time { font-size: 12px; color: var(--muted); }
   .comment__body { margin: 4px 0 0; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }

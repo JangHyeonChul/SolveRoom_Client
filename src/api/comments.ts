@@ -2,31 +2,21 @@ import type { Comment } from "../types/comment";
 import { readApiResponse } from "./apiResponse";
 import { request } from "./request";
 
-// 서버 CommentListResponse. totalCount는 제목의 "댓글 N개"(지우지 않은 댓글과 답글 수)다
-interface CommentListResponse {
-  totalCount: number;
-  comments: Comment[];
-}
-
+// 서버 CommentListResponse. totalCount는 제목의 "댓글 N개"(지우지 않은 댓글과 답글 수)다.
+// page는 1부터, totalPages는 댓글(답글 제외) 10개씩 나눈 페이지 수이고 댓글이 없으면 0이다
 export interface CommentPage {
   totalCount: number;
+  page: number;
+  totalPages: number;
   comments: Comment[];
-  nextLastId: number | null; // 마지막 페이지면 null
 }
 
 const commentUrl = (commentId: number) => `/api/main/comments/${commentId}`;
 
-// 카드 상세 아래 댓글. 댓글을 최신순으로 한 페이지(20개) 읽고, 답글은 댓글마다 등록순으로 모두 붙어 온다.
-// lastId를 주면 그보다 오래된 댓글을 읽는다
-export async function fetchComments(cardId: number, lastId: number | null, signal?: AbortSignal): Promise<CommentPage> {
-  const params = lastId === null ? "" : `?lastId=${lastId}`;
-  const res = await fetch(`/api/main/quiz-cards/${cardId}/comments${params}`, { signal });
-  const { data, pageInfo } = await readApiResponse<CommentListResponse>(res, "댓글 조회");
-  return {
-    totalCount: data.totalCount,
-    comments: data.comments,
-    nextLastId: pageInfo?.hasNext ? pageInfo.lastId : null,
-  };
+// 카드 상세 아래 댓글. 댓글을 최신순으로 한 페이지(10개) 읽고, 답글은 댓글마다 등록순으로 모두 붙어 온다
+export async function fetchComments(cardId: number, page: number, signal?: AbortSignal): Promise<CommentPage> {
+  const res = await fetch(`/api/main/quiz-cards/${cardId}/comments?page=${page}`, { signal });
+  return (await readApiResponse<CommentPage>(res, "댓글 조회")).data;
 }
 
 // 로그인해 있으면 회원 댓글로 쓰고 password는 빼고 보낸다. 비로그인은 비밀번호가 있어야 하고 닉네임은 서버가 익명인N으로 붙인다.
