@@ -469,6 +469,13 @@
   .like-btn[aria-pressed="true"] { color: var(--red); border-color: var(--red-line); background: var(--red-soft); }
   .like-btn:disabled { cursor: default; opacity: .7; }
 
+  /* 공통 오류 화면 */
+  .error-page--full { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
+  .error-page__actions { display: flex; gap: 8px; margin-top: 6px; }
+  .error-page__detail { max-width: 100%; margin-top: 4px; color: var(--muted); font-size: 12px; }
+  .error-page__detail summary { cursor: pointer; }
+  .error-page__detail code { display: block; margin-top: 6px; padding: 8px 10px; border-radius: 6px; background: var(--bg-soft); white-space: pre-wrap; word-break: break-all; text-align: left; }
+
   /* U-01 마이페이지 */
   .mypage__main, .mypage__side { display: flex; flex-direction: column; gap: 16px; }
   .mypage-profile__head { display: flex; align-items: center; gap: 12px; }
