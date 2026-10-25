@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { accessToken, refreshAccessToken } from "../api/accessToken";
-import { fetchMyInfo, logout as requestLogout, type MyInfoResponse } from "../api/auth";
+import { fetchMyInfo, logout as requestLogout, type MyInfoResponse, type UserRole } from "../api/auth";
 
 // 로그인한 회원. 소셜 로그인(카카오·Google)으로 들어오고, 액세스 토큰은 api/accessToken이 들고 있다
 export interface AuthUser {
@@ -8,6 +8,7 @@ export interface AuthUser {
   nickname: string;
   score: number;
   nicknameColor?: string;
+  role: UserRole;
   // 카드 정복 기록은 아직 서버에 없어 늘 비어 있다
   conqueredCardIds: number[];
 }
@@ -30,6 +31,7 @@ const toUser = (me: MyInfoResponse): AuthUser => ({
   nickname: me.nickname,
   score: me.point,
   nicknameColor: me.nicknameColor ?? undefined,
+  role: me.role,
   conqueredCardIds: [],
 });
 

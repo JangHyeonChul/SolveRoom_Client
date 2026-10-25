@@ -66,6 +66,9 @@
   .ticker { display: flex; flex-direction: column; gap: 6px; }
   .ticker__box { display: flex; align-items: center; gap: 8px; width: 100%; height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: border-color .15s; }
   .ticker__box:hover { border-color: var(--line-strong); }
+  .ticker__box--static { cursor: default; }
+  .ticker__box--static:hover { border-color: var(--line); }
+  .ticker__empty { color: var(--muted); }
   .ticker__label { flex: none; display: inline-flex; padding-right: 8px; border-right: 1px solid var(--line); color: #b0841f; }
   .ticker__window { position: relative; flex: 1; min-width: 0; height: 20px; overflow: hidden; }
   .ticker__window .ticker__row { position: absolute; inset: 0; }
@@ -460,6 +463,10 @@
   .detail-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; color: var(--muted); font-size: 13px; }
   .detail-meta span { display: inline-flex; align-items: center; gap: 4px; }
   .detail__manage { align-self: flex-start; text-decoration: none; }
+  .like-btn { display: inline-flex; align-items: center; gap: 4px; height: 24px; margin: -2px 0; padding: 0 9px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--white); color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; transition: color .15s, border-color .15s, background-color .15s; }
+  .like-btn:hover { color: var(--red); border-color: var(--red-line); }
+  .like-btn[aria-pressed="true"] { color: var(--red); border-color: var(--red-line); background: var(--red-soft); }
+  .like-btn:disabled { cursor: default; opacity: .7; }
   .count-input { width: 110px; height: 32px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--white); padding: 0 14px; font: inherit; font-weight: 500; font-size: 13px; color: var(--ink); transition: border-color .15s, background-color .15s; }
   .count-input:focus { outline: none; border-color: var(--green); box-shadow: var(--focus-ring); }
   .count-input.is-active { border-color: var(--ink); background: var(--ink); color: var(--white); }
@@ -689,6 +696,9 @@
   .ticker { display: flex; flex-direction: column; gap: 6px; }
   .ticker__box { display: flex; align-items: center; gap: 8px; width: 100%; height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: border-color .15s; }
   .ticker__box:hover { border-color: var(--line-strong); }
+  .ticker__box--static { cursor: default; }
+  .ticker__box--static:hover { border-color: var(--line); }
+  .ticker__empty { color: var(--muted); }
   .ticker__label { flex: none; display: inline-flex; padding-right: 8px; border-right: 1px solid var(--line); color: #b0841f; }
   .ticker__window { position: relative; flex: 1; min-width: 0; height: 20px; overflow: hidden; }
   .ticker__window .ticker__row { position: absolute; inset: 0; }

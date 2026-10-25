@@ -209,3 +209,48 @@ export async function deleteQuizCard(cardId: number) {
   await request<null>(`/api/main/quiz-cards/${cardId}`, "문제 카드 삭제", { method: "DELETE", manageCardId: cardId });
   manageTokens.remove(cardId);
 }
+
+// 관리자 본인 확인. 비밀번호 없이 관리 토큰을 받아 남의 카드도 관리·삭제한다. 관리자가 아니면 403(ACCESS_DENIED)
+export async function issueAdminManageToken(cardId: number) {
+  const data = await request<ManageTokenResponse>(`/api/admin/quiz-cards/${cardId}/manage-token`, "관리자 확인", {
+    method: "POST",
+  });
+  manageTokens.save(cardId, data.manageToken, data.expiresAt);
+}
+
+// 서버 CardLikeResponse. 비로그인이면 liked는 늘 false다
+export interface CardLike {
+  liked: boolean;
+  likeCount: number;
+}
+
+// 좋아요 상태. 상세 화면이 로그인 확인보다 먼저 뜰 수 있어 상세 조회와 따로 묻는다
+export function fetchCardLike(cardId: number, signal?: AbortSignal) {
+  return request<CardLike>(`/api/main/quiz-cards/${cardId}/like`, "좋아요 조회", { signal });
+}
+
+// 좋아요·취소는 로그인해야 한다. 이미 눌렀거나 누르지 않은 상태로 다시 보내도 수는 한 번만 바뀐다
+export function setCardLike(cardId: number, liked: boolean) {
+  return request<CardLike>(`/api/main/quiz-cards/${cardId}/like`, liked ? "좋아요" : "좋아요 취소", {
+    method: liked ? "PUT" : "DELETE",
+  });
+}
+
+// 서버 CategoryCountResponse. 모든 카테고리가 서버 enum 순서대로 온다
+interface CategoryCountResponse {
+  cardCategory: string;
+  categoryName: string;
+  cardCount: number;
+}
+
+// 사이드바 카테고리별 공개 카드 수. 화면 이름(게임 등)을 키로 바꿔 준다
+export async function fetchCategoryCounts(signal?: AbortSignal) {
+  const data = await request<CategoryCountResponse[]>("/api/main/quiz-cards/category-counts", "카테고리 조회", {
+    signal,
+  });
+  const counts: Partial<Record<Category, number>> = {};
+  data.forEach((c) => {
+    if (isCategory(c.categoryName)) counts[c.categoryName] = c.cardCount;
+  });
+  return counts;
+}

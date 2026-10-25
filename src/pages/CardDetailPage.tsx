@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { errorMessage, hasErrorCode } from "../api/apiResponse";
 import { startPlay } from "../api/plays";
-import { fetchCardDetail } from "../api/quizCards";
+import { fetchCardDetail, fetchCardLike, setCardLike, type CardLike } from "../api/quizCards";
+import { useAuth } from "../app/auth";
 import CardCover from "../components/CardCover";
 import CommentSection from "../components/CommentSection";
 import Icon from "../components/Icon";
+import { useToast } from "../components/Toast";
 import type { CardDetail } from "../types/card";
 import type { PlayLocationState } from "../types/play";
 import { formatCount } from "../utils/format";
@@ -124,6 +126,7 @@ function CardDetailView({ card }: { card: CardDetail }) {
                   <Icon name="eye" size={14} strokeWidth={2.5} />
                   {formatCount(card.viewCount)}
                 </span>
+                <LikeButton cardId={card.id} initialCount={card.likeCount} />
                 <span>by {card.authorNickname}</span>
               </p>
               <Link to={`/cards/${card.id}/questions`} className="text-btn detail__manage">
@@ -190,5 +193,55 @@ function CardDetailView({ card }: { card: CardDetail }) {
 
       <CommentSection cardId={card.id} />
     </main>
+  );
+}
+
+// 좋아요 토글. 로그인 회원만 누를 수 있고, 비로그인이면 로그인 화면으로 보낸다.
+// 내가 눌렀는지는 로그인 상태를 확인한 뒤 따로 읽는다(상세 조회가 먼저 끝날 수 있다)
+function LikeButton({ cardId, initialCount }: { cardId: number; initialCount: number }) {
+  const { user, ready } = useAuth();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const toast = useToast();
+  const [like, setLike] = useState<CardLike>({ liked: false, likeCount: initialCount });
+  const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    if (!ready) return;
+    const controller = new AbortController();
+    fetchCardLike(cardId, controller.signal)
+      .then(setLike)
+      .catch((e) => !controller.signal.aborted && console.error(e));
+    return () => controller.abort();
+  }, [cardId, ready, user?.id]);
+
+  const toggle = async () => {
+    if (!user) {
+      navigate("/login", { state: { from: pathname } });
+      return;
+    }
+    setPending(true);
+    try {
+      setLike(await setCardLike(cardId, !like.liked));
+    } catch (e) {
+      toast(errorMessage(e));
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      className="like-btn"
+      aria-pressed={like.liked}
+      aria-label={`좋아요 ${like.likeCount}개${like.liked ? ", 누름" : ""}`}
+      title={user ? undefined : "로그인하면 좋아요를 누를 수 있어요"}
+      disabled={pending}
+      onClick={toggle}
+    >
+      <Icon name="heart" size={14} strokeWidth={2.5} fill={like.liked ? "currentColor" : "none"} />
+      {formatCount(like.likeCount)}
+    </button>
   );
 }

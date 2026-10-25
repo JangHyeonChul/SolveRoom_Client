@@ -11,7 +11,11 @@ export interface MyInfoResponse {
   nickname: string;
   point: number;
   nicknameColor: string | null;
+  role: UserRole;
 }
+
+// 서버 UserRole. ADMIN은 남의 문제 카드도 관리·삭제할 수 있다
+export type UserRole = "USER" | "ADMIN";
 
 // 소셜 로그인(A-01). 서버(Spring Security)가 카카오·Google 로그인 화면으로 보내고,
 // 끝나면 리프레시 토큰 쿠키를 준 뒤 /login/callback으로 돌려보낸다

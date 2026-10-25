@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent, type MouseEvent } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { fetchCategoryCounts } from "../api/quizCards";
 import { useAuth } from "../app/auth";
-import { mockCards } from "../mocks/cards";
-import { CATEGORIES } from "../types/card";
+import { CATEGORIES, type Category } from "../types/card";
 import Icon from "./Icon";
 import Nickname from "./Nickname";
 import RankTicker from "./RankTicker";
@@ -12,8 +12,8 @@ import { useToast } from "./Toast";
 // 문제 풀이 쪽 화면(카드 상세·풀이·결과)이 아니면 문제 만들기 메뉴를 켠다
 const PLAY_PATH = /^\/cards\/\d+(\/play|\/result)?$/;
 
-const publicCount = (category = "") =>
-  mockCards.filter((c) => c.isPublic && (!category || c.category === category)).length;
+// 맨 앞 ""은 전체
+const CATEGORY_TABS: (Category | "")[] = ["", ...CATEGORIES];
 
 // C-01 공통 내비게이션. 왼쪽 사이드바에 랭킹 티커·메뉴·카테고리·계정을 둔다
 export default function Sidebar() {
@@ -27,6 +27,18 @@ export default function Sidebar() {
   const [keyword, setKeyword] = useState(params.get("q") ?? "");
 
   useEffect(() => setKeyword(params.get("q") ?? ""), [params]);
+
+  // 카테고리별 공개 카드 수. 처음 한 번 읽고, 못 읽으면 수만 비워 둔다
+  const [counts, setCounts] = useState<Partial<Record<Category, number>> | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchCategoryCounts(controller.signal)
+      .then(setCounts)
+      .catch((e) => !controller.signal.aborted && console.error(e));
+    return () => controller.abort();
+  }, []);
+  const countOf = (c: Category | "") =>
+    c ? (counts?.[c] ?? 0) : Object.values(counts ?? {}).reduce((sum, n) => sum + n, 0);
 
   // 멀티플레이는 화면 전체를 바꾸며 들어간다. 새 탭 열기 같은 보조 클릭은 그대로 둔다
   const toMulti = (e: MouseEvent) => {
@@ -106,7 +118,7 @@ export default function Sidebar() {
       <nav className="side-group side-group--cat" aria-label="카테고리">
         <h2 className="side-group__title">카테고리</h2>
         <div className="side-list">
-          {["", ...CATEGORIES].map((c) => (
+          {CATEGORY_TABS.map((c) => (
             <Link
               key={c || "all"}
               to={categoryTo(c)}
@@ -114,7 +126,7 @@ export default function Sidebar() {
               aria-current={current(isHome && !q && category === c)}
             >
               {c || "전체"}
-              <em>{publicCount(c)}</em>
+              {counts && <em>{countOf(c)}</em>}
             </Link>
           ))}
         </div>
