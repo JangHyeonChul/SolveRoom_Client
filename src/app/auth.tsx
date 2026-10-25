@@ -18,6 +18,8 @@ interface AuthContextValue {
   ready: boolean;
   // 리프레시 토큰 쿠키로 로그인 상태를 되살린다. 소셜 로그인에서 돌아왔을 때(/login/callback)와 새로고침할 때 쓴다
   restore: () => Promise<AuthUser | null>;
+  // 아이디 가입·로그인으로 받은 액세스 토큰을 쓰고 내 정보를 불러온다
+  completeLogin: (token: string) => Promise<AuthUser>;
   logout: () => Promise<void>;
 }
 
@@ -43,6 +45,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return next;
   }, []);
 
+  const completeLogin = useCallback(async (token: string) => {
+    accessToken.set(token);
+    const next = toUser(await fetchMyInfo());
+    setUser(next);
+    setReady(true);
+    return next;
+  }, []);
+
   const logout = useCallback(async () => {
     await requestLogout().catch(() => undefined);
     setUser(null);
@@ -56,7 +66,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // 요청 중에 재발급까지 실패하면(쿠키 만료 등) 로그아웃된 것으로 본다
   useEffect(() => accessToken.subscribe((token) => !token && setUser(null)), []);
 
-  return <AuthContext.Provider value={{ user, ready, restore, logout }}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user, ready, restore, completeLogin, logout }}>{children}</AuthContext.Provider>
+  );
 }
 
 export function useAuth() {

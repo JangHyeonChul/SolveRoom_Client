@@ -304,7 +304,12 @@
   .login { width: 100%; max-width: 380px; margin: 48px auto 0; display: flex; flex-direction: column; gap: 14px; padding: 32px 28px; border: 1px solid var(--line); border-radius: 12px; background: var(--white); text-align: center; }
   .login__title { font-size: 22px; }
   .login__desc { margin: 0; color: var(--ink-sub); font-size: 13px; line-height: 1.6; }
-  .login__buttons { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+  .login__form { display: flex; flex-direction: column; gap: 14px; margin-top: 6px; text-align: left; }
+  .login__switch { margin: 0; font-size: 13px; color: var(--ink-sub); }
+  .login__switch a { font-weight: 600; }
+  .login__divider { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; }
+  .login__divider::before, .login__divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .login__buttons { display: flex; flex-direction: column; gap: 8px; }
   .login-btn { display: flex; align-items: center; justify-content: center; gap: 8px; height: 46px; padding: 0 16px; border-radius: 8px; font: inherit; font-weight: 600; font-size: 14px; cursor: pointer; transition: filter .15s, background-color .15s; }
   .login-btn svg { flex: 0 0 auto; }
   .login-btn--kakao { border: 0; background: #fee500; color: rgba(0, 0, 0, .85); }

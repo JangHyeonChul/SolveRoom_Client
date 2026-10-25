@@ -1,29 +1,54 @@
-import { useEffect } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { startSocialLogin, type SocialProvider } from "../api/auth";
+import { useEffect, useState, type FormEvent } from "react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { errorMessage } from "../api/apiResponse";
+import { loginWithPassword, startSocialLogin, type SocialProvider } from "../api/auth";
 import { useAuth } from "../app/auth";
 import { saveReturnTo } from "../app/loginReturn";
+import { useToast } from "../components/Toast";
 
 interface LoginLocationState {
   from?: string;
 }
 
-// A-01 로그인. 카카오·Google 간편 로그인 두 가지만 있고, 처음 로그인하면 소셜 계정 이름으로 가입된다.
+// A-01 로그인. 아이디·비밀번호 로그인과 카카오·Google 간편 로그인이 있다.
 // 돌아갈 화면은 이전 화면이 넘긴 state.from이나 ?from=으로 받는다
 export default function LoginPage() {
-  const { user, ready } = useAuth();
+  const { user, ready, completeLogin } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
   const { state } = useLocation();
   const [params] = useSearchParams();
   const from = (state as LoginLocationState | null)?.from ?? params.get("from");
-  const failed = params.has("error");
+  const socialFailed = params.has("error");
 
-  // 이미 로그인해 있으면 머물 이유가 없다
+  const [loginId, setLoginId] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  // 이미 로그인해 있거나 방금 로그인했으면 돌아간다
   useEffect(() => {
     if (ready && user) navigate(from ?? "/", { replace: true });
   }, [ready, user, from, navigate]);
 
-  const login = (provider: SocialProvider) => {
+  const onSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!loginId.trim() || !password) {
+      setError("아이디와 비밀번호를 입력해 주세요.");
+      return;
+    }
+    setSubmitting(true);
+    setError("");
+    try {
+      const me = await completeLogin(await loginWithPassword(loginId.trim(), password));
+      toast(`${me.nickname}님, 반가워요`);
+    } catch (err) {
+      setError(errorMessage(err));
+      setSubmitting(false);
+    }
+  };
+
+  const socialLogin = (provider: SocialProvider) => {
     saveReturnTo(from);
     startSocialLogin(provider);
   };
@@ -36,18 +61,60 @@ export default function LoginPage() {
         </h1>
         <p className="login__desc">로그인하면 내 닉네임으로 랭킹에 오르고, 포인트와 칭호를 모을 수 있어요.</p>
 
-        {failed && (
-          <p className="error" role="alert">
-            로그인하지 못했어요. 다시 시도해 주세요.
-          </p>
-        )}
+        <form className="login__form" onSubmit={onSubmit} noValidate>
+          <div className="field">
+            <label className="label" htmlFor="login-id">
+              아이디
+            </label>
+            <input
+              id="login-id"
+              className="input"
+              autoComplete="username"
+              autoCapitalize="none"
+              value={loginId}
+              onChange={(e) => setLoginId(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label className="label" htmlFor="login-password">
+              비밀번호
+            </label>
+            <input
+              id="login-password"
+              className="input"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+          {(error || socialFailed) && (
+            <p className="error" role="alert">
+              {error || "로그인하지 못했어요. 다시 시도해 주세요."}
+            </p>
+          )}
+          <button type="submit" className="btn btn--primary btn--block" disabled={submitting}>
+            {submitting ? "로그인하는 중" : "로그인"}
+          </button>
+        </form>
+
+        <p className="login__switch">
+          아직 계정이 없나요?{" "}
+          <Link to="/signup" state={{ from }}>
+            회원가입
+          </Link>
+        </p>
+
+        <div className="login__divider">
+          <span>또는</span>
+        </div>
 
         <div className="login__buttons">
-          <button type="button" className="login-btn login-btn--kakao" onClick={() => login("kakao")}>
+          <button type="button" className="login-btn login-btn--kakao" onClick={() => socialLogin("kakao")}>
             <KakaoSymbol />
             카카오 로그인
           </button>
-          <button type="button" className="login-btn login-btn--google" onClick={() => login("google")}>
+          <button type="button" className="login-btn login-btn--google" onClick={() => socialLogin("google")}>
             <GoogleSymbol />
             Google 계정으로 로그인
           </button>
