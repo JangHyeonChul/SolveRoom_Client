@@ -8,6 +8,13 @@ export function getTier(score: number) {
 // 닉네임 꾸미기 해금 점수
 export const NICKNAME_DECORATION_SCORE = 5000;
 
+// 칭호 구간(마이페이지 치장 탭의 단계표). getTier·nextTierScore와 같이 바꾼다
+export const TIER_STEPS = [
+  { min: 0, max: 100 },
+  { min: 101, max: 1000 },
+  { min: 1001, max: null },
+] as const;
+
 // 다음 칭호가 시작하는 점수. 마지막 구간이면 null (구간은 getTier와 같이 바꾼다)
 export function nextTierScore(score: number) {
   if (score <= 100) return 101;

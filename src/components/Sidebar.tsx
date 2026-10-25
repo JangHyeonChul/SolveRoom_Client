@@ -1,6 +1,5 @@
 import { useEffect, useState, type FormEvent, type MouseEvent } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { fetchCategoryCounts } from "../api/quizCards";
 import { useAuth } from "../app/auth";
 import { CATEGORIES, type Category } from "../types/card";
 import Icon from "./Icon";
@@ -28,17 +27,6 @@ export default function Sidebar() {
 
   useEffect(() => setKeyword(params.get("q") ?? ""), [params]);
 
-  // 카테고리별 공개 카드 수. 처음 한 번 읽고, 못 읽으면 수만 비워 둔다
-  const [counts, setCounts] = useState<Partial<Record<Category, number>> | null>(null);
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchCategoryCounts(controller.signal)
-      .then(setCounts)
-      .catch((e) => !controller.signal.aborted && console.error(e));
-    return () => controller.abort();
-  }, []);
-  const countOf = (c: Category | "") =>
-    c ? (counts?.[c] ?? 0) : Object.values(counts ?? {}).reduce((sum, n) => sum + n, 0);
 
   // 멀티플레이는 화면 전체를 바꾸며 들어간다. 새 탭 열기 같은 보조 클릭은 그대로 둔다
   const toMulti = (e: MouseEvent) => {
@@ -126,7 +114,6 @@ export default function Sidebar() {
               aria-current={current(isHome && !q && category === c)}
             >
               {c || "전체"}
-              {counts && <em>{countOf(c)}</em>}
             </Link>
           ))}
         </div>
@@ -135,18 +122,21 @@ export default function Sidebar() {
       <div className="side-me">
         {user ? (
           <>
-            <Link to="/me" className="side-me__link" aria-current={current(pathname === "/me")} title="마이페이지">
-              <span className="side-me__info">
-                <Nickname
-                  nickname={user.nickname}
-                  score={user.score}
-                  color={user.nicknameColor}
-                  admin={user.role === "ADMIN"}
-                  badgeAfter
-                />
-                <span className="side-me__sub">{user.score.toLocaleString()}P</span>
+            <span className="side-me__info">
+              <Nickname
+                nickname={user.nickname}
+                score={user.score}
+                color={user.nicknameColor}
+                admin={user.role === "ADMIN"}
+                badgeAfter
+              />
+              <span className="side-me__sub">
+                {user.score.toLocaleString()}P ·{" "}
+                <Link to="/me" className="side-me__mypage" aria-current={current(pathname === "/me")}>
+                  마이페이지
+                </Link>
               </span>
-            </Link>
+            </span>
             <button type="button" onClick={onLogout} className="account__logout">
               로그아웃
             </button>

@@ -239,21 +239,3 @@ export function setCardLike(cardId: number, liked: boolean) {
   });
 }
 
-// 서버 CategoryCountResponse. 모든 카테고리가 서버 enum 순서대로 온다
-interface CategoryCountResponse {
-  cardCategory: string;
-  categoryName: string;
-  cardCount: number;
-}
-
-// 사이드바 카테고리별 공개 카드 수. 화면 이름(게임 등)을 키로 바꿔 준다
-export async function fetchCategoryCounts(signal?: AbortSignal) {
-  const data = await request<CategoryCountResponse[]>("/api/main/quiz-cards/category-counts", "카테고리 조회", {
-    signal,
-  });
-  const counts: Partial<Record<Category, number>> = {};
-  data.forEach((c) => {
-    if (isCategory(c.categoryName)) counts[c.categoryName] = c.cardCount;
-  });
-  return counts;
-}

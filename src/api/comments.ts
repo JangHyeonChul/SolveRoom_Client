@@ -3,7 +3,7 @@ import { readApiResponse } from "./apiResponse";
 import { request } from "./request";
 
 // 서버 CommentListResponse. totalCount는 제목의 "댓글 N개"(지우지 않은 댓글과 답글 수)다.
-// page는 1부터, totalPages는 댓글(답글 제외) 10개씩 나눈 페이지 수이고 댓글이 없으면 0이다
+// page는 1부터, totalPages는 댓글과 답글을 화면 순서대로 10개씩 나눈 페이지 수이고 댓글이 없으면 0이다
 export interface CommentPage {
   totalCount: number;
   page: number;
@@ -13,7 +13,8 @@ export interface CommentPage {
 
 const commentUrl = (commentId: number) => `/api/main/comments/${commentId}`;
 
-// 카드 상세 아래 댓글. 댓글을 최신순으로 한 페이지(10개) 읽고, 답글은 댓글마다 등록순으로 모두 붙어 온다
+// 카드 상세 아래 댓글. 최신 댓글부터, 각 댓글 뒤에 그 답글을 등록순으로 세어 한 페이지(10개)를 읽는다.
+// 답글은 댓글의 replies로 묶여 오고, 페이지 경계에서 나뉜 답글은 다음 페이지의 continued 댓글 아래로 온다
 export async function fetchComments(cardId: number, page: number, signal?: AbortSignal): Promise<CommentPage> {
   const res = await fetch(`/api/main/quiz-cards/${cardId}/comments?page=${page}`, { signal });
   return (await readApiResponse<CommentPage>(res, "댓글 조회")).data;

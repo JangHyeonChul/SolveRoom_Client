@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, Navigate, useLocation } from "react-router-dom";
+import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom";
 import { errorMessage } from "../api/apiResponse";
 import {
   changeNickname,
@@ -16,7 +16,7 @@ import CardCover from "../components/CardCover";
 import Nickname from "../components/Nickname";
 import { useToast } from "../components/Toast";
 import { formatRelative } from "../utils/format";
-import { getTier, NICKNAME_DECORATION_SCORE, nextTierScore } from "../utils/tier";
+import { getTier, NICKNAME_DECORATION_SCORE, nextTierScore, TIER_STEPS } from "../utils/tier";
 
 // 서버 NicknameUpdateRequest와 같은 규칙. 서버도 다시 확인한다
 const NICKNAME_MIN = 2;
@@ -25,7 +25,15 @@ const DEFAULT_COLOR = "#1d2127";
 
 type Load<T> = { status: "loading" } | { status: "error" } | { status: "done"; data: T };
 
-// U-01 마이페이지. 내 칭호·포인트, 닉네임과 닉네임 색 바꾸기, 내가 만든 카드, 정복한 카드, 포인트 적립 내역
+// 탭은 주소(?tab=)에 남겨 새로고침해도 그대로 둔다
+const TABS = [
+  { key: "info", label: "정보관리" },
+  { key: "deco", label: "치장" },
+] as const;
+type TabKey = (typeof TABS)[number]["key"];
+
+// U-01 마이페이지. 위에 내 칭호·포인트를 두고, 탭으로 정보관리(닉네임, 내가 만든 카드, 정복한 카드, 포인트 내역)와
+// 치장(칭호 단계, 닉네임 색)을 나눈다
 export default function MyPage() {
   const { user, ready } = useAuth();
   const location = useLocation();
@@ -44,6 +52,8 @@ export default function MyPage() {
 }
 
 function MyPageView({ user }: { user: AuthUser }) {
+  const [params, setParams] = useSearchParams();
+  const tab: TabKey = params.get("tab") === "deco" ? "deco" : "info";
   const [myCards, setMyCards] = useState<Load<MyQuizCard[]>>({ status: "loading" });
   const [cards, setCards] = useState<Load<ConqueredCard[]>>({ status: "loading" });
   const [histories, setHistories] = useState<Load<PointHistory[]>>({ status: "loading" });
@@ -77,32 +87,58 @@ function MyPageView({ user }: { user: AuthUser }) {
 
       <div className="layout">
         <div className="layout__main mypage__main">
-          <section className="panel reveal" aria-labelledby="my-cards-title">
-            <h2 className="panel__title" id="my-cards-title">
-              내가 만든 문제 카드 {myCards.status === "done" && <small>{myCards.data.length}장</small>}
-            </h2>
-            <MyQuizCards state={myCards} />
-          </section>
+          <div className="tabs" role="tablist" aria-label="마이페이지 메뉴">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                role="tab"
+                id={`mypage-tab-${t.key}`}
+                aria-selected={tab === t.key}
+                aria-controls={`mypage-panel-${t.key}`}
+                className="tabs__tab"
+                onClick={() => setParams(t.key === "info" ? {} : { tab: t.key }, { replace: true })}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
 
-          <section className="panel reveal" aria-labelledby="conquered-title">
-            <h2 className="panel__title" id="conquered-title">
-              정복한 카드 {cards.status === "done" && <small>{cards.data.length}장</small>}
-            </h2>
-            <ConqueredCards state={cards} />
-          </section>
+          {tab === "info" ? (
+            <div role="tabpanel" id="mypage-panel-info" aria-labelledby="mypage-tab-info" className="mypage__tab">
+              <NicknamePanel user={user} />
 
-          <section className="panel reveal" aria-labelledby="history-title">
-            <h2 className="panel__title" id="history-title">
-              포인트 내역 <small>최근 50건</small>
-            </h2>
-            <PointHistories state={histories} />
-          </section>
+              <section className="panel reveal" aria-labelledby="my-cards-title">
+                <h2 className="panel__title" id="my-cards-title">
+                  내가 만든 문제 카드 {myCards.status === "done" && <small>{myCards.data.length}장</small>}
+                </h2>
+                <MyQuizCards state={myCards} />
+              </section>
+
+              <section className="panel reveal" aria-labelledby="conquered-title">
+                <h2 className="panel__title" id="conquered-title">
+                  정복한 카드 {cards.status === "done" && <small>{cards.data.length}장</small>}
+                </h2>
+                <ConqueredCards state={cards} />
+              </section>
+
+              <section className="panel reveal" aria-labelledby="history-title">
+                <h2 className="panel__title" id="history-title">
+                  포인트 내역 <small>최근 50건</small>
+                </h2>
+                <PointHistories state={histories} />
+              </section>
+            </div>
+          ) : (
+            <div role="tabpanel" id="mypage-panel-deco" aria-labelledby="mypage-tab-deco" className="mypage__tab">
+              <TierPanel user={user} />
+              <NicknameColorPanel user={user} />
+            </div>
+          )}
         </div>
 
         <aside className="layout__side mypage__side reveal" aria-label="내 정보">
           <ProfilePanel user={user} />
-          <NicknamePanel user={user} />
-          <NicknameColorPanel user={user} />
         </aside>
       </div>
     </main>
@@ -145,6 +181,41 @@ function ProfilePanel({ user }: { user: AuthUser }) {
           : `다음 칭호까지 ${(next - user.score).toLocaleString()}P 남았어요.`}{" "}
         로그인하고 풀면 맞힌 문제마다 +1P, 모두 풀기로 다 맞혀 처음 정복하면 +20P를 더 받아요.
       </p>
+    </section>
+  );
+}
+
+// 칭호 단계표. 지금 칭호를 강조하고, 관리자는 포인트와 상관없이 관리자 칭호를 단다
+function TierPanel({ user }: { user: AuthUser }) {
+  const admin = user.role === "ADMIN";
+  const current = getTier(user.score);
+  return (
+    <section className="panel" aria-labelledby="tier-title">
+      <h2 className="panel__title" id="tier-title">
+        칭호
+      </h2>
+      <ul className="tier-steps">
+        {admin && (
+          <li className="is-current">
+            <span className="badge badge--sm badge--admin">ADMIN</span>
+            <span>관리자 전용 칭호</span>
+            <span className="tier-steps__range">관리자</span>
+          </li>
+        )}
+        {TIER_STEPS.map((step) => {
+          const tier = getTier(step.min);
+          return (
+            <li key={step.min} className={!admin && tier.label === current.label ? "is-current" : undefined}>
+              <span className={`badge badge--sm ${tier.className}`}>{tier.label}</span>
+              <span>{!admin && tier.label === current.label ? "지금 칭호" : ""}</span>
+              <span className="tier-steps__range">
+                {step.max === null ? `${step.min.toLocaleString()}P 이상` : `${step.min.toLocaleString()}~${step.max.toLocaleString()}P`}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="hint">칭호는 누적 포인트로 정해지고 내려가지 않아요. 1001P 이상 칭호 이름은 아직 정해지지 않았어요.</p>
     </section>
   );
 }

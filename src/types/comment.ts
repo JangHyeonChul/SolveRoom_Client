@@ -14,6 +14,9 @@ export interface Comment {
   blinded: boolean;
   deleted: boolean;
   deletedByAdmin: boolean;
+  // 페이지는 답글까지 세어 나눈다. 앞 페이지 댓글의 답글로 시작하는 페이지는 그 댓글이 continued로 와서,
+  // 내용 대신 "이어지는 답글" 머리만 보이고 아래에 답글을 붙인다
+  continued: boolean;
   createdAt: string;
   updatedAt: string;
   replies: Comment[];

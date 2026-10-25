@@ -509,9 +509,21 @@
   .mypage-history__reason a, .mypage-history__reason span { overflow: hidden; text-overflow: ellipsis; color: var(--ink-sub); }
   .mypage-history__time { flex: none; color: var(--muted); font-size: 12px; }
   .mypage-history__amount { flex: none; color: var(--green-dark); font-variant-numeric: tabular-nums; }
-  .side-me__link { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; border-radius: 8px; }
-  .side-me__link:hover { color: inherit; }
-  .side-me__link:hover .side-me__info > :first-child { text-decoration: underline; }
+  .side-me__mypage { color: var(--blue); font-weight: 600; text-decoration: none; }
+  .side-me__mypage:hover, .side-me__mypage[aria-current="page"] { text-decoration: underline; }
+  .comment--continued { padding-top: 8px; }
+  .comment__continued { display: flex; align-items: center; gap: 4px; margin: 0; color: var(--muted); font-size: 12px; }
+  .comment--continued .replies { margin-top: 6px; }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+  .tabs__tab { position: relative; padding: 10px 14px; border: 0; background: none; color: var(--muted); font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
+  .tabs__tab:hover { color: var(--ink); }
+  .tabs__tab[aria-selected="true"] { color: var(--ink); }
+  .tabs__tab[aria-selected="true"]::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--green); }
+  .mypage__tab { display: flex; flex-direction: column; gap: 16px; }
+  .tier-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .tier-steps li { display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; }
+  .tier-steps li.is-current { border-color: var(--green); background: var(--green-soft); font-weight: 600; }
+  .tier-steps__range { color: var(--muted); font-variant-numeric: tabular-nums; }
   .count-input { width: 110px; height: 32px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--white); padding: 0 14px; font: inherit; font-weight: 500; font-size: 13px; color: var(--ink); transition: border-color .15s, background-color .15s; }
   .count-input:focus { outline: none; border-color: var(--green); box-shadow: var(--focus-ring); }
   .count-input.is-active { border-color: var(--ink); background: var(--ink); color: var(--white); }

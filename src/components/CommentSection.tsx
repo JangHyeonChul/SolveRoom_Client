@@ -29,7 +29,7 @@ type PendingAction = { kind: "edit" | "delete"; comment: Comment };
 // 수정 중인 댓글. 비회원 댓글은 비밀번호 확인 모달에서 받은 비밀번호를 수정 요청에 다시 보내고, 내 회원 댓글은 비워 둔다
 type Editing = { id: number; password?: string };
 
-// 댓글은 최신순으로 10개씩 페이지를 나누고, 답글은 등록순이다. 로그인해 있으면 회원 닉네임(앞에 칭호)으로 쓰고, 내 회원 댓글은 비밀번호 없이 고치고 지운다.
+// 댓글은 최신순, 답글은 등록순이고 답글까지 세어 10개씩 페이지를 나눈다. 로그인해 있으면 회원 닉네임(앞에 칭호)으로 쓰고, 내 회원 댓글은 비밀번호 없이 고치고 지운다.
 // 비로그인이면 익명인N으로 쓰고 비밀번호로 고치고 지운다. 관리자는 모든 댓글을 비밀번호 없이 지운다
 export default function CommentSection({ cardId }: { cardId: number }) {
   const { user } = useAuth();
@@ -85,18 +85,11 @@ export default function CommentSection({ cardId }: { cardId: number }) {
       ),
     );
 
-  // 새 댓글은 최신순이라 첫 페이지 맨 위에 오므로 첫 페이지를 다시 읽는다. 새 답글은 그 댓글의 답글 끝에 붙인다
+  // 새 댓글은 첫 페이지 맨 위에 오므로 첫 페이지를, 새 답글은 페이지 경계가 밀리므로 지금 페이지를 다시 읽는다
   const addComment = async (content: string, password: string, parentId: number | null) => {
-    const created = await createComment(cardId, user ? { content, parentId } : { content, password, parentId });
-    if (parentId === null) {
-      setPage(1);
-      setRetry((n) => n + 1);
-    } else {
-      patch(
-        (roots) => roots.map((root) => (root.id === parentId ? { ...root, replies: [...root.replies, created] } : root)),
-        1,
-      );
-    }
+    await createComment(cardId, user ? { content, parentId } : { content, password, parentId });
+    if (parentId === null) setPage(1);
+    setRetry((n) => n + 1);
     setReplyTo(null);
   };
 
@@ -228,8 +221,15 @@ export default function CommentSection({ cardId }: { cardId: number }) {
       ) : (
         <ul className="comment-list" aria-busy={paging}>
           {state.roots.map((root) => (
-            <li key={root.id} className="comment">
-              {renderItem(root, false)}
+            <li key={root.id} className={`comment ${root.continued ? "comment--continued" : ""}`}>
+              {root.continued ? (
+                <p className="comment__continued">
+                  <Icon name="left" size={12} strokeWidth={2.6} />
+                  앞 페이지 <b>{root.deleted ? "삭제된 댓글" : `${root.nickname}님 댓글`}</b>에 이어지는 답글
+                </p>
+              ) : (
+                renderItem(root, false)
+              )}
               <div className={root.replies.length || replyTo === root.id ? "replies" : undefined}>
                 {root.replies.map((reply) => renderItem(reply, true))}
                 {replyTo === root.id && (
