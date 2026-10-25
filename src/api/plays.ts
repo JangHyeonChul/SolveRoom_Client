@@ -52,10 +52,11 @@ export function fetchPlayResult(sessionId: string, signal?: AbortSignal) {
   return request<PlayResult>(`${sessionUrl(sessionId)}/result`, "결과 조회", { signal });
 }
 
-// 비로그인 닉네임은 다 푼 뒤 여기서 받는다. 서버가 앞에 "익명의"를 붙여 저장한다
-export function registerRanking(sessionId: string, nickname: string) {
+// 비로그인 닉네임은 다 푼 뒤 여기서 받는다. 서버가 앞에 "익명의"를 붙여 저장한다.
+// 로그인해서 푼 판(memberPlay)은 닉네임 없이 보내면 회원 닉네임 그대로 등록된다
+export function registerRanking(sessionId: string, nickname?: string) {
   return request<PlayResult>(`${sessionUrl(sessionId)}/ranking`, "랭킹 등록", {
     method: "POST",
-    body: { nickname },
+    body: nickname === undefined ? {} : { nickname },
   });
 }

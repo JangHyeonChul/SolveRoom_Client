@@ -2,7 +2,9 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { errorMessage, hasErrorCode } from "../api/apiResponse";
 import { fetchPlayResult, registerRanking, startPlay } from "../api/plays";
+import { useAuth } from "../app/auth";
 import Icon from "../components/Icon";
+import Nickname from "../components/Nickname";
 import { CORRECT_SCORE, GUEST_PREFIX, type PlayLocationState, type PlayResult, type RankingRow } from "../types/play";
 
 // Q-05 결과·랭킹. 다 푼 풀이를 history state로 받는다
@@ -56,7 +58,13 @@ function ResultLoader({ cardId, sessionId, title }: { cardId: number } & PlayLoc
 
 function ResultView({ initial, sessionId }: { initial: PlayResult; sessionId: string }) {
   const navigate = useNavigate();
+  const { user, reloadMe } = useAuth();
   const [result, setResult] = useState(initial);
+
+  // 이번 판으로 포인트를 받았으면 사이드바의 포인트·정복 수와 목록의 정복 표시를 새로 읽는다
+  useEffect(() => {
+    if (initial.earnedPoint > 0) void reloadMe();
+  }, [initial.earnedPoint, reloadMe]);
   const [nickname, setNickname] = useState("");
   const [nicknameError, setNicknameError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -70,12 +78,27 @@ function ResultView({ initial, sessionId }: { initial: PlayResult; sessionId: st
       ? {
           rank: result.myRank,
           nickname: result.nickname ?? "",
+          point: null,
+          admin: false,
           correctCount: result.correctCount,
           questionCount: result.questionCount,
           totalScore: result.totalScore,
           mine: true,
         }
       : null;
+
+  // 회원 판은 닉네임을 묻지 않고 회원 닉네임으로 바로 등록한다
+  const registerAsMember = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      setResult(await registerRanking(sessionId));
+    } catch (err) {
+      setNicknameError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const register = async (e: FormEvent) => {
     e.preventDefault();
@@ -104,7 +127,7 @@ function ResultView({ initial, sessionId }: { initial: PlayResult; sessionId: st
     setBusy(true);
     setReplayError(null);
     try {
-      const { sessionId: nextSessionId } = await startPlay(result.cardId, result.questionCount);
+      const { sessionId: nextSessionId } = await startPlay(result.cardId, result.playAll ? null : result.questionCount);
       const state: PlayLocationState = { sessionId: nextSessionId, title: result.cardTitle };
       navigate(`/cards/${result.cardId}/play`, { replace: true, state });
     } catch (err) {
@@ -131,7 +154,7 @@ function ResultView({ initial, sessionId }: { initial: PlayResult; sessionId: st
           {result.ranking.length === 0 ? (
             <div className="empty">
               <span className="empty__title">아직 랭킹에 등록한 사람이 없어요</span>
-              <span>닉네임을 넣고 첫 번째로 이름을 올려 보세요.</span>
+              <span>첫 번째로 이름을 올려 보세요.</span>
             </div>
           ) : (
             <ol className="rank-list">
@@ -164,12 +187,24 @@ function ResultView({ initial, sessionId }: { initial: PlayResult; sessionId: st
               </p>
             </div>
 
+            <ConquestNotice result={result} loggedIn={user !== null} />
+
             {result.ranked ? (
               <div className="callout callout--green" role="status">
                 <Icon name="trophy" size={20} strokeWidth={2.2} />
                 <span>
                   <b>{result.myRank}위</b>로 랭킹에 등록했어요
                 </span>
+              </div>
+            ) : result.memberPlay ? (
+              <div className="flex flex-col gap-2">
+                <span className="label">
+                  <b>{result.nickname}</b> 닉네임으로 랭킹에 등록해요
+                </span>
+                {nicknameError && <p className="error">{nicknameError}</p>}
+                <button type="button" className="btn btn--primary btn--block" disabled={busy} onClick={registerAsMember}>
+                  랭킹 등록
+                </button>
               </div>
             ) : (
               <form className="flex flex-col gap-2" onSubmit={register} noValidate>
@@ -228,7 +263,8 @@ function RankItem({ row }: { row: RankingRow }) {
     <li className={`rank ${row.mine ? "is-mine" : ""} ${row.rank <= 3 ? "is-top" : ""}`}>
       <span className="rank__no">{row.rank}</span>
       <span className="rank__name">
-        {row.nickname}
+        {/* 회원 판은 닉네임 앞에 칭호를 붙인다 */}
+        <Nickname nickname={row.nickname} score={row.point ?? undefined} admin={row.admin} />
         {row.mine && <span className="badge badge--green badge--sm rank__me">나</span>}
       </span>
       <span className="rank__meta">
@@ -237,4 +273,22 @@ function RankItem({ row }: { row: RankingRow }) {
       <span className="rank__score">{row.totalScore}점</span>
     </li>
   );
+}
+
+// 카드 정복과 포인트 안내. 회원이 모두 풀기로 모두 맞히면 처음 한 번만 +20P를 받는다
+function ConquestNotice({ result, loggedIn }: { result: PlayResult; loggedIn: boolean }) {
+  if (result.earnedPoint > 0) {
+    return (
+      <div className="callout callout--gold" role="status">
+        <Icon name="crown" size={20} strokeWidth={2.2} />
+        <span>
+          카드 정복! <b>+{result.earnedPoint}P</b>를 받았어요
+        </span>
+      </div>
+    );
+  }
+  if (result.conquered) return <p className="hint">이미 정복한 카드예요. 다시 정복해도 포인트는 한 번만 받아요.</p>;
+  if (!loggedIn) return <p className="hint">로그인하고 모두 풀기로 다 맞히면 카드를 정복하고 포인트를 받아요.</p>;
+  if (!result.playAll) return <p className="hint">모두 풀기로 다 맞히면 카드를 정복하고 포인트를 받아요.</p>;
+  return null;
 }

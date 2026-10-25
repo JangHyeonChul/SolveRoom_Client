@@ -56,6 +56,7 @@ export interface CardDetail {
   viewCount: number;
   likeCount: number;
   authorNickname: string;
+  authorAdmin: boolean; // 만든 회원이 관리자면 관리자 칭호와 닉네임 효과를 붙인다
   createdAt: string;
 }
 

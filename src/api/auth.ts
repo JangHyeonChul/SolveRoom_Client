@@ -12,6 +12,7 @@ export interface MyInfoResponse {
   point: number;
   nicknameColor: string | null;
   role: UserRole;
+  conqueredCardIds: number[];
 }
 
 // 서버 UserRole. ADMIN은 남의 문제 카드도 관리·삭제할 수 있다

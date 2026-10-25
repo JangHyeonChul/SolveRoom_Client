@@ -9,7 +9,7 @@ export interface AuthUser {
   score: number;
   nicknameColor?: string;
   role: UserRole;
-  // 카드 정복 기록은 아직 서버에 없어 늘 비어 있다
+  // 모두 풀기로 모두 맞혀 정복한 카드. 목록에 정복 표시를 하고 사이드바에 수를 보인다
   conqueredCardIds: number[];
 }
 
@@ -21,6 +21,8 @@ interface AuthContextValue {
   restore: () => Promise<AuthUser | null>;
   // 아이디 가입·로그인으로 받은 액세스 토큰을 쓰고 내 정보를 불러온다
   completeLogin: (token: string) => Promise<AuthUser>;
+  // 포인트를 받은 뒤처럼 내 정보가 바뀌었을 때 다시 읽는다. 로그인해 있지 않으면 아무것도 하지 않는다
+  reloadMe: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -32,7 +34,7 @@ const toUser = (me: MyInfoResponse): AuthUser => ({
   score: me.point,
   nicknameColor: me.nicknameColor ?? undefined,
   role: me.role,
-  conqueredCardIds: [],
+  conqueredCardIds: me.conqueredCardIds,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -55,6 +57,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return next;
   }, []);
 
+  const reloadMe = useCallback(async () => {
+    if (!accessToken.get()) return;
+    const next = await fetchMyInfo().then(toUser).catch(() => null);
+    if (next) setUser(next);
+  }, []);
+
   const logout = useCallback(async () => {
     await requestLogout().catch(() => undefined);
     setUser(null);
@@ -69,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => accessToken.subscribe((token) => !token && setUser(null)), []);
 
   return (
-    <AuthContext.Provider value={{ user, ready, restore, completeLogin, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, ready, restore, completeLogin, reloadMe, logout }}>{children}</AuthContext.Provider>
   );
 }
 

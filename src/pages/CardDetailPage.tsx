@@ -7,6 +7,7 @@ import { useAuth } from "../app/auth";
 import CardCover from "../components/CardCover";
 import CommentSection from "../components/CommentSection";
 import Icon from "../components/Icon";
+import Nickname from "../components/Nickname";
 import { useToast } from "../components/Toast";
 import type { CardDetail } from "../types/card";
 import type { PlayLocationState } from "../types/play";
@@ -127,7 +128,9 @@ function CardDetailView({ card }: { card: CardDetail }) {
                   {formatCount(card.viewCount)}
                 </span>
                 <LikeButton cardId={card.id} initialCount={card.likeCount} />
-                <span>by {card.authorNickname}</span>
+                <span>
+                  by <Nickname nickname={card.authorNickname} admin={card.authorAdmin} />
+                </span>
               </p>
               <Link to={`/cards/${card.id}/questions`} className="text-btn detail__manage">
                 문제 관리

@@ -138,7 +138,8 @@ function QuestionManageView({ initialCard, initialQuestions, gate, onError }: Vi
         </div>
       </section>
 
-      {showLink && <ManageLinkNotice cardId={card.id} onClose={() => setShowLink(false)} />}
+      {/* 회원 카드는 로그인으로 관리하므로 관리 주소·비밀번호 안내가 필요 없다 */}
+      {showLink && card.guestCard && <ManageLinkNotice cardId={card.id} onClose={() => setShowLink(false)} />}
 
       <section className="panel reveal" aria-labelledby="q-title">
         <div className="panel__head">

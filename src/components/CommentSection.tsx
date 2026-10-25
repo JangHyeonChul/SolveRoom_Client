@@ -12,6 +12,7 @@ import { useAuth } from "../app/auth";
 import type { Comment } from "../types/comment";
 import { formatRelative } from "../utils/format";
 import Nickname from "./Nickname";
+import ConfirmModal from "./ConfirmModal";
 import TextInputModal from "./TextInputModal";
 
 type LoadState =
@@ -24,8 +25,8 @@ type PendingAction = { kind: "edit" | "delete"; comment: Comment };
 // 수정 중인 댓글. 비회원 댓글은 비밀번호 확인 모달에서 받은 비밀번호를 수정 요청에 다시 보내고, 내 회원 댓글은 비워 둔다
 type Editing = { id: number; password?: string };
 
-// 로그인해 있으면 회원 닉네임(앞에 칭호)으로 쓰고, 내 회원 댓글은 비밀번호 없이 고치고 지운다.
-// 비로그인이면 익명인N으로 쓰고 비밀번호로 고치고 지운다
+// 댓글은 최신순, 답글은 등록순이다. 로그인해 있으면 회원 닉네임(앞에 칭호)으로 쓰고, 내 회원 댓글은 비밀번호 없이 고치고 지운다.
+// 비로그인이면 익명인N으로 쓰고 비밀번호로 고치고 지운다. 관리자는 모든 댓글을 비밀번호 없이 지운다
 export default function CommentSection({ cardId }: { cardId: number }) {
   const { user } = useAuth();
   const [state, setState] = useState<LoadState>({ status: "loading" });
@@ -35,6 +36,9 @@ export default function CommentSection({ cardId }: { cardId: number }) {
   const [editing, setEditing] = useState<Editing | null>(null);
   const [reportedIds, setReportedIds] = useState<Set<number>>(new Set());
   const [pending, setPending] = useState<PendingAction | null>(null);
+  // 비밀번호 없이 지우는 댓글(내 회원 댓글, 관리자). 화면 가운데 확인 모달을 띄운다
+  const [confirmDelete, setConfirmDelete] = useState<Comment | null>(null);
+  const isAdmin = user?.role === "ADMIN";
 
   useEffect(() => {
     const controller = new AbortController();
@@ -70,7 +74,7 @@ export default function CommentSection({ cardId }: { cardId: number }) {
       const page = await fetchComments(cardId, state.nextLastId);
       setState((prev) => {
         if (prev.status !== "done") return prev;
-        // 내가 방금 쓴 댓글은 이미 목록 끝에 붙여 두었으므로 겹치지 않게 뺀다
+        // 더 오래된 댓글을 아래에 붙인다. 그사이 쓴 댓글과 겹치지 않게 뺀다
         const known = new Set(prev.roots.map((c) => c.id));
         const added = page.comments.filter((c) => !known.has(c.id));
         return { status: "done", totalCount: page.totalCount, nextLastId: page.nextLastId, roots: [...prev.roots, ...added] };
@@ -82,13 +86,13 @@ export default function CommentSection({ cardId }: { cardId: number }) {
     }
   };
 
-  // 새 댓글은 다음 페이지가 남아 있어도 바로 보이도록 목록 끝에 붙인다
+  // 새 댓글은 최신순이라 맨 위에, 새 답글은 그 댓글의 답글 끝에 붙인다
   const addComment = async (content: string, password: string, parentId: number | null) => {
     const created = await createComment(cardId, user ? { content, parentId } : { content, password, parentId });
     patch(
       (roots) =>
         parentId === null
-          ? [...roots, created]
+          ? [created, ...roots]
           : roots.map((root) => (root.id === parentId ? { ...root, replies: [...root.replies, created] } : root)),
       1,
     );
@@ -101,22 +105,19 @@ export default function CommentSection({ cardId }: { cardId: number }) {
     setEditing(null);
   };
 
-  // 답글이 남은 댓글은 "삭제된 댓글입니다." 자리로 남기고, 마지막 답글을 지우면 지운 댓글 자리도 없앤다
-  const removeComment = (target: Comment) =>
-    patch((roots) => {
-      // 모달을 여는 동안 답글이 달렸을 수 있어 목록의 최신 답글로 판단한다
-      if (target.parentId === null) {
-        return roots.flatMap((root) => {
-          if (root.id !== target.id) return [root];
-          return root.replies.length > 0 ? [{ ...root, deleted: true, content: null }] : [];
-        });
-      }
-      return roots
-        .map((root) =>
-          root.id === target.parentId ? { ...root, replies: root.replies.filter((r) => r.id !== target.id) } : root,
-        )
-        .filter((root) => !(root.deleted && root.replies.length === 0));
-    }, -1);
+  // 지운 댓글·답글은 "삭제된 댓글입니다."(관리자가 지웠으면 "관리자에 의해 가려진 댓글입니다.") 자리로 남긴다
+  const removeComment = (target: Comment, byAdmin: boolean) => {
+    const removed = { ...target, deleted: true, deletedByAdmin: byAdmin, content: null };
+    patch(
+      (roots) =>
+        roots.map((root) =>
+          root.id === target.id
+            ? { ...removed, replies: root.replies }
+            : { ...root, replies: root.replies.map((r) => (r.id === target.id ? removed : r)) },
+        ),
+      -1,
+    );
+  };
 
   const isMine = (comment: Comment) => comment.member && user !== null && comment.authorId === user.id;
 
@@ -124,15 +125,15 @@ export default function CommentSection({ cardId }: { cardId: number }) {
   const startEdit = (comment: Comment) =>
     isMine(comment) ? setEditing({ id: comment.id }) : setPending({ kind: "edit", comment });
 
-  const startDelete = async (comment: Comment) => {
-    if (!isMine(comment)) {
-      setPending({ kind: "delete", comment });
-      return;
-    }
-    if (!confirm("댓글을 삭제할까요?")) return;
+  // 내 회원 댓글이나 관리자는 확인 모달만, 비회원 댓글은 비밀번호 모달을 띄운다
+  const startDelete = (comment: Comment) =>
+    isMine(comment) || isAdmin ? setConfirmDelete(comment) : setPending({ kind: "delete", comment });
+
+  const deleteWithoutPassword = async (comment: Comment) => {
+    setConfirmDelete(null);
     try {
       await deleteComment(comment.id);
-      removeComment(comment);
+      removeComment(comment, isAdmin && !isMine(comment));
     } catch (e) {
       alert(errorMessage(e));
     }
@@ -201,8 +202,9 @@ export default function CommentSection({ cardId }: { cardId: number }) {
       comment={comment}
       isReply={isReply}
       editing={editing?.id === comment.id}
-      // 남의 회원 댓글은 고치거나 지울 수 없다
-      canManage={!comment.member || isMine(comment)}
+      // 남의 회원 댓글은 고칠 수 없고, 지우기는 관리자만 된다
+      canEdit={!comment.member || isMine(comment)}
+      canDelete={!comment.member || isMine(comment) || isAdmin}
       onReply={() => setReplyTo(replyTo === comment.id ? null : comment.id)}
       onReport={() => report(comment)}
       onEdit={() => startEdit(comment)}
@@ -263,10 +265,25 @@ export default function CommentSection({ cardId }: { cardId: number }) {
           validate={confirmPending}
           onSubmit={(password) => {
             if (pending.kind === "edit") setEditing({ id: pending.comment.id, password });
-            else removeComment(pending.comment);
+            else removeComment(pending.comment, false);
             setPending(null);
           }}
           onClose={() => setPending(null)}
+        />
+      )}
+
+      {confirmDelete && (
+        <ConfirmModal
+          title="댓글 삭제"
+          description={
+            isAdmin && !isMine(confirmDelete)
+              ? "관리자 권한으로 이 댓글을 지워요. \"관리자에 의해 가려진 댓글입니다.\"로 표시돼요."
+              : "이 댓글을 삭제할까요? 되돌릴 수 없어요."
+          }
+          confirmLabel="삭제"
+          danger
+          onConfirm={() => deleteWithoutPassword(confirmDelete)}
+          onClose={() => setConfirmDelete(null)}
         />
       )}
     </section>
@@ -277,7 +294,8 @@ interface CommentItemProps {
   comment: Comment;
   isReply: boolean;
   editing: boolean;
-  canManage: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
   onReply: () => void;
   onReport: () => void;
   onEdit: () => void;
@@ -290,7 +308,8 @@ function CommentItem({
   comment,
   isReply,
   editing,
-  canManage,
+  canEdit,
+  canDelete,
   onReply,
   onReport,
   onEdit,
@@ -299,7 +318,11 @@ function CommentItem({
   onCancelEdit,
 }: CommentItemProps) {
   if (comment.deleted) {
-    return <p className="comment__deleted">삭제된 댓글입니다.</p>;
+    return (
+      <p className="comment__deleted">
+        {comment.deletedByAdmin ? "관리자에 의해 가려진 댓글입니다." : "삭제된 댓글입니다."}
+      </p>
+    );
   }
 
   return (
@@ -310,6 +333,7 @@ function CommentItem({
           nickname={comment.nickname}
           score={comment.point ?? undefined}
           color={comment.nicknameColor ?? undefined}
+          admin={comment.admin}
         />
         <span className="comment__time">{formatRelative(comment.createdAt)}</span>
       </div>
@@ -335,22 +359,21 @@ function CommentItem({
               답글
             </button>
           )}
+          {/* 가려진 댓글은 신고·수정을 막고, 지우기는 쓴 사람과 관리자에게 남긴다 */}
           {!comment.blinded && (
-            <>
-              <button type="button" onClick={onReport} className="text-btn text-btn--danger">
-                신고
-              </button>
-              {canManage && (
-                <>
-                  <button type="button" onClick={onEdit} className="text-btn">
-                    수정
-                  </button>
-                  <button type="button" onClick={onDelete} className="text-btn text-btn--danger">
-                    삭제
-                  </button>
-                </>
-              )}
-            </>
+            <button type="button" onClick={onReport} className="text-btn text-btn--danger">
+              신고
+            </button>
+          )}
+          {!comment.blinded && canEdit && (
+            <button type="button" onClick={onEdit} className="text-btn">
+              수정
+            </button>
+          )}
+          {canDelete && (
+            <button type="button" onClick={onDelete} className="text-btn text-btn--danger">
+              삭제
+            </button>
           )}
         </div>
       )}

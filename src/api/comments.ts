@@ -16,7 +16,8 @@ export interface CommentPage {
 
 const commentUrl = (commentId: number) => `/api/main/comments/${commentId}`;
 
-// 카드 상세 아래 댓글. 댓글을 등록순으로 한 페이지(20개) 읽고, 답글은 댓글마다 모두 붙어 온다
+// 카드 상세 아래 댓글. 댓글을 최신순으로 한 페이지(20개) 읽고, 답글은 댓글마다 등록순으로 모두 붙어 온다.
+// lastId를 주면 그보다 오래된 댓글을 읽는다
 export async function fetchComments(cardId: number, lastId: number | null, signal?: AbortSignal): Promise<CommentPage> {
   const params = lastId === null ? "" : `?lastId=${lastId}`;
   const res = await fetch(`/api/main/quiz-cards/${cardId}/comments${params}`, { signal });

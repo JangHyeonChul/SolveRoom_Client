@@ -13,6 +13,7 @@ import MultiRoomPage from "../pages/MultiRoomPage";
 import LoginPage from "../pages/LoginPage";
 import LoginCallbackPage from "../pages/LoginCallbackPage";
 import SignupPage from "../pages/SignupPage";
+import MyPage from "../pages/MyPage";
 import NotFoundPage from "../pages/NotFoundPage";
 
 // 주석의 ID는 화면 기획의 화면 목록 ID
@@ -35,6 +36,7 @@ export const router = createBrowserRouter([
           { path: "/login", element: <LoginPage /> }, // A-01
           { path: "/login/callback", element: <LoginCallbackPage /> }, // A-01 소셜 로그인에서 돌아오는 화면
           { path: "/signup", element: <SignupPage /> }, // A-02
+          { path: "/me", element: <MyPage /> }, // U-01 마이페이지
           { path: "*", element: <NotFoundPage /> },
         ],
       },

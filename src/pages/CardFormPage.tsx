@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { errorMessage } from "../api/apiResponse";
 import { prepareImage, UPLOADABLE_ACCEPT, UPLOADABLE_TYPES, uploadPrepared, type CropArea } from "../api/images";
 import { createQuizCard, fetchManagedCard, updateQuizCard } from "../api/quizCards";
+import { useAuth } from "../app/auth";
 import CardCover from "../components/CardCover";
 import Icon from "../components/Icon";
 import ImageCropModal from "../components/ImageCropModal";
@@ -40,6 +41,9 @@ interface FormProps {
 
 function CardForm({ card, gate, onError }: FormProps) {
   const editing = card !== undefined;
+  // 로그인해 있으면 회원 카드로 만들어 닉네임·비밀번호를 받지 않는다
+  const { user } = useAuth();
+  const asGuest = !editing && !user;
   const toast = useToast();
   const navigate = useNavigate();
 
@@ -101,8 +105,8 @@ function CardForm({ card, gate, onError }: FormProps) {
     e.preventDefault();
     if (saving) return;
     const next: Partial<Record<FieldKey, boolean>> = { title: !title.trim() };
-    // 로그인 연동 전이라 새 카드는 모두 비회원(닉네임·비밀번호)으로 만든다
-    if (!editing) {
+    // 비로그인으로 만드는 카드만 닉네임·비밀번호를 받는다
+    if (asGuest) {
       next.nickname = nickname.trim().length < 2;
       next.password = password.length < 4;
       next.password2 = password.length >= 4 && password !== password2;
@@ -131,7 +135,9 @@ function CardForm({ card, gate, onError }: FormProps) {
         navigate(`/cards/${card.id}/questions`);
         return;
       }
-      const createdId = await createQuizCard({ ...input, nickname: nickname.trim(), password });
+      const createdId = await createQuizCard(
+        asGuest ? { ...input, guest: { nickname: nickname.trim(), password } } : input,
+      );
       // 문제 관리 화면이 관리 주소 안내를 한 번 띄운다
       navigate(`/cards/${createdId}/questions`, { state: { created: true } });
     } catch (err) {
@@ -271,7 +277,13 @@ function CardForm({ card, gate, onError }: FormProps) {
             </div>
           </section>
 
-          {!editing && (
+          {!editing && user && (
+            <p className="hint">
+              <b>{user.nickname}</b> 회원 카드로 만들어요. 문제 관리는 로그인한 채로 하면 비밀번호 없이 할 수 있어요.
+            </p>
+          )}
+
+          {asGuest && (
             <section className="panel reveal" aria-labelledby="author-title">
               <h2 className="panel__title" id="author-title">
                 만든 사람

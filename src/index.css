@@ -252,6 +252,7 @@
   .callout svg { flex: 0 0 auto; margin-top: 2px; }
   .callout--blue { background: var(--blue-soft); color: #24486a; }
   .callout--green { background: var(--green-soft); color: var(--green-deep); }
+  .callout--gold { background: var(--gold-soft); color: var(--gold); }
   .callout b { font-weight: 700; }
 
   /* 토글 스위치 */
@@ -274,7 +275,7 @@
   .dropzone__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; animation: fade-in .3s var(--ease); }
 
   /* 모달 */
-  .modal-backdrop { position: fixed; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(20, 22, 26, .45); animation: fade-in .2s ease; }
+  .modal-backdrop { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(10, 12, 16, .55); animation: fade-in .2s ease; }
   .modal { width: min(420px, 100%); border-radius: 12px; background: var(--white); box-shadow: 0 16px 48px rgba(0, 0, 0, .16); color: var(--ink); animation: modal-in .25s var(--ease); }
   .modal--wide { width: min(760px, 100%); }
   .modal__body { padding: 22px; display: flex; flex-direction: column; gap: 14px; }
@@ -467,6 +468,38 @@
   .like-btn:hover { color: var(--red); border-color: var(--red-line); }
   .like-btn[aria-pressed="true"] { color: var(--red); border-color: var(--red-line); background: var(--red-soft); }
   .like-btn:disabled { cursor: default; opacity: .7; }
+
+  /* U-01 마이페이지 */
+  .mypage__main, .mypage__side { display: flex; flex-direction: column; gap: 16px; }
+  .mypage-profile__head { display: flex; align-items: center; gap: 12px; }
+  .mypage-profile__name { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-weight: 700; font-size: 16px; }
+  .avatar--lg { width: 48px; height: 48px; flex-basis: 48px; font-size: 20px; }
+  .mypage-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0; }
+  .mypage-stats div { padding: 10px; border-radius: 8px; background: var(--bg-soft); text-align: center; }
+  .mypage-stats dt { color: var(--muted); font-size: 12px; }
+  .mypage-stats dd { margin: 2px 0 0; font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .mypage-row { display: flex; align-items: center; gap: 8px; }
+  .mypage-row .input { flex: 1; min-width: 0; }
+  .mypage-color { width: 40px; height: 32px; flex: none; padding: 0; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--white); cursor: pointer; }
+  .mypage-color:disabled { cursor: not-allowed; opacity: .5; }
+  .mypage-color__preview { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+  .mypage-cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+  .mypage-card { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); text-decoration: none; transition: border-color .2s; }
+  .mypage-card:hover { border-color: var(--line-strong); color: var(--ink); }
+  .mypage-card__cover { aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; background-size: cover; background-position: center; }
+  .mypage-card__body { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; min-width: 0; }
+  .mypage-card__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: 14px; }
+  .mypage-card__meta { color: var(--muted); font-size: 12px; }
+  .mypage-history { list-style: none; margin: 0; padding: 0; }
+  .mypage-history li { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .mypage-history li:first-child { border-top: 0; }
+  .mypage-history__reason { flex: 1; min-width: 0; display: flex; gap: 6px; overflow: hidden; white-space: nowrap; }
+  .mypage-history__reason a, .mypage-history__reason span { overflow: hidden; text-overflow: ellipsis; color: var(--ink-sub); }
+  .mypage-history__time { flex: none; color: var(--muted); font-size: 12px; }
+  .mypage-history__amount { flex: none; color: var(--green-dark); font-variant-numeric: tabular-nums; }
+  .side-me__link { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; border-radius: 8px; }
+  .side-me__link:hover { color: inherit; }
+  .side-me__link:hover .side-me__info > :first-child { text-decoration: underline; }
   .count-input { width: 110px; height: 32px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--white); padding: 0 14px; font: inherit; font-weight: 500; font-size: 13px; color: var(--ink); transition: border-color .15s, background-color .15s; }
   .count-input:focus { outline: none; border-color: var(--green); box-shadow: var(--focus-ring); }
   .count-input.is-active { border-color: var(--ink); background: var(--ink); color: var(--white); }
@@ -489,6 +522,10 @@
   .comment__actions { display: flex; gap: 12px; margin-top: 6px; }
   .replies { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; padding-left: 14px; border-left: 2px solid var(--line); }
   .nickname { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
+  /* 관리자 칭호와 닉네임: 무지개 그라데이션이 흐르고 배지는 빛이 지나가며 반짝인다 (애니메이션 줄이기를 켜면 멈춘 그라데이션만 남는다) */
+  .badge--admin { position: relative; overflow: hidden; color: var(--white); letter-spacing: .04em; background: linear-gradient(90deg, #ff4d6d, #ff9f1c, #ffd60a, #2ec4b6, #4361ee, #b5179e, #ff4d6d); background-size: 300% 100%; box-shadow: 0 0 0 1px rgba(255, 255, 255, .4) inset, 0 1px 6px rgba(181, 23, 158, .35); animation: admin-flow 4s linear infinite, admin-glow 2s ease-in-out infinite; }
+  .badge--admin::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .75) 50%, transparent 70%); transform: translateX(-120%); animation: admin-shine 2.4s ease-in-out infinite; }
+  .nickname--admin { font-weight: 800; color: #b5179e; background: linear-gradient(90deg, #ff4d6d, #ff9f1c, #ffd60a, #2ec4b6, #4361ee, #b5179e, #ff4d6d); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: admin-flow 4s linear infinite; filter: drop-shadow(0 0 4px rgba(181, 23, 158, .25)); }
 
   /* 멀티플레이 공통: 아바타·상태 배지·채팅 */
   .btn--lg { height: 48px; padding: 0 24px; font-size: 15px; border-radius: 10px; }
@@ -653,6 +690,9 @@
 @keyframes shake { 0%, 100% { transform: none; } 25% { transform: translateX(-4px); } 50% { transform: translateX(4px); } 75% { transform: translateX(-2px); } }
 @keyframes slot-in { from { opacity: 0; transform: scale(.95); } }
 @keyframes result-in { from { opacity: 0; transform: translateY(6px); } }
+@keyframes admin-flow { to { background-position: 300% 0; } }
+@keyframes admin-glow { 50% { box-shadow: 0 0 0 1px rgba(255, 255, 255, .4) inset, 0 0 12px rgba(255, 77, 109, .55); } }
+@keyframes admin-shine { 60%, 100% { transform: translateX(120%); } }
 @keyframes ticker-in { from { opacity: 0; transform: translateY(100%); } }
 @keyframes ticker-out { to { opacity: 0; transform: translateY(-100%); } }
 @keyframes blink { 50% { opacity: .3; } }

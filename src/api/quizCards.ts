@@ -89,6 +89,7 @@ interface QuizCardDetailResponse {
   viewCount: number;
   likeCount: number;
   authorNickname: string | null;
+  authorAdmin: boolean;
   createdAt: string;
 }
 
@@ -107,6 +108,7 @@ export async function fetchCardDetail(cardId: number, signal?: AbortSignal): Pro
     viewCount: c.viewCount,
     likeCount: c.likeCount,
     authorNickname: c.authorNickname ?? "",
+    authorAdmin: c.authorAdmin,
     createdAt: c.createdAt,
   };
 }
@@ -159,22 +161,23 @@ const toManagedCard = (c: QuizCardManageResponse): ManagedCard => ({
   guestCard: c.guestCard,
 });
 
-// 문제 카드 만들기(M-01). 로그인 연동 전이라 비회원(닉네임·비밀번호)으로만 만든다.
-// 서버가 함께 주는 관리 토큰을 저장해 두므로 바로 문제를 등록할 수 있다
-export async function createQuizCard(input: CardInput & { nickname: string; password: string }) {
+// 문제 카드 만들기(M-01). 로그인해 있으면 회원 카드로 만들어 닉네임·비밀번호를 빼고 보내고,
+// 비로그인이면 닉네임·비밀번호로 만든다. 서버가 함께 주는 관리 토큰을 저장해 두므로 바로 문제를 등록할 수 있다
+export async function createQuizCard(input: CardInput & { guest?: { nickname: string; password: string } }) {
   const data = await request<ManageTokenResponse & { cardId: number }>("/api/main/quiz-cards", "문제 카드 만들기", {
     method: "POST",
-    body: { ...cardBody(input), nickname: input.nickname, password: input.password },
+    body: { ...cardBody(input), ...input.guest },
   });
   manageTokens.save(data.cardId, data.manageToken, data.expiresAt);
   return data.cardId;
 }
 
-// 본인 확인(M-04). 비밀번호가 맞으면 관리 토큰을 저장한다
-export async function issueManageToken(cardId: number, password: string) {
+// 본인 확인(M-04). 비회원 카드는 비밀번호가 맞으면, 회원 카드는 만든 회원이 로그인해 있으면(password 없이) 관리 토큰을 저장한다.
+// 남의 회원 카드면 403(CARD_NOT_OWNER)
+export async function issueManageToken(cardId: number, password?: string) {
   const data = await request<ManageTokenResponse>(`/api/main/quiz-cards/${cardId}/manage-token`, "본인 확인", {
     method: "POST",
-    body: { password },
+    body: password === undefined ? {} : { password },
   });
   manageTokens.save(cardId, data.manageToken, data.expiresAt);
 }
