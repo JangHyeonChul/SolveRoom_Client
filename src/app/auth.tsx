@@ -34,7 +34,8 @@ const toUser = (me: MyInfoResponse): AuthUser => ({
   score: me.point,
   nicknameColor: me.nicknameColor ?? undefined,
   role: me.role,
-  conqueredCardIds: me.conqueredCardIds,
+  // 프론트가 먼저 배포돼 예전 서버가 응답하면 이 값이 없어 빈 목록으로 둔다
+  conqueredCardIds: me.conqueredCardIds ?? [],
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
