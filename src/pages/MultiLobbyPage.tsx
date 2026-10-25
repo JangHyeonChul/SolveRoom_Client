@@ -40,7 +40,7 @@ const clock = () => {
 
 // MP-01 멀티플레이 로비. 시안 01_Design/multi-01-lobby.html #1(끄투 정리형)을 크게 키웠다
 export default function MultiLobbyPage() {
-  const { user, login } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const sceneNavigate = useSceneNavigate();
   const toast = useToast();
@@ -153,7 +153,7 @@ export default function MultiLobbyPage() {
                 <span className="mp-avatar mp-avatar--lg mp-avatar--guest" aria-hidden="true">?</span>
                 <b>익명의여우</b>
                 <span className="mp-me__sub">로그인하면 닉네임 옆에 칭호가 보여요</span>
-                <button type="button" className="btn btn--outline btn--sm" onClick={login}>
+                <button type="button" className="btn btn--outline btn--sm" onClick={() => sceneNavigate("/login?from=/multi")}>
                   로그인
                 </button>
               </>

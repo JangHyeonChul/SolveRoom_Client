@@ -7,6 +7,7 @@ import Icon from "./Icon";
 import Nickname from "./Nickname";
 import RankTicker from "./RankTicker";
 import { useSceneNavigate } from "./SceneRoot";
+import { useToast } from "./Toast";
 
 // 문제 풀이 쪽 화면(카드 상세·풀이·결과)이 아니면 문제 만들기 메뉴를 켠다
 const PLAY_PATH = /^\/cards\/\d+(\/play|\/result)?$/;
@@ -16,10 +17,12 @@ const publicCount = (category = "") =>
 
 // C-01 공통 내비게이션. 왼쪽 사이드바에 랭킹 티커·메뉴·카테고리·계정을 둔다
 export default function Sidebar() {
-  const { user, login, logout } = useAuth();
+  const { user, ready, logout } = useAuth();
+  const toast = useToast();
   const navigate = useNavigate();
   const sceneNavigate = useSceneNavigate();
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const { pathname } = location;
   const [params] = useSearchParams();
   const [keyword, setKeyword] = useState(params.get("q") ?? "");
 
@@ -36,6 +39,11 @@ export default function Sidebar() {
     e.preventDefault();
     const q = keyword.trim();
     navigate(q ? `/?q=${encodeURIComponent(q)}` : "/");
+  };
+
+  const onLogout = async () => {
+    await logout();
+    toast("로그아웃했어요");
   };
 
   const isHome = pathname === "/";
@@ -122,19 +130,21 @@ export default function Sidebar() {
                 {user.score.toLocaleString()}P · 정복 {user.conqueredCardIds.length}장
               </span>
             </span>
-            <button type="button" onClick={logout} className="account__logout">
+            <button type="button" onClick={onLogout} className="account__logout">
               로그아웃
             </button>
           </>
         ) : (
-          <button
-            type="button"
-            onClick={login}
-            title="목 로그인: 소셜 로그인 연동 전 임시 버튼"
-            className="btn btn--outline btn--sm btn--block"
-          >
-            로그인
-          </button>
+          // 로그인 상태를 확인하는 동안은 버튼을 띄우지 않는다
+          ready && (
+            <Link
+              to="/login"
+              state={{ from: pathname + location.search }}
+              className="btn btn--outline btn--sm btn--block"
+            >
+              로그인
+            </Link>
+          )
         )}
       </div>
     </aside>

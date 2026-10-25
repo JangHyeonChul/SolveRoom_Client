@@ -10,7 +10,8 @@ import PlayPage from "../pages/PlayPage";
 import ResultPage from "../pages/ResultPage";
 import MultiLobbyPage from "../pages/MultiLobbyPage";
 import MultiRoomPage from "../pages/MultiRoomPage";
-import PlaceholderPage from "../pages/PlaceholderPage";
+import LoginPage from "../pages/LoginPage";
+import LoginCallbackPage from "../pages/LoginCallbackPage";
 import NotFoundPage from "../pages/NotFoundPage";
 
 // 주석의 ID는 화면 기획의 화면 목록 ID
@@ -30,7 +31,8 @@ export const router = createBrowserRouter([
           { path: "/cards/:cardId/questions", element: <QuestionManagePage /> }, // M-02
           { path: "/cards/:cardId/questions/new", element: <QuestionFormPage /> }, // M-03
           { path: "/cards/:cardId/questions/:questionId/edit", element: <QuestionFormPage /> }, // M-03
-          { path: "/login", element: <PlaceholderPage screenId="A-01" title="로그인" /> },
+          { path: "/login", element: <LoginPage /> }, // A-01
+          { path: "/login/callback", element: <LoginCallbackPage /> }, // A-01 소셜 로그인에서 돌아오는 화면
           { path: "*", element: <NotFoundPage /> },
         ],
       },
