@@ -1,13 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useRoom } from "../api/room";
 import { useAuth } from "../app/auth";
 import ChatBox from "../components/ChatBox";
 import ConfirmModal from "../components/ConfirmModal";
 import Icon from "../components/Icon";
+import Modal from "../components/Modal";
 import MultiAvatar from "../components/MultiAvatar";
 import Nickname from "../components/Nickname";
+import OptionSeg from "../components/OptionSeg";
 import { useToast } from "../components/Toast";
+import { CATEGORIES, CATEGORY_CODES } from "../types/card";
 import { categoryLabel, type RoomPlayer, type RoomState } from "../types/multi";
 import { copyText } from "../utils/clipboard";
 import { chosung } from "../utils/cover";
@@ -56,6 +59,7 @@ function RoomView({ no }: { no: number }) {
   const toast = useToast();
   const room = useRoom({ no, userId: user?.id, ready, onError: toast });
   const [leaving, setLeaving] = useState(false);
+  const [changingTopic, setChangingTopic] = useState(false);
   const state = room.room;
   const inGame = state?.phase === "play" || state?.phase === "reveal";
   useTicker(inGame);
@@ -84,6 +88,11 @@ function RoomView({ no }: { no: number }) {
 
   const send = (message: string) => {
     if (!room.sendChat(message)) toast("방에 다시 연결하는 중이에요. 잠시 후 보내 주세요");
+  };
+
+  // 문제가 모자란 주제면 서버가 error로 거절하고 이유는 토스트로 뜬다
+  const changeTopic = (category: string) => {
+    if (!room.changeTopic(category)) toast("방에 다시 연결하는 중이에요. 잠시 후 바꿔 주세요");
   };
 
   const answering = state.phase === "play" && !!mine && !mine.correct;
@@ -133,6 +142,7 @@ function RoomView({ no }: { no: number }) {
               onStart={room.start}
               onAgain={room.again}
               onInvite={invite}
+              onChangeTopic={() => setChangingTopic(true)}
             />
           </div>
           {state.phase === "play" && <TimerRow state={state} now={now} />}
@@ -174,7 +184,45 @@ function RoomView({ no }: { no: number }) {
           onClose={() => setLeaving(false)}
         />
       )}
+      {/* 그 사이 방장이 바뀌거나 게임이 시작되면 닫는다 */}
+      {changingTopic && isHost && state.phase === "wait" && (
+        <TopicModal current={state.category} onClose={() => setChangingTopic(false)} onChange={changeTopic} />
+      )}
     </main>
+  );
+}
+
+// 대기실에서 방장이 주제를 바꾼다. 바꾸면 다른 사람의 준비가 풀린다
+function TopicModal({ current, onClose, onChange }: { current: string; onClose: () => void; onChange: (category: string) => void }) {
+  const [category, setCategory] = useState(current);
+
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (category !== current) onChange(category);
+    onClose();
+  };
+
+  return (
+    <Modal title="주제 바꾸기" onClose={onClose}>
+      <form className="mp-form" onSubmit={onSubmit}>
+        <OptionSeg
+          label="주제"
+          options={CATEGORIES.map((c) => CATEGORY_CODES[c])}
+          value={category}
+          onChange={setCategory}
+          format={categoryLabel}
+        />
+        <p className="hint">고른 주제의 공개 카드에서 주관식 문제가 무작위로 나와요. 주제를 바꾸면 다른 사람은 다시 준비해야 해요.</p>
+        <div className="modal__actions">
+          <button type="button" className="btn btn--outline btn--sm" onClick={onClose}>
+            취소
+          </button>
+          <button type="submit" className="btn btn--primary btn--sm" disabled={category === current}>
+            바꾸기
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -257,9 +305,10 @@ interface StageProps {
   onStart: () => void;
   onAgain: () => void;
   onInvite: () => void;
+  onChangeTopic: () => void;
 }
 
-function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite }: StageProps) {
+function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, onChangeTopic }: StageProps) {
   const question = state.question;
   const image = question?.imageUrls[0];
   const topic = categoryLabel(state.category);
@@ -291,6 +340,12 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite }
               <button type="button" className={`btn btn--lg ${mine?.ready ? "btn--ready" : "btn--primary"}`} onClick={onReady}>
                 {mine?.ready && <Icon name="check" size={16} strokeWidth={3} />}
                 {mine?.ready ? "준비 완료" : "준비"}
+              </button>
+            )}
+            {isHost && (
+              <button type="button" className="btn btn--outline btn--lg" onClick={onChangeTopic}>
+                <Icon name="edit" size={15} />
+                주제 바꾸기
               </button>
             )}
             <button type="button" className="btn btn--outline btn--lg" onClick={onInvite}>

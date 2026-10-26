@@ -8,6 +8,7 @@ import Icon from "../components/Icon";
 import Modal from "../components/Modal";
 import MultiAvatar from "../components/MultiAvatar";
 import Nickname from "../components/Nickname";
+import OptionSeg from "../components/OptionSeg";
 import { useSceneNavigate } from "../components/SceneRoot";
 import { useToast } from "../components/Toast";
 import { CATEGORIES, CATEGORY_CODES } from "../types/card";
@@ -228,33 +229,6 @@ function RoomItem({ room, onClick }: { room: Room; onClick: () => void }) {
         <span className={`mp-badge mp-badge--${badge}`}>{ROOM_BADGE_LABELS[badge]}</span>
       </span>
     </button>
-  );
-}
-
-function OptionSeg<T extends string | number>({
-  label,
-  options,
-  value,
-  onChange,
-  format = String,
-}: {
-  label: string;
-  options: T[];
-  value: T;
-  onChange: (v: T) => void;
-  format?: (v: T) => string;
-}) {
-  return (
-    <div className="field">
-      <span className="label">{label}</span>
-      <div className="seg" role="radiogroup" aria-label={label}>
-        {options.map((o) => (
-          <button key={o} type="button" role="radio" aria-checked={value === o} className="seg__btn" onClick={() => onChange(o)}>
-            {format(o)}
-          </button>
-        ))}
-      </div>
-    </div>
   );
 }
 

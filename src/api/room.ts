@@ -172,7 +172,9 @@ export function useRoom({ no, userId, ready, onError }: { no: number; userId?: n
   const toggleReady = useCallback(() => send({ type: "ready" }), [send]);
   const start = useCallback(() => send({ type: "start" }), [send]);
   const again = useCallback(() => send({ type: "again" }), [send]);
+  // 대기실에서 방장만. 바꾸면 서버가 다른 사람의 준비를 풀고, 문제가 모자란 주제는 error로 거절한다
+  const changeTopic = useCallback((category: string) => send({ type: "changeTopic", category }), [send]);
   const serverNow = useCallback(() => Date.now() + offsetRef.current, []);
 
-  return { status, me, room, chat, closedReason, serverNow, sendChat, toggleReady, start, again };
+  return { status, me, room, chat, closedReason, serverNow, sendChat, toggleReady, start, again, changeTopic };
 }
