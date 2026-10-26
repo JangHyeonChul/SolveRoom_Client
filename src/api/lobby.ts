@@ -68,6 +68,8 @@ export function useLobby({ userId, ready, onError }: { userId?: number; ready: b
   const [users, setUsers] = useState<LobbyUser[]>([]);
   const [chat, setChat] = useState<ChatLine[]>([WELCOME_LINE]);
   const socketRef = useRef<WebSocket | null>(null);
+  // welcome을 받은(로비에 들어간) 연결. auth 전에 보낸 채팅은 서버가 버리므로 채팅은 이 연결로만 보낸다
+  const joinedRef = useRef<WebSocket | null>(null);
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
 
@@ -80,11 +82,12 @@ export function useLobby({ userId, ready, onError }: { userId?: number; ready: b
     let refreshed = false;
     let asGuest = false;
 
-    const handle = (event: LobbyEvent) => {
+    const handle = (socket: WebSocket, event: LobbyEvent) => {
       switch (event.type) {
         case "welcome":
           attempt = 0;
           refreshed = false;
+          joinedRef.current = socket;
           setStatus("open");
           setMe(event.me);
           setUsers(event.users);
@@ -119,8 +122,19 @@ export function useLobby({ userId, ready, onError }: { userId?: number; ready: b
         const token = asGuest ? null : accessToken.get();
         socket.send(JSON.stringify(token ? { type: "auth", token } : { type: "auth" }));
       };
-      socket.onmessage = (e) => handle(JSON.parse(e.data) as LobbyEvent);
+      socket.onmessage = (e) => {
+        if (disposed) return;
+        let event: LobbyEvent;
+        try {
+          event = JSON.parse(e.data) as LobbyEvent;
+        } catch (err) {
+          console.warn("로비 메시지를 읽지 못했습니다.", err);
+          return;
+        }
+        handle(socket, event);
+      };
       socket.onclose = async (e) => {
+        if (joinedRef.current === socket) joinedRef.current = null;
         if (disposed) return;
         socketRef.current = null;
         setStatus("reconnecting");
@@ -131,6 +145,8 @@ export function useLobby({ userId, ready, onError }: { userId?: number; ready: b
           } else {
             asGuest = true;
           }
+          // 재발급한 토큰까지 거절되면 멀티 서버와 메인 서버의 서명 키(JWT_SECRET)가 다를 수 있다. 조용히 게스트로 두지 않고 알린다
+          if (asGuest && !disposed) onErrorRef.current("로그인 정보를 확인하지 못해 게스트로 로비에 들어왔어요.");
           if (!disposed) connect();
           return;
         }
@@ -145,12 +161,13 @@ export function useLobby({ userId, ready, onError }: { userId?: number; ready: b
       clearTimeout(retryTimer);
       socketRef.current?.close(1000);
       socketRef.current = null;
+      joinedRef.current = null;
     };
   }, [userId, ready]);
 
   // 보낸 채팅은 서버가 로비 전체에 다시 보내 줄 때 화면에 그린다 (모두가 같은 순서로 본다)
   const sendChat = useCallback((message: string) => {
-    const socket = socketRef.current;
+    const socket = joinedRef.current;
     if (socket?.readyState !== WebSocket.OPEN) return false;
     socket.send(JSON.stringify({ type: "chat", message }));
     return true;
