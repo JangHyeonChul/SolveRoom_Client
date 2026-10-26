@@ -1,0 +1,15 @@
+# 검색 엔진에는 메인 화면과 카드 상세만 보여 준다.
+# /api/는 막지 않는다. 구글이 화면을 그릴 때 카드 정보를 API로 읽어야 하기 때문이다
+User-agent: *
+Disallow: /me
+Disallow: /admin/
+Disallow: /login
+Disallow: /signup
+Disallow: /cards/new
+Disallow: /cards/*/play
+Disallow: /cards/*/result
+Disallow: /cards/*/edit
+Disallow: /cards/*/questions
+Disallow: /multi/rooms/
+
+Sitemap: https://quizcheck.kr/sitemap.xml

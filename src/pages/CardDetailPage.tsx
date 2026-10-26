@@ -14,6 +14,7 @@ import { useToast } from "../components/Toast";
 import type { CardDetail } from "../types/card";
 import type { PlayLocationState } from "../types/play";
 import { formatCount } from "../utils/format";
+import { usePageMeta } from "../utils/pageMeta";
 import NotFoundPage from "./NotFoundPage";
 
 const PRESET_COUNTS = [10, 20, 30] as const;
@@ -76,6 +77,7 @@ function CardDetailLoader({ cardId }: { cardId: number }) {
 
 function CardDetailView({ card }: { card: CardDetail }) {
   const navigate = useNavigate();
+  usePageMeta(card.title, card.description || `${card.title} 퀴즈 ${card.questionCount}문제. 퀴즈 체크에서 풀어 보세요.`);
 
   // 카드의 문제 수보다 적은 개수만 보여 준다. 기본은 10개, 문제가 10개 이하면 모두 푼다
   const presets = PRESET_COUNTS.filter((n) => n < card.questionCount);
