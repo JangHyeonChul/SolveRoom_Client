@@ -48,7 +48,7 @@ export default function ChatBox({
             <p key={l.id} className={`is-${l.kind}`}>
               {l.kind === "correct" && <Icon name="check" size={13} strokeWidth={3} />}
               <span>{l.message}</span>
-              {(l.kind === "mine" || l.kind === "near") && <em>나만 보임</em>}
+              {l.kind === "mine" && <em>나만 보임</em>}
             </p>
           ),
         )}

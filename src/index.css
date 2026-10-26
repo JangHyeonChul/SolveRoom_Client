@@ -668,6 +668,8 @@
   .mp-question { margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 28px; }
   .mp-question__img { width: min(100%, 460px); aspect-ratio: 16 / 10; object-fit: contain; border-radius: 6px; filter: drop-shadow(0 12px 24px rgba(0, 0, 0, .18)); }
   .mp-question figcaption { font-weight: 700; font-size: 18px; letter-spacing: -0.02em; }
+/* 텍스트형 문제: 이미지 없이 본문을 크게 */
+.mp-question figcaption.mp-question__text { max-width: 560px; font-size: 24px; line-height: 1.5; text-align: center; white-space: pre-wrap; word-break: keep-all; }
   .mp-timer { display: flex; align-items: center; gap: 16px; }
   .mp-hint { flex: none; display: flex; align-items: center; gap: 8px; }
   .mp-hint__label { color: var(--muted); font-weight: 700; font-size: 12px; }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ChatLine, LobbyUser } from "../types/multi";
+import type { ChatLine, LobbyUser, Room, RoomSettings } from "../types/multi";
 import { accessToken, refreshAccessToken } from "./accessToken";
 
 // 멀티 서버(SolveRoom_Multi) 로비 웹소켓. nginx·vite가 /api/multi를 멀티 서버로 넘긴다
@@ -7,9 +7,12 @@ const LOBBY_PATH = "/api/multi/ws/lobby";
 
 // 서버 LobbyEvent
 type LobbyEvent =
-  | { type: "welcome"; me: LobbyUser; users: LobbyUser[]; chat: LobbyChatResponse[] }
+  | { type: "welcome"; me: LobbyUser; users: LobbyUser[]; chat: LobbyChatResponse[]; rooms?: Room[] }
   | { type: "presence"; joined: LobbyUser[]; left: string[] }
   | { type: "chat"; line: LobbyChatResponse }
+  | { type: "room"; room: Room }
+  | { type: "roomRemoved"; no: number }
+  | { type: "roomCreated"; no: number }
   | { type: "error"; code: string; message: string };
 
 // 서버 LobbyChatResponse
@@ -60,13 +63,27 @@ const retryDelay = (attempt: number) => {
   return max / 2 + Math.random() * (max / 2);
 };
 
-// 로비 접속자 목록과 채팅. 로그인 상태(userId)가 바뀌면 새 신분으로 다시 접속한다.
-// ready는 AuthProvider가 첫 로그인 확인을 마쳤는지: 그 전에 접속하면 게스트로 들어갔다가 곧바로 다시 접속하게 된다
-export function useLobby({ userId, ready, onError }: { userId?: number; ready: boolean; onError: (message: string) => void }) {
+// 로비 접속자 목록·채팅·방 목록. 로그인 상태(userId)가 바뀌면 새 신분으로 다시 접속한다.
+// ready는 AuthProvider가 첫 로그인 확인을 마쳤는지: 그 전에 접속하면 게스트로 들어갔다가 곧바로 다시 접속하게 된다.
+// 방을 만들면 서버가 만든 사람에게만 번호를 주고(onRoomCreated), 방 목록 변경은 모두에게 따로 온다
+export function useLobby({
+  userId,
+  ready,
+  onError,
+  onRoomCreated,
+}: {
+  userId?: number;
+  ready: boolean;
+  onError: (message: string) => void;
+  onRoomCreated: (no: number) => void;
+}) {
   const [status, setStatus] = useState<LobbyStatus>("connecting");
   const [me, setMe] = useState<LobbyUser | null>(null);
   const [users, setUsers] = useState<LobbyUser[]>([]);
   const [chat, setChat] = useState<ChatLine[]>([WELCOME_LINE]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const onRoomCreatedRef = useRef(onRoomCreated);
+  onRoomCreatedRef.current = onRoomCreated;
   const socketRef = useRef<WebSocket | null>(null);
   // welcome을 받은(로비에 들어간) 연결. auth 전에 보낸 채팅은 서버가 버리므로 채팅은 이 연결로만 보낸다
   const joinedRef = useRef<WebSocket | null>(null);
@@ -92,6 +109,21 @@ export function useLobby({ userId, ready, onError }: { userId?: number; ready: b
           setMe(event.me);
           setUsers(event.users);
           setChat([WELCOME_LINE, ...event.chat.map(toChatLine)]);
+          setRooms(event.rooms ?? []);
+          break;
+        // 같은 번호면 덮어쓰고, 새 방은 맨 앞(최근에 만든 방부터)에 둔다
+        case "room":
+          setRooms((prev) =>
+            prev.some((r) => r.no === event.room.no)
+              ? prev.map((r) => (r.no === event.room.no ? event.room : r))
+              : [event.room, ...prev],
+          );
+          break;
+        case "roomRemoved":
+          setRooms((prev) => prev.filter((r) => r.no !== event.no));
+          break;
+        case "roomCreated":
+          onRoomCreatedRef.current(event.no);
           break;
         case "presence": {
           const left = new Set(event.left);
@@ -173,5 +205,13 @@ export function useLobby({ userId, ready, onError }: { userId?: number; ready: b
     return true;
   }, []);
 
-  return { status, me, users, chat, sendChat };
+  // 로비에 들어간 연결이 없으면 false. 잘못된 설정·문제 부족은 서버가 error로 알려 준다
+  const createRoom = useCallback((settings: RoomSettings) => {
+    const socket = joinedRef.current;
+    if (socket?.readyState !== WebSocket.OPEN) return false;
+    socket.send(JSON.stringify({ type: "createRoom", ...settings }));
+    return true;
+  }, []);
+
+  return { status, me, users, chat, rooms, sendChat, createRoom };
 }
