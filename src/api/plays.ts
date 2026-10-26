@@ -1,4 +1,4 @@
-import type { AnswerResult, PlayQuestion, PlayResult } from "../types/play";
+import type { AnswerResult, PlayQuestion, PlayResult, RankingRow } from "../types/play";
 import type { QuestionType } from "../types/question";
 import { request } from "./request";
 
@@ -46,6 +46,11 @@ export async function fetchCurrentQuestion(sessionId: string, signal?: AbortSign
 // 주관식은 answer를 보내고(비우면 건너뛰기, 오답), 객관식은 고른 보기 위치 choiceIndex(0부터)를 보낸다
 export function submitAnswer(sessionId: string, body: { answer?: string; choiceIndex?: number }) {
   return request<AnswerResult>(`${sessionUrl(sessionId)}/answer`, "답 제출", { method: "POST", body });
+}
+
+// 카드 랭킹 TOP 10. 풀지 않아도 볼 수 있고, 로그인해 있으면 내 기록에 mine이 붙는다. 비공개 카드는 CARD_NOT_FOUND
+export function fetchCardRanking(cardId: number, signal?: AbortSignal) {
+  return request<RankingRow[]>(`/api/main/quiz-cards/${cardId}/ranking`, "랭킹 조회", { signal });
 }
 
 export function fetchPlayResult(sessionId: string, signal?: AbortSignal) {

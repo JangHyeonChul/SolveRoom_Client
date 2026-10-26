@@ -4,7 +4,7 @@ import { errorMessage, hasErrorCode } from "../api/apiResponse";
 import { fetchPlayResult, registerRanking, startPlay } from "../api/plays";
 import { useAuth } from "../app/auth";
 import Icon from "../components/Icon";
-import Nickname from "../components/Nickname";
+import RankItem from "../components/RankItem";
 import { CORRECT_SCORE, GUEST_PREFIX, type PlayLocationState, type PlayResult, type RankingRow } from "../types/play";
 
 // Q-05 결과·랭킹. 다 푼 풀이를 history state로 받는다
@@ -238,23 +238,6 @@ function ResultView({ initial, sessionId }: { initial: PlayResult; sessionId: st
         </aside>
       </div>
     </main>
-  );
-}
-
-function RankItem({ row }: { row: RankingRow }) {
-  return (
-    <li className={`rank ${row.mine ? "is-mine" : ""} ${row.rank <= 3 ? "is-top" : ""}`}>
-      <span className="rank__no">{row.rank}</span>
-      <span className="rank__name">
-        {/* 회원 판은 닉네임 앞에 칭호를 붙인다 */}
-        <Nickname nickname={row.nickname} score={row.point ?? undefined} admin={row.admin} />
-        {row.mine && <span className="badge badge--green badge--sm rank__me">나</span>}
-      </span>
-      <span className="rank__meta">
-        {row.correctCount}/{row.questionCount}
-      </span>
-      <span className="rank__score">{row.totalScore}점</span>
-    </li>
   );
 }
 

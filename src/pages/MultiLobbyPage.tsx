@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLobby, type LobbyStatus } from "../api/lobby";
 import { useAuth } from "../app/auth";
+import AuthModal, { type AuthMode } from "../components/AuthModal";
 import ChatBox from "../components/ChatBox";
 import Icon from "../components/Icon";
 import Modal from "../components/Modal";
@@ -56,7 +57,9 @@ export default function MultiLobbyPage() {
   const onlineUsers = useMemo(() => [...lobby.users].sort(byScore), [lobby.users]);
   // 게스트는 서버가 지어 준 익명 닉네임을 쓴다
   const myNickname = user?.nickname ?? lobby.me?.nickname ?? "익명의여우";
-  const [modal, setModal] = useState<{ kind: "create" | "code" } | { kind: "join"; room: Room } | null>(null);
+  const [modal, setModal] = useState<
+    { kind: "create" | "code" } | { kind: "join"; room: Room } | { kind: "auth"; mode: AuthMode } | null
+  >(null);
 
   const rooms = mockRooms.filter((r) => matches(r, filter, keyword.trim()));
   const waiting = rooms.filter((r) => roomBadge(r) === "wait").length;
@@ -163,8 +166,12 @@ export default function MultiLobbyPage() {
                 <span className="mp-avatar mp-avatar--lg mp-avatar--guest" aria-hidden="true">?</span>
                 <b>{myNickname}</b>
                 <span className="mp-me__sub">로그인하면 닉네임 옆에 칭호가 보여요</span>
-                <button type="button" className="btn btn--outline btn--sm" onClick={() => sceneNavigate("/login?from=/multi")}>
+                {/* 로비를 나가면 연결이 끊기므로 모달로 로그인한다. 로그인하면 useLobby가 회원으로 다시 접속한다 */}
+                <button type="button" className="btn btn--outline btn--sm" onClick={() => setModal({ kind: "auth", mode: "login" })}>
                   로그인
+                </button>
+                <button type="button" className="btn btn--outline btn--sm" onClick={() => setModal({ kind: "auth", mode: "signup" })}>
+                  회원가입
                 </button>
               </>
             )}
@@ -193,6 +200,7 @@ export default function MultiLobbyPage() {
           onEnter={(spectate) => enter(modal.room, { spectate })}
         />
       )}
+      {modal?.kind === "auth" && <AuthModal initialMode={modal.mode} returnTo="/multi" onClose={() => setModal(null)} />}
     </main>
   );
 }

@@ -5,6 +5,7 @@ import { startPlay } from "../api/plays";
 import { fetchCardDetail, fetchCardLike, setCardLike, type CardLike } from "../api/quizCards";
 import { useAuth } from "../app/auth";
 import CardCover from "../components/CardCover";
+import CardRankingModal from "../components/CardRankingModal";
 import CommentSection from "../components/CommentSection";
 import Icon from "../components/Icon";
 import Nickname from "../components/Nickname";
@@ -83,6 +84,7 @@ function CardDetailView({ card }: { card: CardDetail }) {
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
   const [reporting, setReporting] = useState(false);
+  const [rankingOpen, setRankingOpen] = useState(false);
 
   const custom = customInput === "" ? null : Number(customInput);
   const resolvedCount = custom ?? (count === "all" ? card.questionCount : count);
@@ -197,6 +199,10 @@ function CardDetailView({ card }: { card: CardDetail }) {
             >
               {starting ? "시작하고 있어요..." : `시작하기 (${resolvedCount}문제)`}
             </button>
+            <button type="button" className="btn btn--outline btn--block" onClick={() => setRankingOpen(true)}>
+              <Icon name="crown" size={15} />
+              랭킹 보기
+            </button>
           </section>
         </aside>
       </div>
@@ -204,6 +210,7 @@ function CardDetailView({ card }: { card: CardDetail }) {
       <CommentSection cardId={card.id} />
 
       {reporting && <ReportCardModal cardId={card.id} onClose={() => setReporting(false)} />}
+      {rankingOpen && <CardRankingModal cardId={card.id} onClose={() => setRankingOpen(false)} />}
     </main>
   );
 }
