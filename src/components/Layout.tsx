@@ -16,6 +16,10 @@ export default function Layout() {
               <Link to="/terms" className="footer__link">
                 이용약관
               </Link>{" "}
+              ·{" "}
+              <Link to="/privacy" className="footer__link">
+                개인정보처리방침
+              </Link>{" "}
               · 저작권 침해 신고는 문제 카드의 신고 버튼으로 받아요
             </span>
           </div>

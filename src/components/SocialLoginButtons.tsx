@@ -1,7 +1,8 @@
 import { startSocialLogin, type SocialProvider } from "../api/auth";
 import { saveReturnTo } from "../app/loginReturn";
 
-// 카카오·Google 간편 로그인. 다른 사이트를 다녀오므로 돌아올 화면(returnTo)을 먼저 적어 둔다
+// Google 간편 로그인. 다른 사이트를 다녀오므로 돌아올 화면(returnTo)을 먼저 적어 둔다.
+// 카카오는 운영 키를 준비할 때까지 버튼을 뺀다 (서버 설정은 그대로 둔다)
 export default function SocialLoginButtons({ returnTo }: { returnTo: string | null }) {
   const socialLogin = (provider: SocialProvider) => {
     saveReturnTo(returnTo);
@@ -14,28 +15,12 @@ export default function SocialLoginButtons({ returnTo }: { returnTo: string | nu
         <span>또는</span>
       </div>
       <div className="login__buttons">
-        <button type="button" className="login-btn login-btn--kakao" onClick={() => socialLogin("kakao")}>
-          <KakaoSymbol />
-          카카오 로그인
-        </button>
         <button type="button" className="login-btn login-btn--google" onClick={() => socialLogin("google")}>
           <GoogleSymbol />
           Google 계정으로 로그인
         </button>
       </div>
     </>
-  );
-}
-
-// 카카오 로그인 디자인 가이드의 말풍선 심볼
-function KakaoSymbol() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="#000"
-        d="M12 3C6.48 3 2 6.53 2 10.88c0 2.8 1.86 5.26 4.66 6.65l-.95 3.5c-.08.3.26.55.52.38l4.17-2.76c.52.07 1.06.11 1.6.11 5.52 0 10-3.53 10-7.88S17.52 3 12 3z"
-      />
-    </svg>
   );
 }
 
