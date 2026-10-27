@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { fetchQuizCards, type PageCursor, type QuizCardSort } from "../api/quizCards";
 import { useAuth } from "../app/auth";
 import CardItem from "../components/CardItem";
+import LatestCards from "../components/LatestCards";
 import { isCategory, type CardSummary } from "../types/card";
 
 // 인기순은 좋아요 수 기준이다. 조회수 정렬·좋아요순은 서버 설계(V8)에서 인기순 하나로 합쳤다.
@@ -81,6 +82,8 @@ export default function HomePage() {
 
   return (
     <main className="wrap home">
+      {/* 최신 카드는 검색·카테고리를 고르지 않은 메인에만 둔다 */}
+      {!q && !category && <LatestCards />}
       <section id="cards" className="section reveal" aria-labelledby="list-title">
         <div className="section__head">
           <div>

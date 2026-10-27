@@ -47,6 +47,26 @@ interface FetchQuizCardsParams {
   signal?: AbortSignal;
 }
 
+const toSummary = (c: QuizCardSearchResponse): CardSummary => ({
+  id: c.id,
+  title: c.title,
+  category: isCategory(c.categoryName) ? c.categoryName : "게임",
+  thumbnailUrl: c.thumbnailUrl ?? undefined,
+  questionCount: c.questionCount,
+  viewCount: c.viewCount,
+  likeCount: c.likeCount,
+  isPublic: c.isPublic,
+  createdAt: c.createdAt,
+});
+
+// 메인 상단 최신 카드. 관리자에게도 공개 카드만 최근 만든 순으로 온다 (size 1~30)
+export async function fetchLatestCards(size: number, signal?: AbortSignal): Promise<CardSummary[]> {
+  const body = await requestResponse<QuizCardSearchResponse[]>(`/api/main/quiz-cards/latest?size=${size}`, "최신 카드 조회", {
+    signal,
+  });
+  return body.data.map(toSummary);
+}
+
 // 메인 홈·검색 결과의 공개 카드 목록. 관리자로 로그인해 있으면 비공개 카드도 온다
 export async function fetchQuizCards({ category, q, sort, cursor, signal }: FetchQuizCardsParams): Promise<QuizCardPage> {
   // 서버는 sort가 필수이고 enum 값은 대문자만 받는다
@@ -63,17 +83,7 @@ export async function fetchQuizCards({ category, q, sort, cursor, signal }: Fetc
   });
 
   return {
-    cards: body.data.map((c) => ({
-      id: c.id,
-      title: c.title,
-      category: isCategory(c.categoryName) ? c.categoryName : "게임",
-      thumbnailUrl: c.thumbnailUrl ?? undefined,
-      questionCount: c.questionCount,
-      viewCount: c.viewCount,
-      likeCount: c.likeCount,
-      isPublic: c.isPublic,
-      createdAt: c.createdAt,
-    })),
+    cards: body.data.map(toSummary),
     nextCursor:
       body.pageInfo?.hasNext && body.pageInfo.nextCursor && body.pageInfo.lastId != null
         ? { cursor: body.pageInfo.nextCursor, lastId: body.pageInfo.lastId }

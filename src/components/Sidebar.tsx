@@ -1,8 +1,7 @@
-import { useEffect, useState, type FormEvent, type MouseEvent } from "react";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import type { MouseEvent } from "react";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "../app/auth";
 import { CATEGORIES, type Category } from "../types/card";
-import Icon from "./Icon";
 import Nickname from "./Nickname";
 import RankTicker from "./RankTicker";
 import { useSceneNavigate } from "./SceneRoot";
@@ -14,31 +13,20 @@ const PLAY_PATH = /^\/cards\/\d+(\/play|\/result)?$/;
 // 맨 앞 ""은 전체
 const CATEGORY_TABS: (Category | "")[] = ["", ...CATEGORIES];
 
-// C-01 공통 내비게이션. 왼쪽 사이드바에 랭킹 티커·메뉴·카테고리·계정을 둔다
+// C-01 공통 내비게이션. 왼쪽 사이드바에 랭킹 티커·메뉴·카테고리·계정을 둔다 (검색은 본문 위 Topbar)
 export default function Sidebar() {
   const { user, ready, logout } = useAuth();
   const toast = useToast();
-  const navigate = useNavigate();
   const sceneNavigate = useSceneNavigate();
   const location = useLocation();
   const { pathname } = location;
   const [params] = useSearchParams();
-  const [keyword, setKeyword] = useState(params.get("q") ?? "");
-
-  useEffect(() => setKeyword(params.get("q") ?? ""), [params]);
-
 
   // 멀티플레이는 화면 전체를 바꾸며 들어간다. 새 탭 열기 같은 보조 클릭은 그대로 둔다
   const toMulti = (e: MouseEvent) => {
     if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     e.preventDefault();
     sceneNavigate("/multi");
-  };
-
-  const onSearch = (e: FormEvent) => {
-    e.preventDefault();
-    const q = keyword.trim();
-    navigate(q ? `/?q=${encodeURIComponent(q)}` : "/");
   };
 
   const onLogout = async () => {
@@ -69,20 +57,6 @@ export default function Sidebar() {
       </Link>
 
       <RankTicker />
-
-      <form onSubmit={onSearch} className="search" role="search">
-        <Icon name="search" size={14} strokeWidth={2.2} />
-        <label htmlFor="sidebar-search" className="sr-only">
-          문제 카드 검색
-        </label>
-        <input
-          id="sidebar-search"
-          type="search"
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-          placeholder="문제 카드 검색"
-        />
-      </form>
 
       <nav className="side-group side-group--nav" aria-label="주요 메뉴">
         <h2 className="side-group__title">탐색</h2>
