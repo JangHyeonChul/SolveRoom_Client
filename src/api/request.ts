@@ -14,8 +14,13 @@ interface RequestOptions {
 const AUTH_REQUIRED = "AUTH_REQUIRED";
 
 // JSON으로 보내고 공통 응답의 data만 돌려준다. 실패하면 ApiError를 던진다.
+export async function request<T>(url: string, label: string, options: RequestOptions = {}) {
+  return (await requestResponse<T>(url, label, options)).data;
+}
+
+// request와 같지만 공통 응답을 통째로 돌려준다. 목록 API의 pageInfo가 필요할 때 쓴다.
 // 로그인해 있으면 액세스 토큰을 붙이고, 토큰이 만료됐다는 401이면 한 번만 재발급받아 다시 보낸다
-export async function request<T>(
+export async function requestResponse<T>(
   url: string,
   label: string,
   { method = "GET", body, manageCardId, signal }: RequestOptions = {},
@@ -41,7 +46,7 @@ export async function request<T>(
     // 재발급에 실패하면 비로그인으로 다시 보낸다. 회원 전용 API면 그대로 401이 난다
     res = await send(await refreshAccessToken());
   }
-  return (await readApiResponse<T>(res, label)).data;
+  return readApiResponse<T>(res, label);
 }
 
 async function errorCode(res: Response) {

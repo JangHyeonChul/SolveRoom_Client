@@ -15,7 +15,8 @@ const isSort = (value: string | null): value is QuizCardSort => !!value && value
 
 // H-01 메인 홈 (검색 결과 H-02도 이 화면에서 ?q= 로 처리)
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user, ready } = useAuth();
+  const isAdmin = user?.role === "ADMIN"; // 관리자 목록에는 비공개 카드도 온다
   const [params, setParams] = useSearchParams();
   const q = params.get("q")?.trim() ?? "";
   const categoryParam = params.get("category") ?? "";
@@ -30,7 +31,9 @@ export default function HomePage() {
   const [retry, setRetry] = useState(0);
 
   // 조건이 바뀌면 첫 페이지부터 다시 읽는다. 늦게 도착한 이전 조건의 응답은 버린다.
+  // 로그인 복원이 끝나야 관리자 토큰이 붙으므로 그 뒤에 읽고, 관리자로 바뀌거나 풀리면 다시 읽는다.
   useEffect(() => {
+    if (!ready) return;
     const controller = new AbortController();
     setStatus("loading");
     fetchQuizCards({ category: category || undefined, q, sort, signal: controller.signal })
@@ -46,7 +49,7 @@ export default function HomePage() {
         }
       });
     return () => controller.abort();
-  }, [category, q, sort, retry]);
+  }, [category, q, sort, retry, ready, isAdmin]);
 
   const loadMore = async () => {
     if (!nextCursor || loadingMore) return;

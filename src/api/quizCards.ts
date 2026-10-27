@@ -8,7 +8,7 @@ import {
 } from "../types/card";
 import { readApiResponse } from "./apiResponse";
 import { manageTokens } from "./manageTokens";
-import { request } from "./request";
+import { request, requestResponse } from "./request";
 
 // 인기순은 좋아요 수 기준이다 (서버 V8, idx_card_popular).
 // 화면 주소는 소문자(?sort=latest)를 쓰고, API에는 서버 enum 이름 그대로 대문자로 보낸다.
@@ -24,6 +24,7 @@ interface QuizCardSearchResponse {
   questionCount: number;
   viewCount: number;
   likeCount: number;
+  isPublic: boolean; // 관리자 목록에는 비공개 카드도 섞여 온다
   createdAt: string;
 }
 
@@ -46,7 +47,7 @@ interface FetchQuizCardsParams {
   signal?: AbortSignal;
 }
 
-// 메인 홈·검색 결과의 공개 카드 목록
+// 메인 홈·검색 결과의 공개 카드 목록. 관리자로 로그인해 있으면 비공개 카드도 온다
 export async function fetchQuizCards({ category, q, sort, cursor, signal }: FetchQuizCardsParams): Promise<QuizCardPage> {
   // 서버는 sort가 필수이고 enum 값은 대문자만 받는다
   const params = new URLSearchParams({ sort: sort.toUpperCase() });
@@ -57,8 +58,9 @@ export async function fetchQuizCards({ category, q, sort, cursor, signal }: Fetc
     params.set("lastId", String(cursor.lastId));
   }
 
-  const res = await fetch(`/api/main/quiz-cards?${params}`, { signal });
-  const body = await readApiResponse<QuizCardSearchResponse[]>(res, "카드 목록 조회");
+  const body = await requestResponse<QuizCardSearchResponse[]>(`/api/main/quiz-cards?${params}`, "카드 목록 조회", {
+    signal,
+  });
 
   return {
     cards: body.data.map((c) => ({
@@ -69,6 +71,7 @@ export async function fetchQuizCards({ category, q, sort, cursor, signal }: Fetc
       questionCount: c.questionCount,
       viewCount: c.viewCount,
       likeCount: c.likeCount,
+      isPublic: c.isPublic,
       createdAt: c.createdAt,
     })),
     nextCursor:

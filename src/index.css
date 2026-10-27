@@ -153,11 +153,14 @@
   .card { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: var(--white); color: var(--ink); text-decoration: none; transition: border-color .2s, box-shadow .2s; }
   a.card:hover { color: var(--ink); border-color: var(--line-strong); box-shadow: 0 4px 16px rgba(0, 0, 0, .06); }
   .card--conquered { border-color: #ead49c; }
+  /* 관리자 목록에만 오는 비공개 카드. 정복 테두리보다 우선하고 hover에도 유지한다 */
+  a.card--private, a.card--private:hover { border-color: #9aa1ab; }
   .card__cover { position: relative; aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; background-size: cover; background-position: center; }
   .card__hint { font-weight: 700; font-size: 22px; letter-spacing: .12em; }
   .card__tag { position: absolute; top: 8px; left: 8px; }
   .card__tag--right { left: auto; right: 8px; }
   .card__tag.badge--gold { background: #c99a2e; color: var(--white); }
+  .card__tag.badge--gray { background: #5f6773; color: var(--white); }
   .card__body { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px 12px; }
   .card__cat { color: var(--muted); font-weight: 500; font-size: 12px; }
   .card__title { font-weight: 600; font-size: 14px; line-height: 1.4; }

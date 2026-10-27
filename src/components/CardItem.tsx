@@ -11,15 +11,18 @@ interface Props {
   index?: number; // 목록 안 순서. 순서대로 조금씩 늦게 등장한다
 }
 
+// 비공개 카드는 관리자 목록에만 온다. 상세는 공개 카드만 열리니 문제 관리(M-02)로 보낸다
 export default function CardItem({ card, conquered, index = 0 }: Props) {
+  const isPrivate = !card.isPublic;
   return (
     <Link
-      to={`/cards/${card.id}`}
-      className={`card pop-in ${conquered ? "card--conquered" : ""}`}
+      to={isPrivate ? `/cards/${card.id}/questions` : `/cards/${card.id}`}
+      className={`card pop-in ${conquered ? "card--conquered" : ""} ${isPrivate ? "card--private" : ""}`}
       style={{ "--delay": `${Math.min(index * 55, 450)}ms` } as CSSProperties}
     >
       <CardCover id={card.id} title={card.title} thumbnailUrl={card.thumbnailUrl} className="card__cover">
         {conquered && <span className="badge badge--gold card__tag">정복 완료</span>}
+        {isPrivate && <span className="badge badge--gray card__tag card__tag--right">비공개</span>}
       </CardCover>
       <div className="card__body">
         <span className="card__cat">{card.category}</span>

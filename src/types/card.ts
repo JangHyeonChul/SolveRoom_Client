@@ -9,6 +9,8 @@ export const CATEGORIES = [
   "인물",
   "스포츠",
   "병맛",
+  "한국사",
+  "과학",
 ] as const;
 
 export type Category = (typeof CATEGORIES)[number];
@@ -25,6 +27,8 @@ export const CATEGORY_CODES: Record<Category, string> = {
   인물: "PERSON",
   스포츠: "SPORTS",
   병맛: "MEME",
+  한국사: "KOREAN_HISTORY",
+  과학: "SCIENCE",
 };
 
 export const isCategory = (value: string): value is Category => (CATEGORIES as readonly string[]).includes(value);
@@ -77,7 +81,7 @@ export interface ManagedCard {
 // 목록의 카드 한 장에 필요한 값 (GET /api/main/quiz-cards)
 export type CardSummary = Pick<
   Card,
-  "id" | "title" | "category" | "thumbnailUrl" | "questionCount" | "viewCount" | "likeCount" | "createdAt"
+  "id" | "title" | "category" | "thumbnailUrl" | "questionCount" | "viewCount" | "likeCount" | "isPublic" | "createdAt"
 >;
 
 // 카드 표지(목록·문제 관리)의 가로세로 비율. 썸네일은 올릴 때 이 비율로 영역을 골라 자른다
