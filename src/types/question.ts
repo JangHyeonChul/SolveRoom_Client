@@ -10,6 +10,8 @@ export const QUESTION_TYPE_LABEL: Record<QuestionType, string> = {
 export const MAX_IMAGES = 5;
 export const MIN_OPTIONS = 2;
 export const MAX_OPTIONS = 5;
+export const DESCRIPTION_MAX = 200; // 서버 Question.DESCRIPTION_MAX_LENGTH
+export const HINT_MAX = 100; // 서버 Question.HINT_MAX_LENGTH
 
 // 업로드한 이미지. 수정할 때는 key를 다시 보내고, 화면에는 url을 쓴다
 export interface QuestionImage {
@@ -26,6 +28,8 @@ export interface Question {
   prompt: string; // 질문 문구. 텍스트형은 본문(text)이 문제라 비어 있다
   images: QuestionImage[]; // 이미지형
   text?: string; // 텍스트형 본문
+  description: string; // 부가 설명. 풀 때 질문 문구와 함께 보인다 (없으면 빈 값)
+  hint: string; // 힌트. 혼자 풀기는 힌트 버튼을 눌러야, 멀티는 시간이 절반 지나야 보인다 (없으면 빈 값)
   answer: string; // 주관식 정답 (객관식은 정답 보기 내용)
   aliases: string[]; // 주관식에서 같이 인정할 답
   options: string[]; // 객관식 보기

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { errorMessage, hasErrorCode } from "../api/apiResponse";
-import { fetchCurrentQuestion, submitAnswer } from "../api/plays";
+import { fetchCurrentQuestion, fetchHint, submitAnswer } from "../api/plays";
 import CommentSection from "../components/CommentSection";
 import ConfirmModal from "../components/ConfirmModal";
 import ImageSlides from "../components/ImageSlides";
@@ -96,6 +96,22 @@ function PlayView({ cardId, sessionId, title }: { cardId: number } & PlayLocatio
     }
   };
 
+  // 힌트를 받아 지금 문제에 붙인다. 서버가 본 것으로 남겨 새로고침해도 힌트가 그대로 온다
+  const showHint = async () => {
+    if (!question || busy || feedback) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const hint = await fetchHint(sessionId);
+      setQuestion({ ...question, hint });
+    } catch (e) {
+      if (hasErrorCode(e, "PLAY_ALREADY_FINISHED")) return goResult();
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (guess.trim()) answer({ answer: guess }, null);
@@ -168,6 +184,20 @@ function PlayView({ cardId, sessionId, title }: { cardId: number } & PlayLocatio
 
         <section className="play-side panel" aria-label="답하기">
           {prompt && <p className="play__prompt">{prompt}</p>}
+          {question.description && <p className="play__desc">{question.description}</p>}
+          {question.hint ? (
+            <p className="play__hint">
+              <b>힌트</b>
+              {question.hint}
+            </p>
+          ) : (
+            question.hasHint &&
+            !feedback && (
+              <button type="button" className="text-btn play__hint-btn" disabled={busy} onClick={showHint}>
+                힌트 보기 (시간 보너스 없음)
+              </button>
+            )
+          )}
 
           {question.mode === "short" ? (
             <form className="play__form" onSubmit={onSubmit}>

@@ -7,6 +7,8 @@ interface QuestionManageResponse {
   questionType: "IMAGE" | "TEXT" | "SOUND";
   answerType: "SUBJECTIVE" | "MULTIPLE_CHOICE";
   contentText: string | null;
+  description: string | null;
+  hint: string | null;
   images: QuestionImage[];
   answer: string;
   aliases: string[];
@@ -27,6 +29,8 @@ export interface QuestionInput {
   mode: AnswerMode;
   prompt: string;
   text: string;
+  description: string;
+  hint: string;
   imageKeys: string[];
   answer: string;
   aliases: string[];
@@ -41,6 +45,9 @@ const questionBody = (input: QuestionInput) => ({
   questionType: input.type.toUpperCase(),
   answerType: input.mode === "choice" ? "MULTIPLE_CHOICE" : "SUBJECTIVE",
   contentText: input.type === "text" ? input.text : input.prompt || null,
+  // 수정은 문제 전체를 바꾸므로 비워 보내면 지운다
+  description: input.description || null,
+  hint: input.hint || null,
   imageKeys: input.type === "image" ? input.imageKeys : [],
   answer: input.mode === "short" ? input.answer : null,
   aliases: input.mode === "short" ? input.aliases : [],
@@ -55,6 +62,8 @@ const toQuestion = (cardId: number, q: QuestionManageResponse): Question => ({
   mode: q.answerType === "MULTIPLE_CHOICE" ? "choice" : "short",
   prompt: q.questionType === "TEXT" ? "" : (q.contentText ?? ""),
   text: q.questionType === "TEXT" ? (q.contentText ?? "") : undefined,
+  description: q.description ?? "",
+  hint: q.hint ?? "",
   images: q.images,
   answer: q.answer,
   aliases: q.aliases,

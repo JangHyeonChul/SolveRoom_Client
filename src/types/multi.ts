@@ -55,12 +55,15 @@ export interface RoomPlayer {
   order: number; // 이번 문제를 맞힌 순서
 }
 
-// 지금 문제. 정답은 오지 않고 초성 칸 수(answerLength)와 시간이 절반 지난 뒤의 초성 힌트(hint)만 온다
+// 지금 문제. 정답은 오지 않고 초성 칸 수(answerLength)와 시간이 절반 지난 뒤의 초성 힌트(hint)만 온다.
+// 부가 설명(description)은 처음부터, 제작자 힌트(authorHint)는 초성 힌트와 같이 온다
 export interface RoomQuestion {
   prompt?: string;
+  description?: string;
   imageUrls: string[];
   answerLength: number;
   hint?: string;
+  authorHint?: string;
 }
 
 // 방 상태 전체. 멀티 서버 RoomStateResponse. 시각(deadlineAt·nextAt·serverNow)은 서버 시계 기준 epoch ms

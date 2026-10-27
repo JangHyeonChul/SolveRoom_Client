@@ -9,6 +9,8 @@ import { useToast } from "../components/Toast";
 import { useManagedData } from "../components/useManagedData";
 import type { ManagedCard } from "../types/card";
 import {
+  DESCRIPTION_MAX,
+  HINT_MAX,
   MAX_IMAGES,
   MAX_OPTIONS,
   MIN_OPTIONS,
@@ -82,6 +84,8 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
   );
   const [prompt, setPrompt] = useState(original?.prompt ?? "");
   const [text, setText] = useState(original?.text ?? "");
+  const [description, setDescription] = useState(original?.description ?? "");
+  const [hint, setHint] = useState(original?.hint ?? "");
   const [answer, setAnswer] = useState(original?.mode === "short" ? original.answer : "");
   const [aliases, setAliases] = useState<string[]>(original?.aliases ?? []);
   const [aliasInput, setAliasInput] = useState("");
@@ -153,6 +157,8 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
     setImages([]);
     setPrompt("");
     setText("");
+    setDescription("");
+    setHint("");
     setAnswer("");
     setAliases([]);
     setAliasInput("");
@@ -189,6 +195,8 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
         mode,
         prompt: prompt.trim(),
         text: text.trim(),
+        description: description.trim(),
+        hint: hint.trim(),
         imageKeys,
         answer: answer.trim(),
         aliases,
@@ -344,6 +352,44 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
                 {errors.text && <p className="error">{errors.text}</p>}
               </div>
             )}
+
+            <div className="field">
+              <div className="field__row">
+                <label className="label" htmlFor="q-description">
+                  부가 설명 <small>선택</small>
+                </label>
+                <Counter value={description} max={DESCRIPTION_MAX} />
+              </div>
+              <textarea
+                id="q-description"
+                className="textarea textarea--sm"
+                maxLength={DESCRIPTION_MAX}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="예: 1세대 풀 타입 스타팅 포켓몬이에요."
+              />
+              <p className="hint">풀 때 질문 아래에 바로 보여요. 정답을 그대로 적지는 말아 주세요.</p>
+            </div>
+            <div className="field">
+              <div className="field__row">
+                <label className="label" htmlFor="q-hint">
+                  힌트 <small>선택</small>
+                </label>
+                <Counter value={hint} max={HINT_MAX} />
+              </div>
+              <input
+                id="q-hint"
+                className="input"
+                maxLength={HINT_MAX}
+                value={hint}
+                onChange={(e) => setHint(e.target.value)}
+                placeholder="예: 등에 커다란 씨앗이 있어요"
+              />
+              <p className="hint">
+                혼자 풀기는 힌트 버튼을 눌러야 보이고, 힌트를 본 문제는 빨리 맞혀도 시간 점수가 없어요. 멀티플레이는
+                시간이 절반 지나면 초성과 함께 보여요.
+              </p>
+            </div>
           </section>
 
           <section className="panel reveal" aria-labelledby="answer-title">
@@ -488,6 +534,8 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
             images={images.map((image) => image.url)}
             prompt={prompt}
             text={text}
+            description={description}
+            hint={hint}
             answer={answer}
             aliases={aliases}
             options={options}
@@ -547,6 +595,8 @@ interface PreviewProps {
   images: string[];
   prompt: string;
   text: string;
+  description: string;
+  hint: string;
   answer: string;
   aliases: string[];
   options: string[];
@@ -557,8 +607,9 @@ const normalize = (s: string) => s.replace(/\s+/g, "").toLowerCase();
 
 // 실제 풀이 화면 모양의 미리보기. 직접 답을 넣어 채점해 볼 수 있다
 function PlayPreview(props: PreviewProps) {
-  const { cardTitle, type, mode, images, prompt, text, answer, aliases, options, correct } = props;
+  const { cardTitle, type, mode, images, prompt, text, description, hint, answer, aliases, options, correct } = props;
   const [imgIdx, setImgIdx] = useState(0);
+  const [hintOpen, setHintOpen] = useState(false);
   const [guess, setGuess] = useState("");
   const [picked, setPicked] = useState<number | null>(null);
   const [result, setResult] = useState<boolean | null>(null);
@@ -598,6 +649,18 @@ function PlayPreview(props: PreviewProps) {
       )}
 
       {shownPrompt && <p className="play__prompt">{shownPrompt}</p>}
+      {description.trim() && <p className="play__desc">{description.trim()}</p>}
+      {hint.trim() &&
+        (hintOpen ? (
+          <p className="play__hint">
+            <b>힌트</b>
+            {hint.trim()}
+          </p>
+        ) : (
+          <button type="button" className="text-btn play__hint-btn" onClick={() => setHintOpen(true)}>
+            힌트 보기 (시간 보너스 없음)
+          </button>
+        ))}
 
       {mode === "short" ? (
         <form

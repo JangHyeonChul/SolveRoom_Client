@@ -15,6 +15,9 @@ interface PlayQuestionResponse {
   questionType: "IMAGE" | "TEXT" | "SOUND";
   answerType: "SUBJECTIVE" | "MULTIPLE_CHOICE";
   contentText: string | null;
+  description: string | null;
+  hasHint: boolean;
+  hint: string | null;
   imageUrls: string[];
   choices: string[];
 }
@@ -38,9 +41,18 @@ export async function fetchCurrentQuestion(sessionId: string, signal?: AbortSign
     type: q.questionType.toLowerCase() as QuestionType,
     mode: q.answerType === "MULTIPLE_CHOICE" ? "choice" : "short",
     text: q.contentText ?? "",
+    description: q.description ?? "",
+    hasHint: q.hasHint,
+    hint: q.hint,
     imageUrls: q.imageUrls,
     choices: q.choices,
   };
+}
+
+// 지금 문제의 힌트. 본 문제는 맞혀도 시간 점수가 없다. 여러 번 불러도 같은 힌트를 준다
+export async function fetchHint(sessionId: string) {
+  const data = await request<{ hint: string }>(`${sessionUrl(sessionId)}/hint`, "힌트 보기", { method: "POST" });
+  return data.hint;
 }
 
 // 주관식은 answer를 보내고(비우면 건너뛰기, 오답), 객관식은 고른 보기 위치 choiceIndex(0부터)를 보낸다

@@ -427,6 +427,13 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
     <figure key={state.round} className="mp-question swap-in">
       {image && <img src={image} alt="문제 이미지" className="mp-question__img" />}
       <figcaption className={image ? "" : "mp-question__text"}>{question?.prompt ?? "이 이미지는 무엇일까요?"}</figcaption>
+      {question?.description && <p className="mp-question__desc">{question.description}</p>}
+      {question?.authorHint && (
+        <p className="mp-question__hint">
+          <b>힌트</b>
+          {question.authorHint}
+        </p>
+      )}
     </figure>
   );
 }

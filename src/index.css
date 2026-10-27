@@ -220,6 +220,7 @@
   .input, .textarea { width: 100%; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--white); color: var(--ink); font: inherit; font-size: 14px; transition: border-color .2s, box-shadow .2s, background-color .2s; }
   .input { height: 40px; padding: 0 12px; }
   .textarea { min-height: 100px; padding: 10px 12px; resize: vertical; line-height: 1.6; }
+  .textarea--sm { min-height: 64px; }
   .input:focus, .textarea:focus { outline: none; border-color: var(--green); box-shadow: var(--focus-ring); }
   .input::placeholder, .textarea::placeholder { color: #a3a8af; }
   .input--sm { height: 34px; font-size: 13px; border-radius: 7px; }
@@ -400,6 +401,11 @@
   .stage--text { background: var(--blue-soft); padding: 20px; height: auto; min-height: 150px; }
   .stage__text { font-weight: 600; font-size: 16px; line-height: 1.6; text-align: center; color: #24486a; white-space: pre-line; }
   .play__prompt { margin: 0; font-weight: 600; font-size: 15px; text-align: center; min-height: 22px; }
+  /* 부가 설명은 질문 아래에 작게, 힌트는 눌러서 연 뒤 노란 상자로 보인다 */
+  .play__desc { margin: 0; color: var(--ink-sub); font-size: 13px; line-height: 1.55; text-align: center; white-space: pre-line; word-break: keep-all; }
+  .play__hint { display: flex; gap: 8px; align-items: baseline; justify-content: center; margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--gold-soft); color: var(--gold); font-size: 13px; font-weight: 600; line-height: 1.5; word-break: keep-all; }
+  .play__hint b { flex: none; font-size: 12px; }
+  .play__hint-btn { align-self: center; padding: 4px 8px; color: var(--gold); }
   .play__answer { display: flex; gap: 6px; }
   .play__answer .input { height: 40px; }
   .play__choices { display: flex; flex-direction: column; gap: 6px; }
@@ -673,6 +679,9 @@
   .mp-question figcaption { font-weight: 700; font-size: 18px; letter-spacing: -0.02em; }
 /* 텍스트형 문제: 이미지 없이 본문을 크게 */
 .mp-question figcaption.mp-question__text { max-width: 560px; font-size: 24px; line-height: 1.5; text-align: center; white-space: pre-wrap; word-break: keep-all; }
+  .mp-question__desc { max-width: 560px; margin: -8px 0 0; color: var(--ink-sub); font-size: 14px; line-height: 1.55; text-align: center; white-space: pre-line; word-break: keep-all; }
+  .mp-question__hint { display: flex; gap: 8px; align-items: baseline; max-width: 560px; margin: 0; padding: 8px 14px; border-radius: 8px; background: var(--gold-soft); color: var(--gold); font-size: 14px; font-weight: 600; line-height: 1.5; word-break: keep-all; animation: result-in .3s var(--ease); }
+  .mp-question__hint b { flex: none; font-size: 12px; }
   .mp-timer { display: flex; align-items: center; gap: 16px; }
   .mp-hint { flex: none; display: flex; align-items: center; gap: 8px; }
   .mp-hint__label { color: var(--muted); font-weight: 700; font-size: 12px; }

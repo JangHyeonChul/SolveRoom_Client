@@ -7,6 +7,9 @@ export interface PlayQuestion {
   type: QuestionType;
   mode: AnswerMode;
   text: string; // 텍스트형은 본문, 이미지형은 질문 문구(없으면 빈 값)
+  description: string; // 부가 설명(없으면 빈 값)
+  hasHint: boolean; // 힌트 버튼을 보여 줄지
+  hint: string | null; // 이 문제에서 힌트를 본 뒤에만 온다. 본 문제는 맞혀도 시간 점수가 없다
   imageUrls: string[];
   choices: string[]; // 객관식 보기
 }
