@@ -87,7 +87,9 @@
   .ticker__list li:first-child { border-top: 0; }
   .ticker__list li:nth-child(n+4) .ticker__no { color: var(--muted); }
   /* 상단 바 (본문 위 검색) */
-  .topbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; height: var(--topbar-h); padding: 0 32px; border-bottom: 1px solid var(--line); background: rgba(255, 255, 255, .92); backdrop-filter: blur(8px); }
+  /* 안쪽은 메인 본문(.home)과 같은 폭·여백이라 검색칸 왼쪽 끝이 카드 목록과 맞는다 */
+  .topbar { position: sticky; top: 0; z-index: 30; height: var(--topbar-h); border-bottom: 1px solid var(--line); background: rgba(255, 255, 255, .92); backdrop-filter: blur(8px); }
+  .topbar__inner { max-width: 1600px; height: 100%; display: flex; align-items: center; }
   .topbar .search { width: 100%; max-width: 460px; height: 38px; border-color: var(--line-strong); border-radius: 9px; }
   .topbar .search input { font-size: 14px; }
   .search__key { flex: none; min-width: 20px; height: 20px; padding: 0 5px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg-soft); color: var(--muted); font: 600 11px/18px var(--font-body); text-align: center; }
@@ -832,7 +834,6 @@
   .app-shell { grid-template-columns: 1fr; }
   /* 세로는 열어 둬 펼친 랭킹이 사이드바 밖으로 겹쳐 뜨게 한다. 스크롤 칸이 아니게 되므로 min-width: 0으로 카테고리 줄이 폭을 늘리지 않게 막는다 */
   .sidebar { position: relative; min-width: 0; height: auto; overflow: clip visible; gap: 10px; padding: 12px 16px; border-right: 0; border-bottom: 1px solid var(--line); }
-  .topbar { padding: 0 16px; }
   .topbar .search { max-width: none; }
   .search__key { display: none; }
   .sidebar .logo { padding: 2px 0; }

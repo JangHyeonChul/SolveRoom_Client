@@ -33,23 +33,25 @@ export default function Topbar() {
 
   return (
     <header className="topbar">
-      <form onSubmit={onSearch} className="search" role="search">
-        <Icon name="search" size={15} strokeWidth={2.2} />
-        <label htmlFor="top-search" className="sr-only">
-          문제 카드 검색
-        </label>
-        <input
-          id="top-search"
-          ref={inputRef}
-          type="search"
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-          placeholder="문제 카드 제목으로 검색"
-        />
-        <kbd className="search__key" aria-hidden="true">
-          /
-        </kbd>
-      </form>
+      <div className="wrap topbar__inner">
+        <form onSubmit={onSearch} className="search" role="search">
+          <Icon name="search" size={15} strokeWidth={2.2} />
+          <label htmlFor="top-search" className="sr-only">
+            문제 카드 검색
+          </label>
+          <input
+            id="top-search"
+            ref={inputRef}
+            type="search"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="문제 카드 제목으로 검색"
+          />
+          <kbd className="search__key" aria-hidden="true">
+            /
+          </kbd>
+        </form>
+      </div>
     </header>
   );
 }
