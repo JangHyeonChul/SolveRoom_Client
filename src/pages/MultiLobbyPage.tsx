@@ -9,6 +9,7 @@ import Modal from "../components/Modal";
 import MultiAvatar from "../components/MultiAvatar";
 import Nickname from "../components/Nickname";
 import OptionSeg from "../components/OptionSeg";
+import { RoomCardList } from "../components/RoomCards";
 import { useSceneNavigate } from "../components/SceneRoot";
 import { useToast } from "../components/Toast";
 import { CATEGORIES, CATEGORY_CODES } from "../types/card";
@@ -17,7 +18,10 @@ import {
   QUESTION_COUNT_OPTIONS,
   ROOM_BADGE_LABELS,
   TIME_LIMIT_OPTIONS,
+  TOPIC_OPTIONS,
+  cardQuestionTotal,
   categoryLabel,
+  isCustomTopic,
   roomBadge,
   type LobbyUser,
   type Room,
@@ -34,7 +38,10 @@ const isOpen = (room: Room) => roomBadge(room) === "wait";
 
 const matches = (room: Room, filter: Filter, keyword: string) =>
   (filter === "all" || (filter === "wait" ? room.status === "wait" : isOpen(room))) &&
-  (!keyword || `${room.no} ${room.title} ${categoryLabel(room.category)}`.toLowerCase().includes(keyword.toLowerCase()));
+  (!keyword ||
+    `${room.no} ${room.title} ${categoryLabel(room.category)} ${room.cards.map((c) => c.title).join(" ")}`
+      .toLowerCase()
+      .includes(keyword.toLowerCase()));
 
 const CHAT_PLACEHOLDER: Record<LobbyStatus, string> = {
   connecting: "로비에 연결하는 중…",
@@ -215,7 +222,10 @@ function RoomItem({ room, onClick }: { room: Room; onClick: () => void }) {
       <span className="mp-room__no">{room.no}</span>
       <span className="mp-room__info">
         <span className="mp-room__title">{room.title}</span>
-        <span className="mp-room__card">주제 · {categoryLabel(room.category)}</span>
+        <span className="mp-room__card">
+          주제 · {categoryLabel(room.category)}
+          {isCustomTopic(room.category) && (room.cards.length ? ` · 카드 ${room.cards.length}장` : " · 카드 담는 중")}
+        </span>
         <span className="mp-room__meta">
           <span><Icon name="list" size={13} />{room.questionCount}문제</span>
           <span><Icon name="clock" size={13} />{room.timeLimit}초</span>
@@ -233,7 +243,7 @@ function RoomItem({ room, onClick }: { room: Room; onClick: () => void }) {
 }
 
 // 주제(카테고리)를 고르면 그 카테고리의 공개 카드 문제 중에서 무작위로 나온다.
-// 문제가 모자란 주제는 서버가 error로 알려 준다
+// 문제가 모자란 주제는 서버가 error로 알려 준다. 커스텀은 방을 만든 뒤 대기실에서 카드를 담는다
 function CreateRoomModal({
   host,
   creating,
@@ -265,14 +275,18 @@ function CreateRoomModal({
           <span className="label">방 제목</span>
           <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={30} autoFocus />
         </label>
-        <OptionSeg
-          label="주제"
-          options={CATEGORIES.map((c) => CATEGORY_CODES[c])}
-          value={category}
-          onChange={setCategory}
-          format={categoryLabel}
-        />
-        <p className="hint">고른 주제의 공개 카드에서 주관식 문제가 무작위로 나와요.</p>
+        <OptionSeg label="주제" options={TOPIC_OPTIONS} value={category} onChange={setCategory} format={categoryLabel} />
+        {isCustomTopic(category) ? (
+          <p className="callout callout--green">
+            <Icon name="cards" size={15} />
+            <span>
+              방을 만든 뒤 <b>대기실의 카드 덱을 눌러 문제 카드를 담아요.</b> 담은 카드의 주관식 문제에서만 나오고, 들어온
+              사람도 어떤 카드인지 볼 수 있어요.
+            </span>
+          </p>
+        ) : (
+          <p className="hint">고른 주제의 공개 카드에서 주관식 문제가 무작위로 나와요.</p>
+        )}
         <OptionSeg label="문제 수" options={QUESTION_COUNT_OPTIONS} value={questionCount} onChange={setQuestionCount} />
         <OptionSeg label="문제당 제한 시간" options={TIME_LIMIT_OPTIONS} value={timeLimit} onChange={setTimeLimit} format={(n) => `${n}초`} />
         <OptionSeg label="최대 인원" options={MAX_PLAYER_OPTIONS} value={maxPlayers} onChange={setMaxPlayers} format={(n) => `${n}명`} />
@@ -334,6 +348,7 @@ function CodeModal({ rooms, onClose, onFind }: { rooms: Room[]; onClose: () => v
 function JoinModal({ room, onClose, onEnter }: { room: Room; onClose: () => void; onEnter: () => void }) {
   const badge = roomBadge(room);
   const canJoin = badge === "wait";
+  const custom = isCustomTopic(room.category);
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -347,14 +362,29 @@ function JoinModal({ room, onClose, onEnter }: { room: Room; onClose: () => void
           <dt>방 제목</dt>
           <dd>{room.title}</dd>
           <dt>주제</dt>
-          <dd>{categoryLabel(room.category)}</dd>
+          <dd>
+            {categoryLabel(room.category)}
+            {custom && ` · 카드 ${room.cards.length}장`}
+          </dd>
           <dt>규칙</dt>
-          <dd>{room.questionCount}문제 · 문제당 {room.timeLimit}초 · 채팅으로 정답 입력</dd>
+          <dd>
+            {custom && room.cards.length ? `문제 ${cardQuestionTotal(room.cards)}개 중 ` : ""}
+            {room.questionCount}문제 · 문제당 {room.timeLimit}초 · 채팅으로 정답 입력
+          </dd>
           <dt>인원</dt>
           <dd>
             {room.playerCount}/{room.maxPlayers}명{room.hostNickname && ` · 방장 ${room.hostNickname}`}
           </dd>
         </dl>
+        {custom &&
+          (room.cards.length ? (
+            <div className="field">
+              <span className="label">이 방의 문제 카드</span>
+              <RoomCardList cards={room.cards} />
+            </div>
+          ) : (
+            <p className="hint">방장이 대기실에서 문제 카드를 담는 중이에요.</p>
+          ))}
         {!canJoin && (
           <p className="callout callout--blue">
             {badge === "play" ? "게임이 진행 중이에요. 게임이 끝나면 들어갈 수 있어요." : "자리가 가득 찼어요. 잠시 후 다시 시도해 주세요."}

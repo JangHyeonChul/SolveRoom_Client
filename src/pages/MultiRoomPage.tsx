@@ -9,9 +9,16 @@ import Modal from "../components/Modal";
 import MultiAvatar from "../components/MultiAvatar";
 import Nickname from "../components/Nickname";
 import OptionSeg from "../components/OptionSeg";
+import { CardDeckModal, RoomCardsModal, RoomDeck } from "../components/RoomCards";
 import { useToast } from "../components/Toast";
-import { CATEGORIES, CATEGORY_CODES } from "../types/card";
-import { categoryLabel, type RoomPlayer, type RoomState } from "../types/multi";
+import {
+  TOPIC_OPTIONS,
+  cardQuestionTotal,
+  categoryLabel,
+  isCustomTopic,
+  type RoomPlayer,
+  type RoomState,
+} from "../types/multi";
 import { copyText } from "../utils/clipboard";
 import { chosung } from "../utils/cover";
 
@@ -60,6 +67,7 @@ function RoomView({ no }: { no: number }) {
   const room = useRoom({ no, userId: user?.id, ready, onError: toast });
   const [leaving, setLeaving] = useState(false);
   const [changingTopic, setChangingTopic] = useState(false);
+  const [deckOpen, setDeckOpen] = useState(false);
   const state = room.room;
   const inGame = state?.phase === "play" || state?.phase === "reveal";
   useTicker(inGame);
@@ -93,6 +101,12 @@ function RoomView({ no }: { no: number }) {
   // 문제가 모자란 주제면 서버가 error로 거절하고 이유는 토스트로 뜬다
   const changeTopic = (category: string) => {
     if (!room.changeTopic(category)) toast("방에 다시 연결하는 중이에요. 잠시 후 바꿔 주세요");
+  };
+
+  // 담을 수 없는 카드(비공개·주관식 문제 없음 등)는 서버가 error로 거절하고 이유는 토스트로 뜬다
+  const sendCard = (sent: boolean) => {
+    if (!sent) toast("방에 다시 연결하는 중이에요. 잠시 후 다시 해 주세요");
+    return sent;
   };
 
   const answering = state.phase === "play" && !!mine && !mine.correct;
@@ -143,6 +157,7 @@ function RoomView({ no }: { no: number }) {
               onAgain={room.again}
               onInvite={invite}
               onChangeTopic={() => setChangingTopic(true)}
+              onOpenDeck={() => setDeckOpen(true)}
             />
           </div>
           {state.phase === "play" && <TimerRow state={state} now={now} />}
@@ -188,11 +203,23 @@ function RoomView({ no }: { no: number }) {
       {changingTopic && isHost && state.phase === "wait" && (
         <TopicModal current={state.category} onClose={() => setChangingTopic(false)} onChange={changeTopic} />
       )}
+      {/* 덱은 커스텀 주제 대기실에서만 연다. 방장이 바뀌면 열린 모달도 그 시점에 맞게 바뀐다 */}
+      {deckOpen && state.phase === "wait" && isCustomTopic(state.category) &&
+        (isHost ? (
+          <CardDeckModal
+            cards={state.cards}
+            onAdd={(id) => sendCard(room.addCard(id))}
+            onRemove={(id) => sendCard(room.removeCard(id))}
+            onClose={() => setDeckOpen(false)}
+          />
+        ) : (
+          <RoomCardsModal cards={state.cards} onClose={() => setDeckOpen(false)} />
+        ))}
     </main>
   );
 }
 
-// 대기실에서 방장이 주제를 바꾼다. 바꾸면 다른 사람의 준비가 풀린다
+// 대기실에서 방장이 주제를 바꾼다. 바꾸면 다른 사람의 준비가 풀리고, 담아 둔 커스텀 카드는 비워진다
 function TopicModal({ current, onClose, onChange }: { current: string; onClose: () => void; onChange: (category: string) => void }) {
   const [category, setCategory] = useState(current);
 
@@ -205,14 +232,13 @@ function TopicModal({ current, onClose, onChange }: { current: string; onClose: 
   return (
     <Modal title="주제 바꾸기" onClose={onClose}>
       <form className="mp-form" onSubmit={onSubmit}>
-        <OptionSeg
-          label="주제"
-          options={CATEGORIES.map((c) => CATEGORY_CODES[c])}
-          value={category}
-          onChange={setCategory}
-          format={categoryLabel}
-        />
-        <p className="hint">고른 주제의 공개 카드에서 주관식 문제가 무작위로 나와요. 주제를 바꾸면 다른 사람은 다시 준비해야 해요.</p>
+        <OptionSeg label="주제" options={TOPIC_OPTIONS} value={category} onChange={setCategory} format={categoryLabel} />
+        <p className="hint">
+          {isCustomTopic(category)
+            ? "바꾼 뒤 대기실의 카드 덱을 눌러 문제 카드를 담아요."
+            : "고른 주제의 공개 카드에서 주관식 문제가 무작위로 나와요."}{" "}
+          주제를 바꾸면 다른 사람은 다시 준비해야 해요.
+        </p>
         <div className="modal__actions">
           <button type="button" className="btn btn--outline btn--sm" onClick={onClose}>
             취소
@@ -306,9 +332,10 @@ interface StageProps {
   onAgain: () => void;
   onInvite: () => void;
   onChangeTopic: () => void;
+  onOpenDeck: () => void;
 }
 
-function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, onChangeTopic }: StageProps) {
+function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, onChangeTopic, onOpenDeck }: StageProps) {
   const question = state.question;
   const image = question?.imageUrls[0];
   const topic = categoryLabel(state.category);
@@ -317,14 +344,50 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
     const others = state.players.filter((p) => !p.host);
     const readyCount = others.filter((p) => p.ready).length;
     const allReady = readyCount === others.length;
+    // 커스텀 주제는 카드를 담아야, 담은 카드의 문제가 방 문제 수보다 많아야 시작할 수 있다 (서버도 같은 조건으로 막는다)
+    const custom = isCustomTopic(state.category);
+    const cardTotal = cardQuestionTotal(state.cards);
+    const cardBlocker = !custom
+      ? null
+      : !state.cards.length
+        ? isHost
+          ? "왼쪽 카드 덱을 눌러 문제 카드를 담아 주세요."
+          : "방장이 문제 카드를 담으면 시작할 수 있어요."
+        : cardTotal < state.questionCount
+          ? `담은 카드의 문제가 ${cardTotal}개라 ${state.questionCount}문제를 낼 수 없어요.${isHost ? " 카드를 더 담아 주세요." : ""}`
+          : null;
     return (
       <div className="mp-wait swap-in">
-        <div className="mp-wait__cover tone-2">{chosung(topic)}</div>
+        {custom ? (
+          <RoomDeck cards={state.cards} isHost={isHost} onOpen={onOpenDeck} />
+        ) : (
+          <div className="mp-wait__cover tone-2">{chosung(topic)}</div>
+        )}
         <div className="mp-wait__body">
           <span className="mp-wait__eyebrow">주제</span>
-          <h2 className="display">{topic}</h2>
+          <h2 className="display">
+            {topic}
+            {custom && <small className="mp-wait__count">문제 카드 {state.cards.length}장</small>}
+          </h2>
+          {custom &&
+            (state.cards.length ? (
+              <p className="mp-wait__cards">
+                {state.cards.map((c) => (
+                  <span key={c.id}>
+                    <b>{c.title}</b> {c.questionCount}
+                  </span>
+                ))}
+              </p>
+            ) : (
+              <div className="mp-wait__nocards">
+                <b>문제 카드를 추가해 주세요</b>
+                {isHost ? "왼쪽 카드 덱을 눌러 담아요. 담은 카드의 주관식 문제에서만 나와요." : "방장이 카드를 고르고 있어요."}
+              </div>
+            ))}
           <ul className="mp-rules">
-            <li>{topic} 문제 중 {state.questionCount}문제 무작위</li>
+            <li>
+              {custom ? `담은 카드의 문제 ${cardTotal}개` : `${topic} 문제`} 중 {state.questionCount}문제 무작위
+            </li>
             <li>문제당 {state.timeLimit}초</li>
             <li>{Math.floor(state.timeLimit / 2)}초 남으면 초성 힌트</li>
             <li>채팅창에 정답 입력</li>
@@ -333,7 +396,7 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
           </ul>
           <div className="mp-wait__actions">
             {isHost ? (
-              <button type="button" className="btn btn--primary btn--lg" disabled={!allReady} onClick={onStart}>
+              <button type="button" className="btn btn--primary btn--lg" disabled={!allReady || !!cardBlocker} onClick={onStart}>
                 게임 시작
               </button>
             ) : (
@@ -353,8 +416,9 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
               초대 코드 {state.no}
             </button>
           </div>
-          <p className="mp-wait__note">
-            {others.length === 0
+          <p className={`mp-wait__note ${cardBlocker && state.cards.length ? "is-warn" : ""}`}>
+            {cardBlocker ??
+              (others.length === 0
               ? isHost
                 ? "혼자서도 시작할 수 있어요. 친구를 부르려면 초대 링크를 보내세요."
                 : "방장을 기다리는 중이에요."
@@ -362,7 +426,7 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
                 ? allReady
                   ? "모두 준비됐어요. 게임을 시작하세요."
                   : `준비 ${readyCount}/${others.length} · 모두 준비하면 시작할 수 있어요`
-                : `준비 ${readyCount}/${others.length} · 모두 준비하면 방장이 시작해요`}
+                : `준비 ${readyCount}/${others.length} · 모두 준비하면 방장이 시작해요`)}
           </p>
         </div>
       </div>

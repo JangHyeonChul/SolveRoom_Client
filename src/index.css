@@ -738,6 +738,60 @@
   .mp-rules li::before { content: ""; width: 5px; height: 5px; flex: none; border-radius: 50%; background: var(--green); }
   .mp-wait__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
   .mp-wait__note { margin: 0; color: var(--muted); font-size: 13px; }
+  .mp-wait__note.is-warn { color: #c2410c; }
+  /* 커스텀 주제: 대기실 표지 대신 담은 카드 덱 (시안 multi-03-custom-topic.html #3). 카드 뒤에 개수·안내 두 칸이 붙어 맨 위 카드가 뒤에서 3번째다 */
+  .mp-wait__count { margin-left: 10px; color: var(--muted); font-size: 14px; font-weight: 600; letter-spacing: 0; }
+  .mp-wait__cards { margin: 0; display: flex; flex-wrap: wrap; gap: 2px 12px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+  .mp-wait__cards b { color: var(--ink); font-weight: 600; }
+  .mp-wait__nocards { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border: 1.5px dashed var(--green-line); border-radius: 10px; background: #fbfdfb; color: var(--muted); font-size: 13px; }
+  .mp-wait__nocards b { color: var(--green-deep); font-size: 15px; }
+  .mp-deck { position: relative; width: 100%; aspect-ratio: 1; padding: 0; border: 0; background: none; font: inherit; cursor: pointer; }
+  .mp-deck__card { position: absolute; inset: 14% 4% 18% 8%; border-radius: 12px; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 18px -8px rgba(0, 0, 0, .35); transition: transform .25s var(--ease); }
+  .mp-deck__card .card__hint { font-size: 20px; }
+  .mp-deck__card:nth-last-child(5) { transform: rotate(-9deg) translate(-8px, 4px); }
+  .mp-deck__card:nth-last-child(4) { transform: rotate(5deg) translate(6px, 2px); }
+  .mp-deck:hover .mp-deck__card:nth-last-child(5) { transform: rotate(-14deg) translate(-16px, 4px); }
+  .mp-deck:hover .mp-deck__card:nth-last-child(4) { transform: rotate(10deg) translate(14px, 2px); }
+  .mp-deck__count { position: absolute; right: 0; top: 4%; z-index: 1; display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 10px; border-radius: 999px; background: var(--ink); color: var(--white); font-weight: 700; font-size: 12px; box-shadow: 0 4px 10px -4px rgba(0, 0, 0, .4); }
+  .mp-deck__empty { position: absolute; inset: 6% 6% 16%; border: 2px dashed var(--green-line); border-radius: 14px; background: #fbfdfb; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--green-deep); font-weight: 700; font-size: 13px; transition: background-color .15s; }
+  .mp-deck:hover .mp-deck__empty { background: var(--green-soft); }
+  .mp-deck__hint { position: absolute; left: 0; right: 0; bottom: 0; color: var(--muted); font-size: 12px; text-align: center; }
+  .mp-cardlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .mp-cardlist li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+  .mp-cardlist li:first-child { border-top: 0; }
+  .mp-cardlist__cover { flex: none; width: 56px; aspect-ratio: 16 / 9; border-radius: 6px; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; }
+  .mp-cardlist__cover .card__hint { font-size: 11px; letter-spacing: .06em; }
+  .mp-cardlist__body { min-width: 0; display: flex; flex-direction: column; }
+  .mp-cardlist__body a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); font-weight: 600; font-size: 13px; text-decoration: none; }
+  .mp-cardlist__body a:hover { text-decoration: underline; }
+  .mp-cardlist__body small { color: var(--muted); font-size: 12px; }
+  .mp-picker { display: flex; flex-direction: column; gap: 12px; }
+  .mp-picker__cats { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+  .mp-picker__cats button { flex: none; height: 28px; padding: 0 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--white); color: var(--ink-sub); font: inherit; font-weight: 600; font-size: 12px; cursor: pointer; }
+  .mp-picker__cats button[aria-checked="true"] { border-color: var(--ink); background: var(--ink); color: var(--white); }
+  .mp-picker__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; max-height: min(380px, 48vh); overflow-y: auto; padding: 2px; }
+  .mp-picker__grid[aria-busy="true"] { opacity: .6; }
+  .mp-picker__more { grid-column: 1 / -1; justify-self: center; }
+  .mp-pick { position: relative; display: flex; flex-direction: column; padding: 0; border: 1px solid var(--line); border-radius: 9px; background: var(--white); color: var(--ink); font: inherit; text-align: left; overflow: hidden; cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+  .mp-pick:hover:not(:disabled) { border-color: var(--line-strong); }
+  .mp-pick:disabled { cursor: not-allowed; opacity: .55; }
+  .mp-pick.is-on { border-color: var(--green); box-shadow: 0 0 0 2px var(--green-line); opacity: 1; }
+  .mp-pick__cover { position: relative; aspect-ratio: 16 / 9; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; }
+  .mp-pick__cover .card__hint { font-size: 17px; }
+  .mp-pick__check { position: absolute; right: 7px; top: 7px; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, .9); color: transparent; box-shadow: 0 1px 3px rgba(0, 0, 0, .15); }
+  .mp-pick.is-on .mp-pick__check { background: var(--green); color: var(--white); }
+  .mp-pick__body { display: flex; flex-direction: column; padding: 8px 10px 10px; }
+  .mp-pick__body b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+  .mp-pick__body small { color: var(--muted); font-size: 12px; }
+  .mp-picker__tray { display: flex; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .mp-picker__picked { flex: 1; min-width: 0; display: flex; gap: 6px; overflow-x: auto; padding-top: 6px; }
+  .mp-picker__picked button { position: relative; flex: none; padding: 0; border: 0; background: none; cursor: pointer; }
+  .mp-picker__picked button::after { content: "×"; position: absolute; right: -4px; top: -6px; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); color: var(--white); font-size: 11px; line-height: 16px; text-align: center; }
+  .mp-picker__thumb { width: 56px; aspect-ratio: 16 / 9; border-radius: 6px; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; }
+  .mp-picker__thumb .card__hint { font-size: 10px; letter-spacing: .04em; }
+  .mp-picker__sum { flex: none; color: var(--muted); font-size: 12px; }
+  .mp-picker__none { flex: 1; color: var(--muted); font-size: 13px; }
+  .mp-picker__none b { color: var(--green-deep); }
   .mp-reveal { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 28px; text-align: center; }
   .mp-reveal__img { width: 180px; aspect-ratio: 16 / 10; object-fit: contain; filter: drop-shadow(0 8px 18px rgba(0, 0, 0, .16)); }
   .mp-reveal__label { color: var(--muted); font-weight: 700; font-size: 13px; }

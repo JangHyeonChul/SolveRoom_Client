@@ -6,7 +6,16 @@ import { CATEGORIES, CATEGORY_CODES, type Category } from "./card";
 export type RoomStatus = "wait" | "play";
 export type RoomBadge = RoomStatus | "full";
 
-// 로비 방 목록 한 줄. 멀티 서버 RoomSummaryResponse. category는 서버 코드(GAME 등)
+// 커스텀 주제 방에 담은 문제 카드. 멀티 서버 RoomCard. questionCount는 카드 전체가 아니라 멀티에서 낼 수 있는 문제 수
+export interface RoomCard {
+  id: number;
+  title: string;
+  category: string; // 서버 카테고리 코드(GAME 등)
+  thumbnailUrl: string | null;
+  questionCount: number;
+}
+
+// 로비 방 목록 한 줄. 멀티 서버 RoomSummaryResponse. category는 서버 코드(GAME 등, 커스텀은 CUSTOM)
 export interface Room {
   no: number;
   title: string;
@@ -17,6 +26,7 @@ export interface Room {
   playerCount: number;
   hostNickname: string | null; // 만들고 아직 아무도 안 들어왔으면 null
   status: RoomStatus;
+  cards: RoomCard[]; // 커스텀 주제에서 담은 카드. 아니면 빈 목록
 }
 
 // 로비 접속자. 멀티 서버 LobbyUserResponse. 회원은 key가 "u{회원 id}"라 탭을 여러 개 열어도 한 번만 나온다
@@ -79,6 +89,7 @@ export interface RoomState {
   totalRounds: number;
   hostKey?: string;
   players: RoomPlayer[];
+  cards: RoomCard[];
   question?: RoomQuestion;
   answer?: string; // 정답 공개(reveal) 단계에만 온다
   deadlineAt?: number;
@@ -100,9 +111,18 @@ export const ROOM_BADGE_LABELS: Record<RoomBadge, string> = { wait: "대기 중"
 export const roomBadge = (room: Room): RoomBadge =>
   room.status === "play" ? "play" : room.playerCount >= room.maxPlayers ? "full" : "wait";
 
+// 커스텀 주제. 카테고리 대신 방장이 대기실에서 담은 문제 카드에서 낸다 (멀티 서버 RoomCategory.CUSTOM)
+export const CUSTOM_TOPIC = "CUSTOM";
+export const MAX_ROOM_CARDS = 10; // 멀티 서버 Room.MAX_CARDS와 같다
+export const isCustomTopic = (code: string) => code === CUSTOM_TOPIC;
+// 방 만들기·주제 바꾸기 선택지. 카테고리 다음 맨 끝에 커스텀
+export const TOPIC_OPTIONS = [...CATEGORIES.map((c) => CATEGORY_CODES[c]), CUSTOM_TOPIC];
+// 담은 카드에서 낼 수 있는 문제 수
+export const cardQuestionTotal = (cards: RoomCard[]) => cards.reduce((sum, c) => sum + c.questionCount, 0);
+
 // 서버 카테고리 코드(GAME) → 화면 이름(게임)
 const CATEGORY_LABELS = Object.fromEntries(CATEGORIES.map((c) => [CATEGORY_CODES[c], c])) as Record<string, Category>;
-export const categoryLabel = (code: string) => CATEGORY_LABELS[code] ?? code;
+export const categoryLabel = (code: string) => (isCustomTopic(code) ? "커스텀" : (CATEGORY_LABELS[code] ?? code));
 
 // 방 만들기 선택지. 멀티 서버 RoomSettings와 같다
 export const QUESTION_COUNT_OPTIONS = [10, 20, 30, 50];

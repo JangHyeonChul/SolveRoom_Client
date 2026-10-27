@@ -174,7 +174,10 @@ export function useRoom({ no, userId, ready, onError }: { no: number; userId?: n
   const again = useCallback(() => send({ type: "again" }), [send]);
   // 대기실에서 방장만. 바꾸면 서버가 다른 사람의 준비를 풀고, 문제가 모자란 주제는 error로 거절한다
   const changeTopic = useCallback((category: string) => send({ type: "changeTopic", category }), [send]);
+  // 커스텀 주제 대기실에서 방장만. 담거나 빼면 서버가 다른 사람의 준비를 풀고, 담을 수 없는 카드는 error로 거절한다
+  const addCard = useCallback((cardId: number) => send({ type: "addCard", cardId }), [send]);
+  const removeCard = useCallback((cardId: number) => send({ type: "removeCard", cardId }), [send]);
   const serverNow = useCallback(() => Date.now() + offsetRef.current, []);
 
-  return { status, me, room, chat, closedReason, serverNow, sendChat, toggleReady, start, again, changeTopic };
+  return { status, me, room, chat, closedReason, serverNow, sendChat, toggleReady, start, again, changeTopic, addCard, removeCard };
 }

@@ -14,6 +14,7 @@ const PATHS = {
   info: <><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v5h1" /></>,
   check: <path d="M5 12l5 5 9-10" />,
   plus: <path d="M12 5v14M5 12h14" />,
+  cards: <><rect x="8" y="3" width="12" height="15" rx="2" /><path d="M5 7v12a2 2 0 0 0 2 2h9" /></>,
   close: <path d="M6 6l12 12M18 6L6 18" />,
   edit: <path d="M4 20h4L19 9l-4-4L4 16z" />,
   trash: <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />,
