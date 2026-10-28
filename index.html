@@ -22,6 +22,15 @@
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
     />
+    <!-- 앱 CSS는 JS와 함께 늦게 오므로, 그 전에 잠깐 보이는 소개글이 깨져 보이지 않게 여기서 꾸민다 -->
+    <style>
+      #root > h1, #root > p {
+        max-width: 560px; margin: 0 auto; padding: 0 16px; text-align: center;
+        font-family: "Pretendard Variable", Pretendard, -apple-system, sans-serif;
+        color: #9a9a9a; font-size: 13px; font-weight: 400; line-height: 1.6; word-break: keep-all;
+      }
+      #root > h1 { padding-top: 40vh; font-size: 15px; font-weight: 600; }
+    </style>
   </head>
   <body>
     <!-- 스크립트를 돌리지 않는 검색 로봇(네이버 등)이 읽을 소개글. 앱이 뜨면 React가 이 내용을 지우고 화면을 그린다 -->
