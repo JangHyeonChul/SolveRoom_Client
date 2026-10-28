@@ -66,11 +66,12 @@ export interface RoomPlayer {
 }
 
 // 지금 문제. 정답은 오지 않고 초성 칸 수(answerLength)와 시간이 절반 지난 뒤의 초성 힌트(hint)만 온다.
-// 부가 설명(description)은 처음부터, 제작자 힌트(authorHint)는 초성 힌트와 같이 온다
+// 부가 설명(description)과 소리(soundUrl)는 처음부터, 제작자 힌트(authorHint)는 초성 힌트와 같이 온다
 export interface RoomQuestion {
   prompt?: string;
   description?: string;
   imageUrls: string[];
+  soundUrl?: string;
   answerLength: number;
   hint?: string;
   authorHint?: string;
@@ -92,6 +93,8 @@ export interface RoomState {
   cards: RoomCard[];
   question?: RoomQuestion;
   answer?: string; // 정답 공개(reveal) 단계에만 온다
+  // 소리 문제를 모두 같이 재생하기 시작하는 시각. 소리 문제를 푸는 중에만 온다 (그 전까지는 카운트다운)
+  playAt?: number;
   deadlineAt?: number;
   nextAt?: number;
   serverNow: number;

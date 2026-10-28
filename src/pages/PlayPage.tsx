@@ -5,6 +5,7 @@ import { fetchCurrentQuestion, fetchHint, submitAnswer } from "../api/plays";
 import CommentSection from "../components/CommentSection";
 import ConfirmModal from "../components/ConfirmModal";
 import ImageSlides from "../components/ImageSlides";
+import SoundStage from "../components/SoundStage";
 import type { AnswerResult, PlayLocationState, PlayQuestion } from "../types/play";
 
 // 답을 낸 뒤의 결과. 객관식은 고른 보기를, 주관식은 건너뛰었는지를 함께 둔다
@@ -142,7 +143,12 @@ function PlayView({ cardId, sessionId, title }: { cardId: number } & PlayLocatio
   const total = question.questionCount;
   const answered = feedback ? question.seq : question.seq - 1;
   const isImage = question.type === "image" && question.imageUrls.length > 0;
-  const prompt = isImage ? question.text || "이 그림은 무엇일까요?" : "";
+  const isSound = question.type === "sound" && !!question.soundUrl;
+  const prompt = isSound
+    ? question.text || "이 소리는 무엇일까요?"
+    : isImage
+      ? question.text || "이 그림은 무엇일까요?"
+      : "";
 
   return (
     <main className="wrap page page--wide">
@@ -172,7 +178,17 @@ function PlayView({ cardId, sessionId, title }: { cardId: number } & PlayLocatio
 
       {/* 문제마다 새로 그려 입력이 비고 등장 애니메이션이 다시 나온다 */}
       <div key={question.seq} className="play-body swap-in">
-        {isImage ? (
+        {isSound ? (
+          // 다음 문제를 누른 뒤라 대부분 바로 재생된다. 브라우저가 막으면 재생 버튼을 누르면 된다
+          <SoundStage
+            className="stage--play"
+            src={question.soundUrl!}
+            autoPlay
+            images={question.imageUrls}
+            imageIndex={imageIndex}
+            onImageChange={setImageIndex}
+          />
+        ) : isImage ? (
           <div className="stage stage--play">
             <ImageSlides images={question.imageUrls} index={imageIndex} onChange={setImageIndex} />
           </div>

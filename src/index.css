@@ -823,6 +823,76 @@
   .mp-tag--host svg { fill: currentColor; }
   .mp-tag--ready { background: var(--green-soft); color: var(--green-deep); }
   .mp-tag--gain { background: var(--blue-soft); color: var(--blue); }
+
+  /* 소리형 (시안 3): 이미지 또는 소리 아이콘 위에 재생 바를 얹는다 */
+  .stage--sound { flex-direction: column; }
+  .stage--sound.is-empty { background: var(--purple-soft); }
+  .stage--sound img { bottom: 64px; }
+  .stage--sound .stage__dots { top: 8px; bottom: auto; }
+  .stage--sound .stage__nav { translate: 0 calc(-50% - 28px); }
+  .stage--sound .stage__empty { color: var(--purple); }
+  .stage__sound-icon { width: 80px; height: 80px; margin-bottom: 48px; border-radius: 50%; background: var(--purple); color: var(--white); display: flex; align-items: center; justify-content: center; }
+  .stage--sound .sound-bar { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 2; }
+  .sound-bar { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 10px 0 6px; border: 1px solid var(--line); border-radius: 10px; background: var(--white); box-shadow: 0 4px 14px rgba(0, 0, 0, .06); }
+  .sound-bar__btn { width: 36px; height: 36px; flex: 0 0 36px; border: 0; border-radius: 8px; background: var(--purple); color: var(--white); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+  .sound-bar__btn:hover { background: #5f3b93; }
+  .sound-bar__time { flex: none; min-width: 32px; color: var(--ink-sub); font-weight: 600; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .sound-bar__time--total { color: var(--muted); text-align: right; }
+  .sound-bar__track { flex: 1; min-width: 0; height: 6px; margin: 0; border-radius: 999px; appearance: none; background: linear-gradient(var(--purple), var(--purple)) 0 / var(--fill, 0%) 100% no-repeat, #ece6f5; cursor: pointer; }
+  .sound-bar__track::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--purple); border: 2px solid var(--white); box-shadow: 0 1px 3px rgba(0, 0, 0, .25); }
+  .sound-bar__track::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--purple); border: 2px solid var(--white); }
+  .sound-bar__track--fixed { display: block; overflow: hidden; cursor: default; background: #ece6f5; }
+  .sound-bar__track--fixed span { display: block; height: 100%; background: var(--purple); transition: width .25s linear; }
+  .sound-bar__icon { width: 32px; height: 32px; flex: 0 0 32px; border: 1px solid var(--line); border-radius: 7px; background: var(--white); color: var(--ink-sub); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+  .sound-bar__icon:hover { color: var(--ink); border-color: var(--line-strong); }
+
+  /* 소리형 등록 (시안 C): 파형에서 최대 30초 구간을 끌어서 고른다 */
+  .sound-drop { position: relative; height: 128px; border: 1px dashed #c9cdd2; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--muted); font-weight: 600; font-size: 13px; text-align: center; cursor: pointer; transition: border-color .2s, color .2s, background-color .2s; }
+  .sound-drop small { font-weight: 400; font-size: 12px; }
+  .sound-drop:hover, .sound-drop.is-drag { border-color: #b9a5d8; color: var(--purple); background: #fbf9fe; }
+  .sound-drop.is-invalid { border-color: #e6a3a3; background: #fffafa; }
+  .sound-drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .sound-edit { display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid #d6c8ea; border-radius: 10px; background: #fbf9fe; }
+  .sound-edit__head { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--purple); }
+  .sound-edit__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); font-weight: 600; font-size: 14px; }
+  .sound-edit__meta { flex: none; color: var(--muted); font-size: 12px; }
+  .sound-edit__file { margin-left: auto; position: relative; }
+  .sound-edit__file input, .sound-edit__actions label input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .sound-edit__actions { display: flex; gap: 8px; }
+  .sound-edit__actions label { position: relative; }
+  .sound-edit__wave { position: relative; height: 96px; margin: 28px 6px 0; touch-action: none; cursor: pointer; }
+  .sound-edit__bars { display: flex; align-items: center; gap: 2px; height: 100%; }
+  .sound-edit__bars span { flex: 1; min-width: 1px; border-radius: 2px; background: #d6c8ea; }
+  .sound-edit__bars span.is-on { background: var(--purple); }
+  .sound-edit__range { position: absolute; top: -6px; bottom: -6px; box-sizing: border-box; border-top: 2px solid var(--purple); border-bottom: 2px solid var(--purple); background: rgba(112, 72, 168, .1); cursor: grab; touch-action: none; }
+  .sound-edit__range:active { cursor: grabbing; }
+  .sound-edit__len { position: absolute; top: -28px; left: 50%; translate: -50% 0; height: 22px; padding: 0 8px; border-radius: 5px; background: var(--purple); color: var(--white); font-weight: 700; font-size: 11px; white-space: nowrap; display: flex; align-items: center; pointer-events: none; }
+  .sound-edit__handle { position: absolute; top: -2px; bottom: -2px; width: 14px; padding: 0; border: 0; border-radius: 5px; background: var(--purple); cursor: ew-resize; touch-action: none; }
+  .sound-edit__handle::after { content: ""; position: absolute; left: 6px; top: 50%; width: 2px; height: 22px; translate: 0 -50%; border-radius: 1px; background: var(--white); }
+  .sound-edit__handle--start { left: -8px; }
+  .sound-edit__handle--end { right: -8px; }
+  .sound-edit__ticks { display: flex; justify-content: space-between; margin: 0 6px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .sound-edit__foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 10px; border-top: 1px solid #ece6f5; }
+  .sound-edit__picked { display: flex; flex-direction: column; gap: 2px; }
+  .sound-edit__picked small { color: var(--muted); font-size: 12px; }
+  .sound-edit__picked b { color: #4a2f73; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .sound-edit__picked em { color: var(--purple); font-style: normal; font-weight: 500; font-size: 13px; }
+
+  /* 멀티 소리 문제 (시안 멀티 1·2·3·6) */
+  .mp-sound { position: relative; width: min(100%, 460px); aspect-ratio: 16 / 10; border-radius: 8px; overflow: hidden; background: var(--gold-soft); display: flex; align-items: center; justify-content: center; box-shadow: 0 12px 24px rgba(0, 0, 0, .12); }
+  .mp-sound.is-empty { background: var(--purple-soft); box-shadow: none; }
+  .mp-sound img { position: absolute; left: 0; top: 0; width: 100%; height: calc(100% - 64px); object-fit: contain; }
+  .mp-sound__icon { width: 80px; height: 80px; margin-bottom: 56px; border-radius: 50%; background: var(--purple); color: var(--white); display: flex; align-items: center; justify-content: center; }
+  .mp-sound .sound-bar { position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: 1; }
+  .mp-sound__count { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(241, 236, 248, .92); color: #4a2f73; font-weight: 600; font-size: 14px; animation: fade-in .2s var(--ease); }
+  .mp-sound__count b { width: 112px; height: 112px; border: 5px solid #d6c8ea; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 60px; line-height: 1; }
+  .mp-sound__count audio { display: none; }
+  .mp-sound__unlock { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 0 24px; background: rgba(245, 246, 247, .82); text-align: center; animation: fade-in .2s var(--ease); }
+  .mp-sound__unlock p { margin: 0; color: var(--ink-sub); font-weight: 600; font-size: 13px; line-height: 1.5; }
+  .mp-sound__unlock-btn { border: 0; border-radius: 999px; background: var(--purple); color: var(--white); box-shadow: 0 10px 28px rgba(112, 72, 168, .35); }
+  .mp-sound__unlock-btn:hover { background: #5f3b93; color: var(--white); }
+  .mp-reveal__sound { width: min(100%, 360px); display: flex; flex-direction: column; gap: 4px; }
+  .mp-reveal__sound small { color: var(--muted); font-size: 12px; }
 }
 
 /* 등장 애니메이션 */

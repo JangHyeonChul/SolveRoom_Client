@@ -19,6 +19,7 @@ interface PlayQuestionResponse {
   hasHint: boolean;
   hint: string | null;
   imageUrls: string[];
+  soundUrl: string | null;
   choices: string[];
 }
 
@@ -45,6 +46,7 @@ export async function fetchCurrentQuestion(sessionId: string, signal?: AbortSign
     hasHint: q.hasHint,
     hint: q.hint,
     imageUrls: q.imageUrls,
+    soundUrl: q.soundUrl,
     choices: q.choices,
   };
 }

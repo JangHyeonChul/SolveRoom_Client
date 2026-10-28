@@ -2,6 +2,8 @@ import { request } from "./request";
 
 // 서버 ImagePurpose. 용도별로 줄이는 크기와 서버 상한(썸네일 1MB, 문제 2MB)이 다르다
 export type ImagePurpose = "THUMBNAIL" | "QUESTION";
+// 같은 업로드 URL 발급을 소리(MP3, 2MB)도 쓴다
+export type UploadPurpose = ImagePurpose | "SOUND";
 
 // 이미지에서 쓸 영역. 원본 너비·높이에 대한 비율(0~1)이라 화면에 보이는 크기와 상관없이 같은 곳을 가리킨다
 export interface CropArea {
@@ -51,7 +53,7 @@ export async function prepareImage(source: Blob, purpose: ImagePurpose, area?: C
 
 // 준비한 이미지를 S3에 바로 올리고, 카드·문제를 저장할 때 보낼 key를 돌려준다.
 // 파일은 서버를 거치지 않는다. 서버는 업로드 URL에 서명만 하고, 저장할 때 올라온 파일을 확인한다
-export async function uploadPrepared(blob: Blob, purpose: ImagePurpose): Promise<string> {
+export async function uploadPrepared(blob: Blob, purpose: UploadPurpose): Promise<string> {
   const presigned = await request<PresignedUrl>("/api/main/images/presigned-url", "업로드 URL 발급", {
     method: "POST",
     body: { purpose, contentType: blob.type, size: blob.size },
@@ -59,7 +61,7 @@ export async function uploadPrepared(blob: Blob, purpose: ImagePurpose): Promise
 
   // 형식·캐시·pending 표시 헤더가 서명에 들어 있어, 받은 그대로 붙여야 S3가 받는다
   const res = await fetch(presigned.uploadUrl, { method: "PUT", headers: presigned.headers, body: blob });
-  if (!res.ok) throw new Error(`이미지 업로드 실패 (${res.status})`);
+  if (!res.ok) throw new Error(`${purpose === "SOUND" ? "소리" : "이미지"} 업로드 실패 (${res.status})`);
   return presigned.key;
 }
 

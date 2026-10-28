@@ -19,6 +19,9 @@ export interface QuestionImage {
   url: string;
 }
 
+// 업로드한 소리. 이미지와 같이 key는 수정할 때, url은 듣기에 쓴다
+export type QuestionSound = QuestionImage;
+
 // 문제 관리(M-02)·문제 수정(M-03) 화면의 문제. 정답이 들어 있어 본인 확인을 거친 제작자만 받는다
 export interface Question {
   id: number;
@@ -26,7 +29,8 @@ export interface Question {
   type: QuestionType;
   mode: AnswerMode;
   prompt: string; // 질문 문구. 텍스트형은 본문(text)이 문제라 비어 있다
-  images: QuestionImage[]; // 이미지형
+  images: QuestionImage[]; // 이미지형(1장 이상), 소리형(없어도 된다)
+  sound: QuestionSound | null; // 소리형
   text?: string; // 텍스트형 본문
   description: string; // 부가 설명. 풀 때 질문 문구와 함께 보인다 (없으면 빈 값)
   hint: string; // 힌트. 혼자 풀기는 힌트 버튼을 눌러야, 멀티는 시간이 절반 지나야 보인다 (없으면 빈 값)

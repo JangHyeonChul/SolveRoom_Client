@@ -2,9 +2,12 @@ import { useEffect, useRef, useState, type DragEvent, type FormEvent, type Keybo
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { UPLOADABLE_ACCEPT, UPLOADABLE_TYPES, uploadImage } from "../api/images";
 import { createQuestion, fetchManagedQuestions, updateQuestion } from "../api/questions";
+import { encodeClip, uploadSound } from "../api/sounds";
 import { fetchManagedCard } from "../api/quizCards";
 import Icon from "../components/Icon";
 import ImageSlides from "../components/ImageSlides";
+import SoundClipEditor, { type SoundDraft } from "../components/SoundClipEditor";
+import SoundStage from "../components/SoundStage";
 import { useToast } from "../components/Toast";
 import { useManagedData } from "../components/useManagedData";
 import type { ManagedCard } from "../types/card";
@@ -21,8 +24,7 @@ import {
 } from "../types/question";
 import NotFoundPage from "./NotFoundPage";
 
-// 소리형은 오디오 업로드를 서버에 붙인 뒤에 넣는다
-const TYPES: QuestionType[] = ["image", "text"];
+const TYPES: QuestionType[] = ["image", "text", "sound"];
 const MODES: { mode: AnswerMode; label: string }[] = [
   { mode: "short", label: "주관식" },
   { mode: "choice", label: "객관식" },
@@ -30,7 +32,7 @@ const MODES: { mode: AnswerMode; label: string }[] = [
 
 const TYPE_BADGE: Record<QuestionType, string> = { image: "badge--gold", text: "badge--blue", sound: "badge--purple" };
 
-type FieldKey = "images" | "text" | "answer" | "options";
+type FieldKey = "images" | "sound" | "text" | "answer" | "options";
 
 // 새로 고른 파일은 저장할 때 줄여서 올리고, 이미 올린 이미지는 key를 그대로 보낸다
 type ImageItem = { id: string; url: string } & ({ file: File } | { key: string });
@@ -82,6 +84,9 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
   const [images, setImages] = useState<ImageItem[]>(
     () => original?.images.map((image) => ({ id: image.key, url: image.url, key: image.key })) ?? [],
   );
+  const [sound, setSound] = useState<SoundDraft | null>(() =>
+    original?.sound ? { kind: "saved", key: original.sound.key, url: original.sound.url } : null,
+  );
   const [prompt, setPrompt] = useState(original?.prompt ?? "");
   const [text, setText] = useState(original?.text ?? "");
   const [description, setDescription] = useState(original?.description ?? "");
@@ -121,6 +126,13 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
     clearError("images");
   };
 
+  // 고른 소리 파일의 미리 듣기 URL도 화면을 떠날 때 정리한다
+  const changeSound = (next: SoundDraft | null) => {
+    if (next?.kind === "picked") created.current.add(next.url);
+    setSound(next);
+    clearError("sound");
+  };
+
   const onAliasKey = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.nativeEvent.isComposing) return;
     if (e.key === "Enter" || e.key === ",") {
@@ -143,6 +155,7 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
   const validate = () => {
     const next: Partial<Record<FieldKey, string>> = {};
     if (type === "image" && images.length === 0) next.images = "이미지를 1장 이상 올려 주세요.";
+    if (type === "sound" && !sound) next.sound = "소리를 올려 주세요.";
     if (type === "text" && !text.trim()) next.text = "문제 내용을 입력해 주세요.";
     if (mode === "short" && !answer.trim()) next.answer = "정답을 입력해 주세요.";
     if (mode === "choice") {
@@ -155,6 +168,7 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
 
   const resetForm = () => {
     setImages([]);
+    setSound(null);
     setPrompt("");
     setText("");
     setDescription("");
@@ -184,11 +198,18 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
     setSaving(true);
     try {
       // 새로 고른 이미지만 줄여서 올린다. 저장이 실패해 다시 누를 때 또 올리지 않도록 받은 key를 기억해 둔다
-      const imageKeys =
-        type === "image"
-          ? await Promise.all(images.map((image) => ("key" in image ? image.key : uploadImage(image.file, "QUESTION"))))
-          : [];
-      if (type === "image") setImages(images.map((image, i) => ({ id: image.id, url: image.url, key: imageKeys[i] })));
+      const withImages = type !== "text";
+      const imageKeys = withImages
+        ? await Promise.all(images.map((image) => ("key" in image ? image.key : uploadImage(image.file, "QUESTION"))))
+        : [];
+      if (withImages) setImages(images.map((image, i) => ({ id: image.id, url: image.url, key: imageKeys[i] })));
+
+      // 새로 고른 소리는 고른 구간만 MP3로 만들어 올린다. 올린 뒤에는 key를 기억해 다시 올리지 않는다
+      let soundKey: string | null = null;
+      if (type === "sound" && sound) {
+        soundKey = sound.kind === "saved" ? sound.key : await uploadSound(await encodeClip(sound.buffer, sound.start, sound.end));
+        if (sound.kind === "picked") setSound({ kind: "saved", key: soundKey, url: sound.url });
+      }
 
       const input = {
         type,
@@ -198,6 +219,7 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
         description: description.trim(),
         hint: hint.trim(),
         imageKeys,
+        soundKey,
         answer: answer.trim(),
         aliases,
         options: options.map((o) => o.trim()),
@@ -268,12 +290,50 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
               </div>
             </div>
 
-            {type === "image" ? (
+            {type === "text" ? (
+              <div key={`text-${attempt}`} ref={fieldRef("text")} className={`${fieldClass("text")} swap-in`}>
+                <div className="field__row">
+                  <label className="label" htmlFor="q-text">
+                    문제 내용<span className="req" aria-hidden="true">*</span>
+                  </label>
+                  <Counter value={text} max={300} />
+                </div>
+                <textarea
+                  id="q-text"
+                  className="textarea"
+                  maxLength={300}
+                  value={text}
+                  onChange={(e) => (setText(e.target.value), clearError("text"))}
+                  placeholder="예: 꼬리에 불꽃이 타오르는 1세대 스타팅 포켓몬은?"
+                />
+                {errors.text && <p className="error">{errors.text}</p>}
+              </div>
+            ) : (
               <>
+                {type === "sound" && (
+                  <div key={`sound-${attempt}`} ref={fieldRef("sound")} className={`${fieldClass("sound")} swap-in`}>
+                    <div className="field__row">
+                      <span className="label">
+                        소리<span className="req" aria-hidden="true">*</span>
+                      </span>
+                      <span className="counter">원본 10MB · 10분까지 · 잘라서 최대 30초</span>
+                    </div>
+                    <SoundClipEditor value={sound} onChange={changeSound} onError={toast} invalid={!!errors.sound} />
+                    {errors.sound && <p className="error">{errors.sound}</p>}
+                    <p className="hint">
+                      {sound?.kind === "picked"
+                        ? "양 끝 손잡이를 끌면 길이가, 가운데를 끌면 위치가 바뀌어요. 저장하면 고른 구간만 잘라서 올라가요. "
+                        : ""}
+                      직접 녹음했거나 쓸 권리가 있는 소리만 올려 주세요. 권리자가 요청하면 삭제될 수 있어요.{" "}
+                      <Link to="/terms">이용약관</Link>
+                    </p>
+                  </div>
+                )}
                 <div key={`images-${attempt}`} ref={fieldRef("images")} className={`${fieldClass("images")} swap-in`}>
                   <div className="field__row">
                     <span className="label">
-                      이미지<span className="req" aria-hidden="true">*</span>
+                      이미지
+                      {type === "image" ? <span className="req" aria-hidden="true">*</span> : <small> 선택</small>}
                     </span>
                     <span className="counter">
                       {images.length} / {MAX_IMAGES}
@@ -312,7 +372,9 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
                   </div>
                   {errors.images && <p className="error">{errors.images}</p>}
                   <p className="hint">
-                    직접 만들었거나 쓸 권리가 있는 이미지만 올려 주세요. 권리자가 신고하면 카드를 내릴 수 있어요.{" "}
+                    {type === "sound"
+                      ? "소리와 함께 보여 줄 이미지예요. 없으면 풀 때 소리 아이콘이 대신 보여요."
+                      : "직접 만들었거나 쓸 권리가 있는 이미지만 올려 주세요. 권리자가 신고하면 카드를 내릴 수 있어요."}{" "}
                     <Link to="/terms">이용약관</Link>
                   </p>
                 </div>
@@ -329,28 +391,10 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
                     maxLength={60}
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="예: 이 포켓몬의 이름은?"
+                    placeholder={type === "sound" ? "예: 이 소리는 어떤 동물일까요?" : "예: 이 포켓몬의 이름은?"}
                   />
                 </div>
               </>
-            ) : (
-              <div key={`text-${attempt}`} ref={fieldRef("text")} className={`${fieldClass("text")} swap-in`}>
-                <div className="field__row">
-                  <label className="label" htmlFor="q-text">
-                    문제 내용<span className="req" aria-hidden="true">*</span>
-                  </label>
-                  <Counter value={text} max={300} />
-                </div>
-                <textarea
-                  id="q-text"
-                  className="textarea"
-                  maxLength={300}
-                  value={text}
-                  onChange={(e) => (setText(e.target.value), clearError("text"))}
-                  placeholder="예: 꼬리에 불꽃이 타오르는 1세대 스타팅 포켓몬은?"
-                />
-                {errors.text && <p className="error">{errors.text}</p>}
-              </div>
             )}
 
             <div className="field">
@@ -532,6 +576,11 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
             type={type}
             mode={mode}
             images={images.map((image) => image.url)}
+            sound={
+              sound
+                ? { src: sound.url, clip: sound.kind === "picked" ? { start: sound.start, end: sound.end } : undefined }
+                : null
+            }
             prompt={prompt}
             text={text}
             description={description}
@@ -593,6 +642,7 @@ interface PreviewProps {
   type: QuestionType;
   mode: AnswerMode;
   images: string[];
+  sound: { src: string; clip?: { start: number; end: number } } | null;
   prompt: string;
   text: string;
   description: string;
@@ -607,7 +657,7 @@ const normalize = (s: string) => s.replace(/\s+/g, "").toLowerCase();
 
 // 실제 풀이 화면 모양의 미리보기. 직접 답을 넣어 채점해 볼 수 있다
 function PlayPreview(props: PreviewProps) {
-  const { cardTitle, type, mode, images, prompt, text, description, hint, answer, aliases, options, correct } = props;
+  const { cardTitle, type, mode, images, sound, prompt, text, description, hint, answer, aliases, options, correct } = props;
   const [imgIdx, setImgIdx] = useState(0);
   const [hintOpen, setHintOpen] = useState(false);
   const [guess, setGuess] = useState("");
@@ -625,7 +675,8 @@ function PlayPreview(props: PreviewProps) {
   const idx = Math.min(imgIdx, Math.max(images.length - 1, 0));
 
   const correctAnswer = mode === "short" ? answer.trim() : options[correct]?.trim() ?? "";
-  const shownPrompt = type === "text" ? "" : prompt.trim() || "이 그림은 무엇일까요?";
+  const shownPrompt =
+    type === "text" ? "" : prompt.trim() || (type === "sound" ? "이 소리는 무엇일까요?" : "이 그림은 무엇일까요?");
 
   return (
     <div className="play">
@@ -634,7 +685,22 @@ function PlayPreview(props: PreviewProps) {
         <span className={`badge ${TYPE_BADGE[type]}`}>{QUESTION_TYPE_LABEL[type]}</span>
       </div>
 
-      {type === "image" ? (
+      {type === "sound" ? (
+        sound ? (
+          <SoundStage
+            key="sound"
+            src={sound.src}
+            clip={sound.clip}
+            images={images}
+            imageIndex={idx}
+            onImageChange={setImgIdx}
+          />
+        ) : (
+          <div key="sound" className="stage stage--sound is-empty">
+            <span className="stage__empty">소리를 올리면 여기서 들어 볼 수 있어요</span>
+          </div>
+        )
+      ) : type === "image" ? (
         <div key="image" className="stage">
           {images.length === 0 ? (
             <span className="stage__empty">이미지를 올리면 여기에 보여요</span>

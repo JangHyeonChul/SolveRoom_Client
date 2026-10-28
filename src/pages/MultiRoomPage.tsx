@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useRoom } from "../api/room";
 import { useAuth } from "../app/auth";
@@ -10,6 +10,7 @@ import MultiAvatar from "../components/MultiAvatar";
 import Nickname from "../components/Nickname";
 import OptionSeg from "../components/OptionSeg";
 import { CardDeckModal, RoomCardsModal, RoomDeck } from "../components/RoomCards";
+import SoundPlayer, { type SoundPlayerHandle } from "../components/SoundPlayer";
 import { useToast } from "../components/Toast";
 import {
   TOPIC_OPTIONS,
@@ -17,6 +18,7 @@ import {
   categoryLabel,
   isCustomTopic,
   type RoomPlayer,
+  type RoomQuestion,
   type RoomState,
 } from "../types/multi";
 import { copyText } from "../utils/clipboard";
@@ -299,7 +301,8 @@ function TimerRow({ state, now }: { state: RoomState; now: number }) {
   const length = state.question?.answerLength ?? 0;
   const hint = state.question?.hint;
   const letters = hint ? hint.split("") : Array.from({ length }, () => "");
-  const left = secondsUntil(state.deadlineAt, now);
+  // 소리 문제는 카운트다운 동안 마감이 제한 시간보다 뒤에 있어 제한 시간까지만 보여 준다
+  const left = Math.min(state.timeLimit, secondsUntil(state.deadlineAt, now));
   const urgent = left <= 5;
   return (
     <div className="mp-timer">
@@ -440,6 +443,12 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
         {image && <img src={image} alt="" className="mp-reveal__img" />}
         <span className="mp-reveal__label">정답</span>
         <strong className="mp-reveal__answer">{state.answer}</strong>
+        {question?.soundUrl && (
+          <div className="mp-reveal__sound">
+            <SoundPlayer src={question.soundUrl} />
+            <small>다시 듣기는 나한테만 들려요</small>
+          </div>
+        )}
         {winners.length ? (
           <ol className="mp-reveal__who">
             {winners.map((p, i) => (
@@ -486,6 +495,8 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
     );
   }
 
+  if (question?.soundUrl) return <SoundQuestion key={state.round} question={question} playAt={state.playAt ?? now} now={now} />;
+
   // 이미지형은 이미지와 질문 문구, 텍스트형은 문제 본문을 크게 보여 준다
   return (
     <figure key={state.round} className="mp-question swap-in">
@@ -493,6 +504,70 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
       <figcaption className={image ? "" : "mp-question__text"}>{question?.prompt ?? "이 이미지는 무엇일까요?"}</figcaption>
       {question?.description && <p className="mp-question__desc">{question.description}</p>}
       {question?.authorHint && (
+        <p className="mp-question__hint">
+          <b>힌트</b>
+          {question.authorHint}
+        </p>
+      )}
+    </figure>
+  );
+}
+
+// 소리 문제 (시안 멀티 1·2·3). 카운트다운 동안 소리를 미리 받아 두고, 재생 시각(playAt)이 되면 모두 같이 재생한다.
+// 되감기·건너뛰기는 막는다. 브라우저가 자동 재생을 막으면 "소리 켜기"를 누른 순간 다른 사람이 듣는 곳부터 이어 듣는다
+function SoundQuestion({ question, playAt, now }: { question: RoomQuestion; playAt: number; now: number }) {
+  const [blocked, setBlocked] = useState(false);
+  const playerRef = useRef<SoundPlayerHandle>(null);
+  const image = question.imageUrls[0];
+  const counting = now < playAt;
+  const elapsed = () => Math.max(0, (now - playAt) / 1000);
+
+  const unlock = () => {
+    playerRef.current
+      ?.playFrom(elapsed())
+      .then(() => setBlocked(false))
+      .catch(() => undefined);
+  };
+
+  return (
+    <figure className="mp-question swap-in">
+      <div className={`mp-sound ${image ? "" : "is-empty"}`}>
+        {image ? (
+          <img src={image} alt="문제 이미지" />
+        ) : (
+          <span className="mp-sound__icon" aria-hidden="true">
+            <Icon name="speaker" size={48} strokeWidth={1.8} />
+          </span>
+        )}
+        {counting ? (
+          <div className="mp-sound__count" role="status">
+            <b>{Math.ceil((playAt - now) / 1000)}</b>
+            <span>곧 소리가 나와요 · 모두 같이 들어요</span>
+            <audio src={question.soundUrl} preload="auto" />
+          </div>
+        ) : (
+          <SoundPlayer
+            ref={playerRef}
+            src={question.soundUrl!}
+            seekable={false}
+            autoPlay
+            startAt={elapsed()}
+            onBlocked={() => setBlocked(true)}
+          />
+        )}
+        {blocked && !counting && (
+          <div className="mp-sound__unlock">
+            <button type="button" className="btn btn--lg mp-sound__unlock-btn" onClick={unlock}>
+              <Icon name="speaker" size={20} strokeWidth={2.2} />
+              눌러서 소리 켜기
+            </button>
+            <p>브라우저가 자동 재생을 막았어요. 한 번만 누르면 다음 문제부터는 바로 나와요.</p>
+          </div>
+        )}
+      </div>
+      <figcaption>{question.prompt ?? "이 소리는 무엇일까요?"}</figcaption>
+      {question.description && <p className="mp-question__desc">{question.description}</p>}
+      {question.authorHint && (
         <p className="mp-question__hint">
           <b>힌트</b>
           {question.authorHint}

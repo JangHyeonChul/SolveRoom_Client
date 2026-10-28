@@ -1,4 +1,4 @@
-import type { AnswerMode, Question, QuestionImage, QuestionType } from "../types/question";
+import type { AnswerMode, Question, QuestionImage, QuestionSound, QuestionType } from "../types/question";
 import { request } from "./request";
 
 // 서버 QuestionManageResponse
@@ -10,6 +10,7 @@ interface QuestionManageResponse {
   description: string | null;
   hint: string | null;
   images: QuestionImage[];
+  sound: QuestionSound | null;
   answer: string;
   aliases: string[];
   choices: string[];
@@ -32,6 +33,7 @@ export interface QuestionInput {
   description: string;
   hint: string;
   imageKeys: string[];
+  soundKey: string | null; // 소리형: uploadSound가 돌려준 key
   answer: string;
   aliases: string[];
   options: string[];
@@ -40,7 +42,7 @@ export interface QuestionInput {
 
 const questionsUrl = (cardId: number) => `/api/main/quiz-cards/${cardId}/questions`;
 
-// 텍스트형은 본문을, 이미지형은 질문 문구를 contentText 한 칸으로 보낸다
+// 텍스트형은 본문을, 이미지형·소리형은 질문 문구를 contentText 한 칸으로 보낸다
 const questionBody = (input: QuestionInput) => ({
   questionType: input.type.toUpperCase(),
   answerType: input.mode === "choice" ? "MULTIPLE_CHOICE" : "SUBJECTIVE",
@@ -48,7 +50,8 @@ const questionBody = (input: QuestionInput) => ({
   // 수정은 문제 전체를 바꾸므로 비워 보내면 지운다
   description: input.description || null,
   hint: input.hint || null,
-  imageKeys: input.type === "image" ? input.imageKeys : [],
+  imageKeys: input.type === "text" ? [] : input.imageKeys,
+  soundKey: input.type === "sound" ? input.soundKey : null,
   answer: input.mode === "short" ? input.answer : null,
   aliases: input.mode === "short" ? input.aliases : [],
   choices: input.mode === "choice" ? input.options : [],
@@ -65,6 +68,7 @@ const toQuestion = (cardId: number, q: QuestionManageResponse): Question => ({
   description: q.description ?? "",
   hint: q.hint ?? "",
   images: q.images,
+  sound: q.sound,
   answer: q.answer,
   aliases: q.aliases,
   options: q.choices,
