@@ -1,4 +1,4 @@
-import type { AnswerMode, QuestionType } from "./question";
+import type { AnswerMode, QuestionType, SoundClip } from "./question";
 
 // 풀이 중인 문제 (GET /api/main/play-sessions/{sessionId}/question). 정답은 오지 않는다
 export interface PlayQuestion {
@@ -11,7 +11,7 @@ export interface PlayQuestion {
   hasHint: boolean; // 힌트 버튼을 보여 줄지
   hint: string | null; // 이 문제에서 힌트를 본 뒤에만 온다. 본 문제는 맞혀도 시간 점수가 없다
   imageUrls: string[];
-  soundUrl: string | null; // 소리형의 소리
+  sound: SoundClip | null; // 소리형: 유튜브 영상 id와 들려줄 구간
   choices: string[]; // 객관식 보기
 }
 

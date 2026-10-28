@@ -2,11 +2,10 @@ import { useEffect, useRef, useState, type DragEvent, type FormEvent, type Keybo
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { UPLOADABLE_ACCEPT, UPLOADABLE_TYPES, uploadImage } from "../api/images";
 import { createQuestion, fetchManagedQuestions, updateQuestion } from "../api/questions";
-import { encodeClip, uploadSound } from "../api/sounds";
 import { fetchManagedCard } from "../api/quizCards";
 import Icon from "../components/Icon";
 import ImageSlides from "../components/ImageSlides";
-import SoundClipEditor, { type SoundDraft } from "../components/SoundClipEditor";
+import SoundClipEditor from "../components/SoundClipEditor";
 import SoundStage from "../components/SoundStage";
 import { useToast } from "../components/Toast";
 import { useManagedData } from "../components/useManagedData";
@@ -21,6 +20,7 @@ import {
   type AnswerMode,
   type Question,
   type QuestionType,
+  type SoundClip,
 } from "../types/question";
 import NotFoundPage from "./NotFoundPage";
 
@@ -84,8 +84,8 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
   const [images, setImages] = useState<ImageItem[]>(
     () => original?.images.map((image) => ({ id: image.key, url: image.url, key: image.key })) ?? [],
   );
-  const [sound, setSound] = useState<SoundDraft | null>(() =>
-    original?.sound ? { kind: "saved", key: original.sound.key, url: original.sound.url } : null,
+  const [sound, setSound] = useState<SoundClip | null>(() =>
+    original?.sound ?? null,
   );
   const [prompt, setPrompt] = useState(original?.prompt ?? "");
   const [text, setText] = useState(original?.text ?? "");
@@ -126,11 +126,9 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
     clearError("images");
   };
 
-  // 고른 소리 파일의 미리 듣기 URL도 화면을 떠날 때 정리한다
-  const changeSound = (next: SoundDraft | null) => {
-    if (next?.kind === "picked") created.current.add(next.url);
+  const changeSound = (next: SoundClip | null) => {
     setSound(next);
-    clearError("sound");
+    if (next) clearError("sound");
   };
 
   const onAliasKey = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -155,7 +153,7 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
   const validate = () => {
     const next: Partial<Record<FieldKey, string>> = {};
     if (type === "image" && images.length === 0) next.images = "이미지를 1장 이상 올려 주세요.";
-    if (type === "sound" && !sound) next.sound = "소리를 올려 주세요.";
+    if (type === "sound" && !sound) next.sound = "유튜브 링크를 불러와 들려줄 구간을 정해 주세요.";
     if (type === "text" && !text.trim()) next.text = "문제 내용을 입력해 주세요.";
     if (mode === "short" && !answer.trim()) next.answer = "정답을 입력해 주세요.";
     if (mode === "choice") {
@@ -204,13 +202,6 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
         : [];
       if (withImages) setImages(images.map((image, i) => ({ id: image.id, url: image.url, key: imageKeys[i] })));
 
-      // 새로 고른 소리는 고른 구간만 MP3로 만들어 올린다. 올린 뒤에는 key를 기억해 다시 올리지 않는다
-      let soundKey: string | null = null;
-      if (type === "sound" && sound) {
-        soundKey = sound.kind === "saved" ? sound.key : await uploadSound(await encodeClip(sound.buffer, sound.start, sound.end));
-        if (sound.kind === "picked") setSound({ kind: "saved", key: soundKey, url: sound.url });
-      }
-
       const input = {
         type,
         mode,
@@ -219,7 +210,7 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
         description: description.trim(),
         hint: hint.trim(),
         imageKeys,
-        soundKey,
+        sound: type === "sound" ? sound : null,
         answer: answer.trim(),
         aliases,
         options: options.map((o) => o.trim()),
@@ -316,15 +307,13 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
                       <span className="label">
                         소리<span className="req" aria-hidden="true">*</span>
                       </span>
-                      <span className="counter">원본 10MB · 10분까지 · 잘라서 최대 30초</span>
+                      <span className="counter">유튜브 링크 · 최대 30초</span>
                     </div>
-                    <SoundClipEditor value={sound} onChange={changeSound} onError={toast} invalid={!!errors.sound} />
+                    <SoundClipEditor value={sound} onChange={changeSound} />
                     {errors.sound && <p className="error">{errors.sound}</p>}
                     <p className="hint">
-                      {sound?.kind === "picked"
-                        ? "양 끝 손잡이를 끌면 길이가, 가운데를 끌면 위치가 바뀌어요. 저장하면 고른 구간만 잘라서 올라가요. "
-                        : ""}
-                      직접 녹음했거나 쓸 권리가 있는 소리만 올려 주세요. 권리자가 요청하면 삭제될 수 있어요.{" "}
+                      풀 때는 영상을 가리고 정한 구간의 소리만 들려줘요. 업로더가 다른 사이트 재생을 막은 영상은 쓸 수
+                      없어요.{" "}
                       <Link to="/terms">이용약관</Link>
                     </p>
                   </div>
@@ -576,11 +565,7 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
             type={type}
             mode={mode}
             images={images.map((image) => image.url)}
-            sound={
-              sound
-                ? { src: sound.url, clip: sound.kind === "picked" ? { start: sound.start, end: sound.end } : undefined }
-                : null
-            }
+            sound={sound}
             prompt={prompt}
             text={text}
             description={description}
@@ -642,7 +627,7 @@ interface PreviewProps {
   type: QuestionType;
   mode: AnswerMode;
   images: string[];
-  sound: { src: string; clip?: { start: number; end: number } } | null;
+  sound: SoundClip | null;
   prompt: string;
   text: string;
   description: string;
@@ -689,15 +674,14 @@ function PlayPreview(props: PreviewProps) {
         sound ? (
           <SoundStage
             key="sound"
-            src={sound.src}
-            clip={sound.clip}
+            clip={sound}
             images={images}
             imageIndex={idx}
             onImageChange={setImgIdx}
           />
         ) : (
           <div key="sound" className="stage stage--sound is-empty">
-            <span className="stage__empty">소리를 올리면 여기서 들어 볼 수 있어요</span>
+            <span className="stage__empty">유튜브 링크를 불러오면 여기서 들어 볼 수 있어요</span>
           </div>
         )
       ) : type === "image" ? (

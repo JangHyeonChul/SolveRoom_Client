@@ -143,7 +143,7 @@ function PlayView({ cardId, sessionId, title }: { cardId: number } & PlayLocatio
   const total = question.questionCount;
   const answered = feedback ? question.seq : question.seq - 1;
   const isImage = question.type === "image" && question.imageUrls.length > 0;
-  const isSound = question.type === "sound" && !!question.soundUrl;
+  const isSound = question.type === "sound" && question.sound !== null;
   const prompt = isSound
     ? question.text || "이 소리는 무엇일까요?"
     : isImage
@@ -179,11 +179,13 @@ function PlayView({ cardId, sessionId, title }: { cardId: number } & PlayLocatio
       {/* 문제마다 새로 그려 입력이 비고 등장 애니메이션이 다시 나온다 */}
       <div key={question.seq} className="play-body swap-in">
         {isSound ? (
-          // 다음 문제를 누른 뒤라 대부분 바로 재생된다. 브라우저가 막으면 재생 버튼을 누르면 된다
+          // 다음 문제를 누른 뒤라 대부분 바로 재생된다. 브라우저가 막으면 재생 버튼을 누르면 된다.
+          // 답을 낼 때까지 구간을 반복해서 들려준다
           <SoundStage
             className="stage--play"
-            src={question.soundUrl!}
+            clip={question.sound!}
             autoPlay
+            loop={!feedback}
             images={question.imageUrls}
             imageIndex={imageIndex}
             onImageChange={setImageIndex}

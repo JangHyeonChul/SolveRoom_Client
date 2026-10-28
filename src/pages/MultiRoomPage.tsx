@@ -36,6 +36,7 @@ import {
 } from "../types/multi";
 import { copyText } from "../utils/clipboard";
 import { chosung } from "../utils/cover";
+import { youTubeThumbnail } from "../utils/youtube";
 
 // 남은 시간 표시를 갱신하는 간격. 1초보다 짧게 잡아 초가 바뀌는 순간과 크게 어긋나지 않게 한다
 const TICK_MS = 250;
@@ -727,15 +728,17 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
   }
 
   if (state.phase === "reveal") {
+    // 이미지가 없는 소리 문제는 정답과 함께 영상 썸네일을 보여 준다
+    const revealImage = image ?? (question?.sound ? youTubeThumbnail(question.sound.videoId) : undefined);
     const winners = state.players.filter((p) => p.gain).sort((a, b) => a.order - b.order);
     return (
       <div className="mp-reveal swap-in">
-        {image && <img src={image} alt="" className="mp-reveal__img" />}
+        {revealImage && <img src={revealImage} alt="" className="mp-reveal__img" />}
         <span className="mp-reveal__label">정답</span>
         <strong className="mp-reveal__answer">{state.answer}</strong>
-        {question?.soundUrl && (
+        {question?.sound && (
           <div className="mp-reveal__sound">
-            <SoundPlayer src={question.soundUrl} />
+            <SoundPlayer clip={question.sound} />
             <small>다시 듣기는 나한테만 들려요</small>
           </div>
         )}
@@ -766,7 +769,10 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
     );
   }
 
-  if (question?.soundUrl) return <SoundQuestion key={state.round} question={question} playAt={state.playAt ?? now} now={now} />;
+  if (question?.sound)
+    return (
+      <SoundQuestion key={state.round} question={question} playAt={state.playAt ?? now} now={now} solved={!!mine?.correct} />
+    );
 
   // 이미지형은 이미지와 질문 문구, 텍스트형은 문제 본문을 크게 보여 준다
   return (
@@ -784,14 +790,34 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
   );
 }
 
-// 소리 문제 (시안 멀티 1·2·3). 카운트다운 동안 소리를 미리 받아 두고, 재생 시각(playAt)이 되면 모두 같이 재생한다.
-// 되감기·건너뛰기는 막는다. 브라우저가 자동 재생을 막으면 "소리 켜기"를 누른 순간 다른 사람이 듣는 곳부터 이어 듣는다
-function SoundQuestion({ question, playAt, now }: { question: RoomQuestion; playAt: number; now: number }) {
+// 소리 문제 (시안 멀티 1·2·3). 카운트다운 동안 유튜브 플레이어를 미리 띄워 두고, 재생 시각(playAt)이 되면 모두 같이 재생한다.
+// 되감기·건너뛰기는 막고, 맞히거나 시간이 끝날 때까지 구간을 반복한다.
+// 브라우저가 자동 재생을 막으면 "소리 켜기"를 누른 순간 다른 사람이 듣는 곳부터 이어 듣는다
+function SoundQuestion({
+  question,
+  playAt,
+  now,
+  solved,
+}: {
+  question: RoomQuestion;
+  playAt: number;
+  now: number;
+  solved: boolean;
+}) {
   const [blocked, setBlocked] = useState(false);
   const playerRef = useRef<SoundPlayerHandle>(null);
   const image = question.imageUrls[0];
   const counting = now < playAt;
   const elapsed = () => Math.max(0, (now - playAt) / 1000);
+
+  // 카운트다운이 끝나는 순간 같이 재생한다
+  useEffect(() => {
+    if (counting) return;
+    playerRef.current?.playFrom(elapsed()).catch((e: unknown) => {
+      if (e instanceof DOMException && e.name === "NotAllowedError") setBlocked(true);
+    });
+    // 카운트다운이 끝날 때 한 번만
+  }, [counting]);
 
   const unlock = () => {
     playerRef.current
@@ -810,21 +836,13 @@ function SoundQuestion({ question, playAt, now }: { question: RoomQuestion; play
             <Icon name="speaker" size={48} strokeWidth={1.8} />
           </span>
         )}
-        {counting ? (
+        {/* 카운트다운 동안에도 그려 두어 유튜브 플레이어를 미리 띄운다 */}
+        <SoundPlayer ref={playerRef} clip={question.sound!} seekable={false} loop={!solved} />
+        {counting && (
           <div className="mp-sound__count" role="status">
             <b>{Math.ceil((playAt - now) / 1000)}</b>
             <span>곧 소리가 나와요 · 모두 같이 들어요</span>
-            <audio src={question.soundUrl} preload="auto" />
           </div>
-        ) : (
-          <SoundPlayer
-            ref={playerRef}
-            src={question.soundUrl!}
-            seekable={false}
-            autoPlay
-            startAt={elapsed()}
-            onBlocked={() => setBlocked(true)}
-          />
         )}
         {blocked && !counting && (
           <div className="mp-sound__unlock">

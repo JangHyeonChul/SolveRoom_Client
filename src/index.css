@@ -898,6 +898,36 @@
   .sound-bar__track--fixed span { display: block; height: 100%; background: var(--purple); transition: width .25s linear; }
   .sound-bar__icon { width: 32px; height: 32px; flex: 0 0 32px; border: 1px solid var(--line); border-radius: 7px; background: var(--white); color: var(--ink-sub); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
   .sound-bar__icon:hover { color: var(--ink); border-color: var(--line-strong); }
+  .sound-bar__error { flex: 1; min-width: 0; color: var(--red); font-weight: 600; font-size: 12px; }
+  /* 소리형의 유튜브 플레이어. 영상은 보이지 않게 두되 크기는 남긴다(0이면 재생을 막는 브라우저가 있다) */
+  .yt-hidden { position: fixed; left: 0; bottom: 0; width: 200px; height: 113px; opacity: 0; pointer-events: none; z-index: -1; }
+  .yt-hidden iframe, .yt-host iframe { width: 100%; height: 100%; border: 0; }
+  .yt-host { position: relative; width: 100%; height: 100%; }
+  .yt-host iframe { position: absolute; inset: 0; }
+  /* 소리형 구간 편집 (M-03, 시안 D: 확대 타임라인) */
+  .clip-editor { display: flex; flex-direction: column; gap: 14px; }
+  .clip-editor__url { display: flex; gap: 6px; }
+  .clip-editor__url .input { flex: 1; min-width: 0; }
+  .clip-editor__player { width: 100%; max-width: 520px; align-self: center; aspect-ratio: 16 / 9; border-radius: 8px; overflow: hidden; background: #16181b; }
+  .clip-editor__zoom { display: flex; gap: 4px; }
+  .ok { margin: 0; display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--green-deep); }
+  .clip-mini { position: relative; height: 6px; border-radius: 999px; background: var(--line); }
+  .clip-mini__win { position: absolute; top: -4px; bottom: -4px; border: 1px solid var(--line-strong); border-radius: 4px; background: rgba(47, 158, 68, .08); }
+  .clip-mini__sel { position: absolute; top: 0; bottom: 0; border-radius: 999px; background: var(--green); }
+  .clip-track { position: relative; height: 56px; margin-top: 26px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--bg-soft) repeating-linear-gradient(90deg, transparent 0 calc(12.5% - 1px), var(--line) calc(12.5% - 1px) 12.5%); cursor: pointer; touch-action: none; user-select: none; }
+  .clip-track.is-dragging { cursor: ew-resize; }
+  .clip-track__sel { position: absolute; top: -1px; bottom: -1px; border: 2px solid var(--green); border-radius: 8px; background: rgba(47, 158, 68, .12); pointer-events: none; }
+  .clip-track__handle { position: absolute; top: 50%; width: 14px; height: 32px; margin: -16px 0 0 -7px; padding: 0; border: 0; border-radius: 4px; background: var(--green); box-shadow: 0 1px 3px rgba(0, 0, 0, .2); cursor: ew-resize; touch-action: none; }
+  .clip-track__handle::after { content: ""; position: absolute; inset: -8px -10px; }
+  .clip-track__label { position: absolute; top: -22px; width: 56px; margin-left: -28px; text-align: center; font-size: 12px; font-weight: 700; color: var(--green-deep); font-variant-numeric: tabular-nums; pointer-events: none; }
+  .clip-track__now { position: absolute; top: -6px; bottom: -6px; width: 2px; margin-left: -1px; background: var(--red); pointer-events: none; }
+  .clip-ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .clip-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg-soft); }
+  .clip-bar__group { display: flex; align-items: center; gap: 6px; }
+  .clip-bar__name { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .clip-bar__time { min-width: 44px; text-align: center; font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .clip-bar__lengths { margin-left: auto; }
+  .clip-bar__lengths .seg__btn[aria-pressed="true"] { color: var(--ink); background: var(--white); font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, .08); }
 
   /* 소리형 등록 (시안 C): 파형에서 최대 30초 구간을 끌어서 고른다 */
   .sound-drop { position: relative; height: 128px; border: 1px dashed #c9cdd2; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--muted); font-weight: 600; font-size: 13px; text-align: center; cursor: pointer; transition: border-color .2s, color .2s, background-color .2s; }
@@ -937,9 +967,8 @@
   .mp-sound img { position: absolute; left: 0; top: 0; width: 100%; height: calc(100% - 64px); object-fit: contain; }
   .mp-sound__icon { width: 80px; height: 80px; margin-bottom: 56px; border-radius: 50%; background: var(--purple); color: var(--white); display: flex; align-items: center; justify-content: center; }
   .mp-sound .sound-bar { position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: 1; }
-  .mp-sound__count { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(241, 236, 248, .92); color: #4a2f73; font-weight: 600; font-size: 14px; animation: fade-in .2s var(--ease); }
+  .mp-sound__count { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(241, 236, 248, .92); color: #4a2f73; font-weight: 600; font-size: 14px; animation: fade-in .2s var(--ease); }
   .mp-sound__count b { width: 112px; height: 112px; border: 5px solid #d6c8ea; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 60px; line-height: 1; }
-  .mp-sound__count audio { display: none; }
   .mp-sound__unlock { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 0 24px; background: rgba(245, 246, 247, .82); text-align: center; animation: fade-in .2s var(--ease); }
   .mp-sound__unlock p { margin: 0; color: var(--ink-sub); font-weight: 600; font-size: 13px; line-height: 1.5; }
   .mp-sound__unlock-btn { border: 0; border-radius: 999px; background: var(--purple); color: var(--white); box-shadow: 0 10px 28px rgba(112, 72, 168, .35); }

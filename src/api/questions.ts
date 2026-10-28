@@ -1,4 +1,4 @@
-import type { AnswerMode, Question, QuestionImage, QuestionSound, QuestionType } from "../types/question";
+import type { AnswerMode, Question, QuestionImage, QuestionType, SoundClip } from "../types/question";
 import { request } from "./request";
 
 // 서버 QuestionManageResponse
@@ -10,7 +10,7 @@ interface QuestionManageResponse {
   description: string | null;
   hint: string | null;
   images: QuestionImage[];
-  sound: QuestionSound | null;
+  sound: SoundClip | null;
   answer: string;
   aliases: string[];
   choices: string[];
@@ -33,7 +33,7 @@ export interface QuestionInput {
   description: string;
   hint: string;
   imageKeys: string[];
-  soundKey: string | null; // 소리형: uploadSound가 돌려준 key
+  sound: SoundClip | null; // 소리형: 유튜브 영상 id와 들려줄 구간
   answer: string;
   aliases: string[];
   options: string[];
@@ -51,7 +51,7 @@ const questionBody = (input: QuestionInput) => ({
   description: input.description || null,
   hint: input.hint || null,
   imageKeys: input.type === "text" ? [] : input.imageKeys,
-  soundKey: input.type === "sound" ? input.soundKey : null,
+  sound: input.type === "sound" ? input.sound : null,
   answer: input.mode === "short" ? input.answer : null,
   aliases: input.mode === "short" ? input.aliases : [],
   choices: input.mode === "choice" ? input.options : [],

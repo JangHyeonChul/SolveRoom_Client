@@ -1,4 +1,5 @@
 import { CATEGORIES, CATEGORY_CODES, type Category } from "./card";
+import type { SoundClip } from "./question";
 
 // 멀티플레이 로비(MP-01)·방(MP-02)에서 멀티 서버(SolveRoom_Multi)와 주고받는 모양
 
@@ -72,12 +73,12 @@ export interface RoomPlayer {
 }
 
 // 지금 문제. 정답은 오지 않고 초성 칸 수(answerLength)와 시간이 절반 지난 뒤의 초성 힌트(hint)만 온다.
-// 부가 설명(description)과 소리(soundUrl)는 처음부터, 제작자 힌트(authorHint)는 초성 힌트와 같이 온다
+// 부가 설명(description)과 소리(sound, 유튜브 구간)는 처음부터, 제작자 힌트(authorHint)는 초성 힌트와 같이 온다
 export interface RoomQuestion {
   prompt?: string;
   description?: string;
   imageUrls: string[];
-  soundUrl?: string;
+  sound?: SoundClip;
   answerLength: number;
   hint?: string;
   authorHint?: string;

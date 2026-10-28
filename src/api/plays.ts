@@ -1,5 +1,5 @@
 import type { AnswerResult, PlayQuestion, PlayResult, RankingRow } from "../types/play";
-import type { QuestionType } from "../types/question";
+import type { QuestionType, SoundClip } from "../types/question";
 import { request } from "./request";
 
 // 서버 PlayStartResponse
@@ -19,7 +19,7 @@ interface PlayQuestionResponse {
   hasHint: boolean;
   hint: string | null;
   imageUrls: string[];
-  soundUrl: string | null;
+  sound: SoundClip | null;
   choices: string[];
 }
 
@@ -46,7 +46,7 @@ export async function fetchCurrentQuestion(sessionId: string, signal?: AbortSign
     hasHint: q.hasHint,
     hint: q.hint,
     imageUrls: q.imageUrls,
-    soundUrl: q.soundUrl,
+    sound: q.sound,
     choices: q.choices,
   };
 }
