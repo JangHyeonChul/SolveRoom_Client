@@ -1032,6 +1032,24 @@
   .stage--play { height: auto; aspect-ratio: 4 / 3; }
   .stage--play.stage--text { aspect-ratio: auto; min-height: 180px; padding: 24px; }
   .stage--play .stage__text { font-size: 17px; }
+
+  /* 멀티 방 모바일 (시안 6): 참가자는 문제 위 아바타 한 줄(빈 자리 없음, 맞히면 ✓), 채팅은 짧게 두고 오래된 줄을 흐린다 */
+  .mp-seats { border: 0; border-radius: 0; background: transparent; }
+  .mp-seats__title { display: none; }
+  .mp-seats ul { display: flex; gap: 4px; overflow-x: auto; padding: 2px 0 4px; scrollbar-width: none; }
+  .mp-seats ul > li.mp-seat { flex: 0 0 68px; flex-direction: column; gap: 3px; min-height: 0; padding: 4px 0; border-top: 0; background: transparent; text-align: center; }
+  .mp-seats ul > li.mp-seat.is-empty { display: none; }
+  .mp-seat .mp-avatar { position: relative; width: 42px; height: 42px; flex-basis: 42px; }
+  .mp-seat.is-me .mp-avatar { box-shadow: 0 0 0 2px var(--green-line); }
+  .mp-seat.is-correct .mp-avatar::after { content: "✓"; position: absolute; right: -3px; bottom: -3px; width: 16px; height: 16px; border: 2px solid var(--white); border-radius: 50%; background: var(--green); color: var(--white); font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .mp-seat__name { flex: none; width: 100%; align-items: center; }
+  .mp-seat__nick { justify-content: center; max-width: 100%; font-size: 11px; }
+  .mp-seat__nick .nickname { overflow: hidden; text-overflow: ellipsis; }
+  .mp-seat__nick .badge, .mp-seat__name small { display: none; }
+  .mp-seat__points { align-items: center; font-size: 12px; }
+  .mp-seat .mp-tag { height: 16px; padding: 0 5px; font-size: 10px; }
+  .mp-chat--room { height: 200px; }
+  .mp-chat--room .mp-chat__log { -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 56px); mask-image: linear-gradient(to bottom, transparent 0, #000 56px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
