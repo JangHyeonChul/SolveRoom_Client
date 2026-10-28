@@ -247,8 +247,14 @@ function PlayView({ cardId, sessionId, title }: { cardId: number } & PlayLocatio
           ) : (
             <div className="play__choices">
               {question.choices.map((choice, i) => {
-                // 틀리면 정답 보기는 표시하지 않고 고른 보기만 표시한다
-                const state = feedback?.picked === i ? (feedback.correct ? "is-right" : "is-wrong") : "";
+                // 고른 보기는 맞으면 초록, 틀리면 빨강으로 표시하고, 틀렸을 때는 정답 보기도 초록으로 알려 준다
+                const state = !feedback
+                  ? ""
+                  : feedback.picked === i && !feedback.correct
+                    ? "is-wrong"
+                    : choice === feedback.answer
+                      ? "is-right"
+                      : "";
                 return (
                   <button
                     key={i}
@@ -270,7 +276,7 @@ function PlayView({ cardId, sessionId, title }: { cardId: number } & PlayLocatio
               <span className="result__title">
                 {feedback.correct ? "정답입니다!" : feedback.skipped ? "건너뛰었어요" : "오답입니다"}
               </span>
-              {feedback.correct && feedback.answer && <span className="result__answer">정답: {feedback.answer}</span>}
+              {feedback.answer && <span className="result__answer">정답: {feedback.answer}</span>}
             </div>
           )}
           {error && (
