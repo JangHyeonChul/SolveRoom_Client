@@ -13,10 +13,14 @@ import { CardDeckModal, RoomCardsModal, RoomDeck } from "../components/RoomCards
 import SoundPlayer, { type SoundPlayerHandle } from "../components/SoundPlayer";
 import { useToast } from "../components/Toast";
 import {
+  REWARD_MIN_PLAYERS,
+  REWARD_MIN_QUESTIONS,
+  REWARD_RULE,
   TOPIC_OPTIONS,
   cardQuestionTotal,
   categoryLabel,
   isCustomTopic,
+  rankOf,
   type RoomPlayer,
   type RoomQuestion,
   type RoomState,
@@ -26,6 +30,8 @@ import { chosung } from "../utils/cover";
 
 // 남은 시간 표시를 갱신하는 간격. 1초보다 짧게 잡아 초가 바뀌는 순간과 크게 어긋나지 않게 한다
 const TICK_MS = 250;
+// 순위 포인트를 받고 내 정보를 다시 읽기까지. 멀티 서버가 메인 서버에 포인트를 보내는 시간을 기다린다
+const REWARD_RELOAD_MS = 2000;
 
 // MP-02 멀티플레이 방. 시안 01_Design/multi-02-room.html #1(기본 2단): 왼쪽 문제·채팅, 오른쪽 참가자.
 // 게임 진행(문제·시간·정답 판정·점수)은 멀티 서버가 하고, 여기서는 받은 상태를 그린다
@@ -63,7 +69,7 @@ function useTicker(active: boolean) {
 const secondsUntil = (at: number | undefined, now: number) => (at === undefined ? 0 : Math.max(0, Math.ceil((at - now) / 1000)));
 
 function RoomView({ no }: { no: number }) {
-  const { user, ready } = useAuth();
+  const { user, ready, reloadMe } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
   const room = useRoom({ no, userId: user?.id, ready, onError: toast });
@@ -73,6 +79,14 @@ function RoomView({ no }: { no: number }) {
   const state = room.room;
   const inGame = state?.phase === "play" || state?.phase === "reveal";
   useTicker(inGame);
+
+  // 순위 포인트를 받았으면 헤더·마이페이지 포인트가 맞도록 내 정보를 다시 읽는다
+  const myReward = state?.phase === "end" ? state.players.find((p) => p.key === room.me)?.reward : undefined;
+  useEffect(() => {
+    if (!myReward) return;
+    const id = window.setTimeout(() => void reloadMe(), REWARD_RELOAD_MS);
+    return () => window.clearTimeout(id);
+  }, [myReward, reloadMe]);
 
   if (room.closedReason) return <RoomMessage title={`${no}번 방에 들어갈 수 없어요`} message={room.closedReason} />;
   if (!state) {
@@ -254,9 +268,6 @@ function TopicModal({ current, onClose, onChange }: { current: string; onClose: 
   );
 }
 
-const rankOf = (players: RoomPlayer[], player: RoomPlayer) =>
-  [...players].sort((a, b) => b.points - a.points).indexOf(player) + 1;
-
 function Seat({ player: p, state, me }: { player: RoomPlayer; state: RoomState; me: boolean }) {
   const waiting = state.phase === "wait";
   const status = waiting ? (
@@ -271,7 +282,9 @@ function Seat({ player: p, state, me }: { player: RoomPlayer; state: RoomState; 
     p.correct && <span className="mp-tag mp-tag--ready"><Icon name="check" size={11} strokeWidth={3} />정답!</span>
   ) : state.phase === "reveal" ? (
     <span className={`mp-tag ${p.gain ? "mp-tag--gain" : ""}`}>{p.gain ? `+${p.gain}` : "—"}</span>
-  ) : null;
+  ) : (
+    p.reward && <span className="mp-tag mp-tag--reward">+{p.reward}P</span>
+  );
 
   return (
     <li className={`mp-seat ${me ? "is-me" : ""} ${state.phase === "play" && p.correct ? "is-correct" : ""}`}>
@@ -321,6 +334,64 @@ function TimerRow({ state, now }: { state: RoomState; now: number }) {
         <span style={{ width: `${Math.min(100, (left / state.timeLimit) * 100)}%` }} />
       </div>
       <b className={`mp-timer__sec ${urgent ? "is-urgent" : ""}`}>{left}</b>
+    </div>
+  );
+}
+
+// 최종 순위. 동점은 같은 등수로 보이고, 순위대로 받은 회원 포인트를 옆에 붙인다. ?를 누르면 받는 조건을 보여 준다
+function FinalStage({ state, mine, onAgain }: { state: RoomState; mine?: RoomPlayer; onAgain: () => void }) {
+  const [ruleOpen, setRuleOpen] = useState(false);
+  const ranked = [...state.players].sort((a, b) => b.points - a.points);
+  const guest = !!mine && mine.score === undefined;
+  return (
+    <div className="mp-final swap-in">
+      <div className="mp-final__head">
+        <span className="mp-reveal__label">최종 순위</span>
+        <button
+          type="button"
+          className="mp-final__help"
+          aria-label="포인트 받는 방법"
+          aria-expanded={ruleOpen}
+          onClick={() => setRuleOpen((open) => !open)}
+        >
+          ?
+        </button>
+      </div>
+      {ruleOpen && <p className="mp-final__rule">{REWARD_RULE}</p>}
+      <p className={`mp-final__note ${state.rewarded ? "is-rewarded" : ""}`}>
+        {state.rewarded
+          ? `${state.players.length}명 · ${state.totalRounds}문제 판이라 순위대로 포인트를 받았어요`
+          : `${REWARD_MIN_PLAYERS}명 이상이 끝까지 남은 ${REWARD_MIN_QUESTIONS}문제 판이면 순위대로 포인트를 받아요`}
+      </p>
+      <ol className="rank-list mp-final__list">
+        {ranked.map((p) => {
+          const rank = rankOf(state.players, p);
+          return (
+            <li key={p.key} className={`rank ${rank <= 3 ? "is-top" : ""} ${p.key === mine?.key ? "is-mine" : ""}`}>
+              <span className="rank__no">{rank}</span>
+              <span className="rank__name">{p.nickname}</span>
+              <span className="rank__meta">{p.host ? "방장" : ""}</span>
+              <span className="rank__score">{p.points}점</span>
+              <span className="mp-final__reward">
+                {p.reward ? <b className={rank === 1 ? "is-first" : ""}>+{p.reward}P</b> : null}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+      {mine?.reward ? (
+        <p className="mp-final__mine">내 포인트 +{mine.reward}P · 누적과 사용 가능 포인트에 쌓였어요</p>
+      ) : state.rewarded && guest ? (
+        <p className="mp-final__mine is-guest">로그인하면 다음 판부터 순위대로 포인트를 받아요</p>
+      ) : null}
+      <div className="mp-wait__actions">
+        <button type="button" className="btn btn--primary" onClick={onAgain}>
+          한 판 더
+        </button>
+        <Link to="/multi" className="btn btn--outline">
+          로비로
+        </Link>
+      </div>
     </div>
   );
 }
@@ -468,32 +539,7 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
     );
   }
 
-  if (state.phase === "end") {
-    const ranked = [...state.players].sort((a, b) => b.points - a.points);
-    return (
-      <div className="mp-final swap-in">
-        <span className="mp-reveal__label">최종 순위</span>
-        <ol className="rank-list mp-final__list">
-          {ranked.map((p, i) => (
-            <li key={p.key} className={`rank ${i < 3 ? "is-top" : ""} ${p.key === mine?.key ? "is-mine" : ""}`}>
-              <span className="rank__no">{i + 1}</span>
-              <span className="rank__name">{p.nickname}</span>
-              <span className="rank__meta">{p.host ? "방장" : ""}</span>
-              <span className="rank__score">{p.points}점</span>
-            </li>
-          ))}
-        </ol>
-        <div className="mp-wait__actions">
-          <button type="button" className="btn btn--primary" onClick={onAgain}>
-            한 판 더
-          </button>
-          <Link to="/multi" className="btn btn--outline">
-            로비로
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  if (state.phase === "end") return <FinalStage state={state} mine={mine} onAgain={onAgain} />;
 
   if (question?.soundUrl) return <SoundQuestion key={state.round} question={question} playAt={state.playAt ?? now} now={now} />;
 

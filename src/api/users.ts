@@ -43,7 +43,7 @@ export interface ConqueredCard {
 // 서버 PointHistoryResponse. 카드 정복 적립이면 카드가 함께 온다(지운 카드면 비어 있다)
 export interface PointHistory {
   id: number;
-  amount: number;
+  amount: number; // 적립은 양수, 아이템 구매처럼 쓴 건 음수
   reason: string;
   reasonName: string;
   cardId: number | null;

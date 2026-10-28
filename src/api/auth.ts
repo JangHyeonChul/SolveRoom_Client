@@ -3,13 +3,15 @@ import { request } from "./request";
 
 export type SocialProvider = "kakao" | "google";
 
-// 서버 MyInfoResponse. 카카오와 아이디 가입(LOCAL)은 이메일을 받지 않아 email이 null이다
+// 서버 MyInfoResponse. 카카오와 아이디 가입(LOCAL)은 이메일을 받지 않아 email이 null이다.
+// point는 누적(랭킹·칭호), availablePoint는 치장 아이템을 사는 잔액이다
 export interface MyInfoResponse {
   id: number;
   provider: "LOCAL" | "KAKAO" | "GOOGLE";
   email: string | null;
   nickname: string;
   point: number;
+  availablePoint?: number; // 서버가 이 필드보다 먼저 배포된 경우에만 없다
   nicknameColor: string | null;
   role: UserRole;
   conqueredCardIds?: number[]; // 서버가 이 필드보다 먼저 배포된 경우에만 없다

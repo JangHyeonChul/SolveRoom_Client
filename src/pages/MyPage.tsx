@@ -163,8 +163,12 @@ function ProfilePanel({ user }: { user: AuthUser }) {
       </div>
       <dl className="mypage-stats">
         <div>
-          <dt>포인트</dt>
+          <dt>누적 포인트</dt>
           <dd>{user.score.toLocaleString()}P</dd>
+        </div>
+        <div>
+          <dt>사용 가능</dt>
+          <dd>{user.availablePoint.toLocaleString()}P</dd>
         </div>
         <div>
           <dt>칭호</dt>
@@ -184,7 +188,8 @@ function ProfilePanel({ user }: { user: AuthUser }) {
         {next === null
           ? "가장 높은 칭호예요."
           : `다음 칭호까지 ${(next - user.score).toLocaleString()}P 남았어요.`}{" "}
-        로그인하고 풀면 맞힌 문제마다 +1P, 모두 풀기로 다 맞혀 처음 정복하면 +20P를 더 받아요.
+        로그인하고 풀면 맞힌 문제마다 +1P, 모두 풀기로 다 맞혀 처음 정복하면 +20P를 더 받아요. 칭호는 누적 포인트로
+        정해지고, 아이템을 사도 줄지 않아요.
       </p>
     </section>
   );
@@ -454,7 +459,10 @@ function PointHistories({ state }: { state: Load<PointHistory[]> }) {
               ))}
           </span>
           <span className="mypage-history__time">{formatRelative(h.createdAt)}</span>
-          <b className="mypage-history__amount">+{h.amount}P</b>
+          {/* 쓴 포인트는 음수로 온다 */}
+          <b className={h.amount < 0 ? "mypage-history__amount mypage-history__amount--spend" : "mypage-history__amount"}>
+            {h.amount < 0 ? h.amount : `+${h.amount}`}P
+          </b>
         </li>
       ))}
     </ul>

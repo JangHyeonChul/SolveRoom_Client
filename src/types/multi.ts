@@ -63,6 +63,7 @@ export interface RoomPlayer {
   correct: boolean; // 이번 문제를 맞혔는지
   gain: number; // 이번 문제에서 얻은 점수
   order: number; // 이번 문제를 맞힌 순서
+  reward?: number; // 게임이 끝나 최종 순위로 받은 회원 포인트. 받은 사람만 온다
 }
 
 // 지금 문제. 정답은 오지 않고 초성 칸 수(answerLength)와 시간이 절반 지난 뒤의 초성 힌트(hint)만 온다.
@@ -97,8 +98,21 @@ export interface RoomState {
   playAt?: number;
   deadlineAt?: number;
   nextAt?: number;
+  rewarded?: boolean; // 게임이 끝났을 때만: 순위대로 회원 포인트를 준 판인지
   serverNow: number;
 }
+
+// 멀티플레이 순위 포인트 조건 (멀티 서버 RoomRewards와 같다)
+export const REWARD_MIN_PLAYERS = 3;
+export const REWARD_MIN_QUESTIONS = 50;
+export const REWARD_RULE =
+  "끝까지 남은 사람이 3명 이상이고 50문제 이상인 판이면 최종 순위대로 회원 포인트를 줘요. " +
+  "3명이면 1등 3P · 2등 2P · 3등 1P, 4명 이상이면 1등 4P · 2등 3P · 3등 2P · 나머지 1P예요. " +
+  "동점은 같은 등수로 같은 포인트를 받고, 0점과 비로그인은 받지 않아요.";
+
+// 나보다 점수가 높은 사람 수 + 1. 동점이면 같은 등수다
+export const rankOf = (players: RoomPlayer[], player: RoomPlayer) =>
+  1 + players.filter((other) => other.points > player.points).length;
 
 // 방 만들기에서 서버로 보내는 값
 export interface RoomSettings {

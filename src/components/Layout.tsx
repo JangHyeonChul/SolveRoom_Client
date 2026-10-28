@@ -20,7 +20,10 @@ export default function Layout() {
               <Link to="/privacy" className="footer__link">
                 개인정보처리방침
               </Link>{" "}
-              · 저작권 침해 신고는 문제 카드의 신고 버튼으로 받아요
+              · 고객문의{" "}
+              <a href="mailto:wkdgus1139@gmail.com" className="footer__link">
+                wkdgus1139@gmail.com
+              </a>
             </span>
           </div>
         </footer>
