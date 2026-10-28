@@ -5,7 +5,9 @@ import { fetchPlayResult, registerRanking, startPlay } from "../api/plays";
 import { useAuth } from "../app/auth";
 import Icon from "../components/Icon";
 import RankItem from "../components/RankItem";
+import { useToast } from "../components/Toast";
 import { CORRECT_SCORE, GUEST_PREFIX, type PlayLocationState, type PlayResult, type RankingRow } from "../types/play";
+import { copyText } from "../utils/clipboard";
 
 // Q-05 결과·랭킹. 다 푼 풀이를 history state로 받는다
 export default function ResultPage() {
@@ -58,6 +60,7 @@ function ResultLoader({ cardId, sessionId, title }: { cardId: number } & PlayLoc
 
 function ResultView({ initial, sessionId }: { initial: PlayResult; sessionId: string }) {
   const navigate = useNavigate();
+  const toast = useToast();
   const { user, reloadMe } = useAuth();
   const [result, setResult] = useState(initial);
 
@@ -106,6 +109,23 @@ function ResultView({ initial, sessionId }: { initial: PlayResult; sessionId: st
     } finally {
       setBusy(false);
     }
+  };
+
+  // 결과 공유. 폰은 기본 공유 창을 띄우고, 공유 창이 없으면(PC 등) 문구와 링크를 복사한다.
+  // 링크(/s/카드 번호?r=맞힌 수-문제 수-점수)를 받은 메신저는 서버가 그린 점수 그림을 미리보기로 보여 준다
+  const share = async () => {
+    const url = `${window.location.origin}/s/${result.cardId}?r=${result.correctCount}-${result.questionCount}-${result.totalScore}`;
+    const text = `「${result.cardTitle}」 ${result.questionCount}문제 중 ${result.correctCount}개 맞힘! ${result.totalScore.toLocaleString("ko-KR")}점\n너도 해 봐`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ text, url });
+        return;
+      } catch (err) {
+        // 공유 창을 그냥 닫았으면 끝낸다. 그 밖의 실패는 복사로 넘어간다
+        if (err instanceof DOMException && err.name === "AbortError") return;
+      }
+    }
+    toast((await copyText(`${text}\n${url}`)) ? "공유 문구와 링크를 복사했어요" : "주소를 직접 복사해 주세요");
   };
 
   // 같은 개수로 새 풀이를 시작한다. 뒤로 가기로 이 결과에 돌아오지 않게 기록을 바꿔 끼운다
@@ -215,6 +235,11 @@ function ResultView({ initial, sessionId }: { initial: PlayResult; sessionId: st
                 </button>
               </form>
             )}
+
+            <button type="button" className="btn btn--outline btn--block" onClick={share}>
+              <Icon name="send" size={16} strokeWidth={2.2} />
+              결과 공유하기
+            </button>
 
             <div className="flex gap-2">
               <button
