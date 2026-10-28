@@ -23,6 +23,7 @@ import {
   categoryLabel,
   isCustomTopic,
   roomBadge,
+  teamModeLabel,
   type LobbyUser,
   type Room,
   type RoomSettings,
@@ -39,7 +40,7 @@ const isOpen = (room: Room) => roomBadge(room) === "wait";
 const matches = (room: Room, filter: Filter, keyword: string) =>
   (filter === "all" || (filter === "wait" ? room.status === "wait" : isOpen(room))) &&
   (!keyword ||
-    `${room.no} ${room.title} ${categoryLabel(room.category)} ${room.cards.map((c) => c.title).join(" ")}`
+    `${room.no} ${room.title} ${categoryLabel(room.category)} ${room.teamMode ? "팀전" : ""} ${room.cards.map((c) => c.title).join(" ")}`
       .toLowerCase()
       .includes(keyword.toLowerCase()));
 
@@ -225,6 +226,7 @@ function RoomItem({ room, onClick }: { room: Room; onClick: () => void }) {
         <span className="mp-room__card">
           주제 · {categoryLabel(room.category)}
           {isCustomTopic(room.category) && (room.cards.length ? ` · 카드 ${room.cards.length}장` : " · 카드 담는 중")}
+          {room.teamMode && <b className="mp-room__team"> · {teamModeLabel(room.maxPlayers)}</b>}
         </span>
         <span className="mp-room__meta">
           <span><Icon name="list" size={13} />{room.questionCount}문제</span>
@@ -242,8 +244,11 @@ function RoomItem({ room, onClick }: { room: Room; onClick: () => void }) {
   );
 }
 
+type Mode = "solo" | "team";
+
 // 주제(카테고리)를 고르면 그 카테고리의 공개 카드 문제 중에서 무작위로 나온다.
-// 문제가 모자란 주제는 서버가 error로 알려 준다. 커스텀은 방을 만든 뒤 대기실에서 카드를 담는다
+// 문제가 모자란 주제는 서버가 error로 알려 준다. 커스텀은 방을 만든 뒤 대기실에서 카드를 담는다.
+// 팀전은 최대 인원을 반씩 나눈 두 팀(4·6·8명 → 2:2·3:3·4:4)으로 겨룬다
 function CreateRoomModal({
   host,
   creating,
@@ -260,12 +265,13 @@ function CreateRoomModal({
   const [questionCount, setQuestionCount] = useState(10);
   const [timeLimit, setTimeLimit] = useState(20);
   const [maxPlayers, setMaxPlayers] = useState(8);
+  const [mode, setMode] = useState<Mode>("solo");
   const invalid = !title.trim();
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (invalid || creating) return;
-    onCreate({ title: title.trim(), category, questionCount, timeLimit, maxPlayers });
+    onCreate({ title: title.trim(), category, questionCount, timeLimit, maxPlayers, teamMode: mode === "team" });
   };
 
   return (
@@ -290,6 +296,18 @@ function CreateRoomModal({
         <OptionSeg label="문제 수" options={QUESTION_COUNT_OPTIONS} value={questionCount} onChange={setQuestionCount} />
         <OptionSeg label="문제당 제한 시간" options={TIME_LIMIT_OPTIONS} value={timeLimit} onChange={setTimeLimit} format={(n) => `${n}초`} />
         <OptionSeg label="최대 인원" options={MAX_PLAYER_OPTIONS} value={maxPlayers} onChange={setMaxPlayers} format={(n) => `${n}명`} />
+        <OptionSeg<Mode>
+          label="방식"
+          options={["solo", "team"]}
+          value={mode}
+          onChange={setMode}
+          format={(m) => (m === "team" ? teamModeLabel(maxPlayers) : "개인전")}
+        />
+        {mode === "team" && (
+          <p className="hint">
+            블루팀과 레드팀으로 나눠 겨뤄요. 팀에서 한 명만 맞혀도 팀 점수가 되고, 대기실에서 팀을 바꿀 수 있어요.
+          </p>
+        )}
         <div className="modal__actions">
           <button type="button" className="btn btn--outline btn--sm" onClick={onClose}>
             취소
@@ -370,6 +388,7 @@ function JoinModal({ room, onClose, onEnter }: { room: Room; onClose: () => void
           <dd>
             {custom && room.cards.length ? `문제 ${cardQuestionTotal(room.cards)}개 중 ` : ""}
             {room.questionCount}문제 · 문제당 {room.timeLimit}초 · 채팅으로 정답 입력
+            {room.teamMode && ` · ${teamModeLabel(room.maxPlayers)}, 팀에서 한 명만 맞혀도 팀 점수`}
           </dd>
           <dt>인원</dt>
           <dd>

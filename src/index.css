@@ -14,6 +14,7 @@
   --red: #c92a2a;
   --red-soft: #fbecec;
   --red-line: #f0c4c4;
+  --red-dark: #b02525;
   --gold: #8a6200;
   --gold-soft: #faf3e0;
   --purple: #7048a8;
@@ -836,6 +837,45 @@
   .mp-tag--ready { background: var(--green-soft); color: var(--green-deep); }
   .mp-tag--gain { background: var(--blue-soft); color: var(--blue); }
   .mp-tag--reward { background: var(--gold-soft); color: var(--gold); }
+  .mp-tag--reward svg { fill: currentColor; }
+  .mp-tag.is-pending { background: var(--white); color: var(--ink-sub); }
+
+  /* 팀전 (팀전 시안 1 기본형): 참가자 목록을 팀별로 나누고, 팀 제목 줄에 대기실은 인원·게임 중에는 팀 점수를 둔다 */
+  .mp-team__head { display: flex; align-items: center; gap: 8px; margin: 0; padding: 9px 16px; font-size: 13px; font-weight: 700; }
+  .mp-team + .mp-team .mp-team__head { border-top: 1px solid var(--line); }
+  .mp-team--blue .mp-team__head { background: var(--blue-soft); color: var(--blue-dark); }
+  .mp-team--red .mp-team__head { background: var(--red-soft); color: var(--red-dark); }
+  .mp-team__mark { width: 10px; height: 10px; flex: none; border-radius: 3px; }
+  .mp-team--blue .mp-team__mark { background: var(--blue); }
+  .mp-team--red .mp-team__mark { background: var(--red); }
+  .mp-team__count { margin-left: auto; font-weight: 600; }
+  .mp-team__score { margin-left: auto; color: var(--ink); font-size: 22px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .mp-team__lead { margin: 0; padding: 12px 16px; border-top: 1px solid var(--line); color: var(--ink-sub); font-size: 13px; font-weight: 700; }
+  .mp-team__lead.is-blue { color: var(--blue-dark); }
+  .mp-team__lead.is-red { color: var(--red-dark); }
+  .mp-team-chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; margin-left: 10px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--white); color: var(--ink); font-size: 13px; font-weight: 700; letter-spacing: 0; vertical-align: 4px; }
+  .mp-team-chip i { width: 8px; height: 8px; border-radius: 2px; background: var(--blue); }
+  .mp-team-chip i + i { margin-left: -2px; background: var(--red); }
+  .mp-rules li.is-key { color: var(--ink); font-weight: 700; }
+  .mp-chat__log b.is-blue, .mp-reveal__team.is-blue { color: var(--blue-dark); }
+  .mp-chat__log b.is-red, .mp-reveal__team.is-red { color: var(--red-dark); }
+  .mp-reveal__team { font-weight: 700; }
+  .mp-room__team { color: var(--ink); font-weight: 700; }
+  .mp-final__winner { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.2; animation: rise .4s var(--ease) both; }
+  .mp-final__winner.is-blue { color: var(--blue-dark); }
+  .mp-final__winner.is-red { color: var(--red-dark); }
+  .mp-final__teams { width: min(100%, 640px); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .mp-final__team { border-radius: 10px; background: var(--white); overflow: hidden; }
+  .mp-final__team.is-winner.mp-team--blue { box-shadow: 0 0 0 2px var(--blue); }
+  .mp-final__team.is-winner.mp-team--red { box-shadow: 0 0 0 2px var(--red); }
+  .mp-final__team ol { list-style: none; margin: 0; padding: 0; }
+  .mp-final__team li { display: grid; grid-template-columns: minmax(0, 1fr) auto 56px 44px; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border-top: 1px solid var(--line); font-size: 13px; }
+  .mp-final__team li:first-child { border-top: 0; }
+  .mp-final__team li.is-mine { background: var(--green-soft); color: var(--green-deep); }
+  .mp-final__team li.mp-final__empty { grid-template-columns: minmax(0, 1fr); color: var(--muted); }
+  .mp-final__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+  .mp-final__count { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .mp-final__points { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
 
   /* 소리형 (시안 3): 이미지 또는 소리 아이콘 위에 재생 바를 얹는다 */
   .stage--sound { flex-direction: column; }
@@ -1048,6 +1088,12 @@
   .mp-seat__nick .badge, .mp-seat__name small { display: none; }
   .mp-seat__points { align-items: center; font-size: 12px; }
   .mp-seat .mp-tag { height: 16px; padding: 0 5px; font-size: 10px; }
+  /* 팀전: 팀 제목 줄을 작게 두고 그 아래에 팀원 아바타 줄을 놓는다 */
+  .mp-team__head { padding: 6px 10px; border-radius: 8px; }
+  .mp-team + .mp-team .mp-team__head { margin-top: 6px; border-top: 0; }
+  .mp-team__score { font-size: 16px; }
+  .mp-team__lead { display: none; }
+  .mp-final__teams { grid-template-columns: minmax(0, 1fr); }
   .mp-chat--room { height: 200px; }
   .mp-chat--room .mp-chat__log { -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 56px); mask-image: linear-gradient(to bottom, transparent 0, #000 56px); }
 }

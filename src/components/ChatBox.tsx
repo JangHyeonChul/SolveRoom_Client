@@ -40,7 +40,7 @@ export default function ChatBox({
         {lines.map((l) =>
           l.kind === "chat" ? (
             <p key={l.id}>
-              <b>{l.nickname}</b>
+              <b className={l.team ? `is-${l.team}` : undefined}>{l.nickname}</b>
               <span>{l.message}</span>
               {l.time && <time>{l.time}</time>}
             </p>

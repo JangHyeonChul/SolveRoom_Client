@@ -13,14 +13,23 @@ import { CardDeckModal, RoomCardsModal, RoomDeck } from "../components/RoomCards
 import SoundPlayer, { type SoundPlayerHandle } from "../components/SoundPlayer";
 import { useToast } from "../components/Toast";
 import {
+  MAX_TEAM_GAP,
   REWARD_MIN_PLAYERS,
   REWARD_MIN_QUESTIONS,
   REWARD_RULE,
+  TEAMS,
+  TEAM_LABELS,
+  TEAM_REWARD_RULE,
+  TEAM_WIN_POINT,
   TOPIC_OPTIONS,
   cardQuestionTotal,
   categoryLabel,
   isCustomTopic,
+  otherTeam,
   rankOf,
+  teamModeLabel,
+  teamOf,
+  teamSize,
   type RoomPlayer,
   type RoomQuestion,
   type RoomState,
@@ -34,6 +43,7 @@ const TICK_MS = 250;
 const REWARD_RELOAD_MS = 2000;
 
 // MP-02 멀티플레이 방. 시안 01_Design/multi-02-room.html #1(기본 2단): 왼쪽 문제·채팅, 오른쪽 참가자.
+// 팀전은 팀전 시안 1(기본형)대로 오른쪽 참가자를 블루·레드 팀별로 나누고 팀 제목 줄에 팀 점수를 둔다.
 // 게임 진행(문제·시간·정답 판정·점수)은 멀티 서버가 하고, 여기서는 받은 상태를 그린다
 export default function MultiRoomPage() {
   const { roomNo } = useParams();
@@ -125,13 +135,16 @@ function RoomView({ no }: { no: number }) {
     return sent;
   };
 
-  const answering = state.phase === "play" && !!mine && !mine.correct;
-  const placeholder =
-    state.phase !== "play" || !mine
-      ? "채팅 입력"
-      : mine.correct
-        ? "정답! 다른 사람이 맞힐 때까지 채팅만 할 수 있어요"
-        : "정답 또는 채팅 입력 후 Enter";
+  // 상대 팀이 꽉 찼으면 서버가 error로 거절하고 이유는 토스트로 뜬다
+  const switchTeam = () => {
+    if (!room.switchTeam()) toast("방에 다시 연결하는 중이에요. 잠시 후 다시 해 주세요");
+  };
+
+  // 팀전은 팀에서 누가 맞히면 팀 전체가 이번 문제를 마친다
+  const teamDone = state.teamMode && !!mine?.team && teamOf(state, mine.team).answered;
+  const done = !!mine && (mine.correct || teamDone);
+  const answering = state.phase === "play" && !!mine && !done;
+  const placeholder = chatPlaceholder(state, mine, teamDone);
 
   return (
     <main className="wrap page page--wide mp-room-page">
@@ -145,6 +158,7 @@ function RoomView({ no }: { no: number }) {
           <h1 className="display">{state.title}</h1>
           <small>
             {categoryLabel(state.category)} · {state.questionCount}문제 · 문제당 {state.timeLimit}초
+            {state.teamMode && ` · ${teamModeLabel(state.maxPlayers)}`}
           </small>
         </div>
         <span className="mp-pill">
@@ -174,11 +188,12 @@ function RoomView({ no }: { no: number }) {
               onInvite={invite}
               onChangeTopic={() => setChangingTopic(true)}
               onOpenDeck={() => setDeckOpen(true)}
+              onSwitchTeam={switchTeam}
             />
           </div>
           {state.phase === "play" && <TimerRow state={state} now={now} />}
           <ChatBox
-            className={`mp-chat--room ${state.phase === "play" && mine?.correct ? "is-correct" : ""}`}
+            className={`mp-chat--room ${state.phase === "play" && done ? "is-correct" : ""}`}
             lines={room.chat}
             placeholder={room.status === "open" ? placeholder : "연결이 끊겨 다시 연결하는 중…"}
             onSend={send}
@@ -191,17 +206,16 @@ function RoomView({ no }: { no: number }) {
           <h2 className="mp-seats__title">
             참가자 <em>{state.players.length}/{state.maxPlayers}</em>
           </h2>
-          <ul>
-            {state.players.map((p) => (
-              <Seat key={p.key} player={p} state={state} me={p.key === room.me} />
-            ))}
-            {Array.from({ length: Math.max(0, state.maxPlayers - state.players.length) }, (_, i) => (
-              <li key={`empty-${i}`} className="mp-seat is-empty">
-                <span className="mp-seat__hole" />
-                빈 자리
-              </li>
-            ))}
-          </ul>
+          {state.teamMode ? (
+            <TeamSeats state={state} me={room.me} />
+          ) : (
+            <ul>
+              {state.players.map((p) => (
+                <Seat key={p.key} player={p} state={state} me={p.key === room.me} />
+              ))}
+              <EmptySeats count={state.maxPlayers - state.players.length} />
+            </ul>
+          )}
         </aside>
       </div>
 
@@ -295,7 +309,15 @@ function Seat({ player: p, state, me }: { player: RoomPlayer; state: RoomState; 
           {me && <em>나</em>}
           {!waiting && p.host && <Icon name="crown" size={12} className="mp-seat__crown" />}
         </span>
-        <small>{waiting ? (p.score === undefined ? "비로그인" : `누적 ${p.score.toLocaleString()}P`) : `${rankOf(state.players, p)}위`}</small>
+        <small>
+          {waiting
+            ? p.score === undefined
+              ? "비로그인"
+              : `누적 ${p.score.toLocaleString()}P`
+            : state.teamMode
+              ? `${p.correctCount}문제 맞힘`
+              : `${rankOf(state.players, p)}위`}
+        </small>
       </span>
       {waiting ? (
         status
@@ -307,6 +329,85 @@ function Seat({ player: p, state, me }: { player: RoomPlayer; state: RoomState; 
       )}
     </li>
   );
+}
+
+function EmptySeats({ count }: { count: number }) {
+  return (
+    <>
+      {Array.from({ length: Math.max(0, count) }, (_, i) => (
+        <li key={`empty-${i}`} className="mp-seat is-empty">
+          <span className="mp-seat__hole" />
+          빈 자리
+        </li>
+      ))}
+    </>
+  );
+}
+
+// 팀전 참가자 (팀전 시안 1 기본형). 팀마다 제목 줄에 대기실은 인원, 게임 중에는 팀 점수를 두고 아래에 팀원과 빈 자리를 놓는다
+function TeamSeats({ state, me }: { state: RoomState; me: string | null }) {
+  const answering = state.phase === "play" || state.phase === "reveal";
+  const [blue, red] = TEAMS.map((team) => teamOf(state, team).points);
+  const leader = blue === red ? null : blue > red ? "blue" : "red";
+  return (
+    <>
+      {TEAMS.map((team) => {
+        const members = state.players.filter((p) => p.team === team);
+        const { points, answered } = teamOf(state, team);
+        // 맞힌 팀원이 나갔으면 점수 없이 맞혔다고만 보여 준다
+        const gain = members.find((p) => p.correct)?.gain;
+        return (
+          <section key={team} className={`mp-team mp-team--${team}`} aria-label={TEAM_LABELS[team]}>
+            <h3 className="mp-team__head">
+              <i className="mp-team__mark" aria-hidden="true" />
+              {TEAM_LABELS[team]}
+              {answering &&
+                (answered ? (
+                  <span className="mp-tag mp-tag--ready">
+                    <Icon name="check" size={11} strokeWidth={3} />
+                    맞힘{gain ? ` +${gain}` : ""}
+                  </span>
+                ) : (
+                  <span className="mp-tag is-pending">{state.phase === "play" ? "푸는 중" : "못 맞힘"}</span>
+                ))}
+              {state.phase === "end" && state.winner === team && (
+                <span className="mp-tag mp-tag--reward">
+                  <Icon name="crown" size={11} />
+                  승리
+                </span>
+              )}
+              {state.phase === "wait" ? (
+                <span className="mp-team__count">
+                  {members.length}/{teamSize(state.maxPlayers)}
+                </span>
+              ) : (
+                <b className="mp-team__score">{points.toLocaleString()}</b>
+              )}
+            </h3>
+            <ul>
+              {members.map((p) => (
+                <Seat key={p.key} player={p} state={state} me={p.key === me} />
+              ))}
+              <EmptySeats count={teamSize(state.maxPlayers) - members.length} />
+            </ul>
+          </section>
+        );
+      })}
+      {answering && (
+        <p className={`mp-team__lead ${leader ? `is-${leader}` : ""}`}>
+          {leader ? `${TEAM_LABELS[leader]}이 ${Math.abs(blue - red).toLocaleString()}점 앞서요` : "두 팀이 동점이에요"}
+        </p>
+      )}
+    </>
+  );
+}
+
+// 채팅 칸 안내. 문제 중에 맞혔으면(팀전은 팀원이 맞혔어도) 정답 대신 채팅만 친다
+function chatPlaceholder(state: RoomState, mine: RoomPlayer | undefined, teamDone: boolean) {
+  if (state.phase !== "play" || !mine) return "채팅 입력";
+  if (mine.correct) return `정답! 다른 ${state.teamMode ? "팀이" : "사람이"} 맞힐 때까지 채팅만 할 수 있어요`;
+  if (teamDone) return "우리 팀이 맞혔어요! 이번 문제는 채팅만 할 수 있어요";
+  return "정답 또는 채팅 입력 후 Enter";
 }
 
 // 초성 칸은 처음엔 비워 두고, 시간이 절반 지나 서버가 힌트를 보내면 채운다
@@ -396,6 +497,92 @@ function FinalStage({ state, mine, onAgain }: { state: RoomState; mine?: RoomPla
   );
 }
 
+// 팀전 최종 결과. 이긴 팀과 두 팀 점수, 팀마다 팀원이 보탠 점수·맞힌 문제와 받은 포인트를 보여 준다. ?를 누르면 받는 조건을 보여 준다
+function TeamFinalStage({ state, mine, onAgain }: { state: RoomState; mine?: RoomPlayer; onAgain: () => void }) {
+  const [ruleOpen, setRuleOpen] = useState(false);
+  const winner = state.winner;
+  const guest = !!mine && mine.score === undefined;
+  // 한 팀이 모두 나가서 남은 팀이 이긴 판
+  const loser = winner && otherTeam(winner);
+  const forfeit = !!loser && !state.players.some((p) => p.team === loser);
+  const rewardNote = state.rewarded
+    ? `이긴 팀 회원이 한 명당 +${TEAM_WIN_POINT}P를 받았어요`
+    : winner
+      ? `${REWARD_MIN_PLAYERS}명 이상이 끝까지 남은 ${REWARD_MIN_QUESTIONS}문제 판이면 이긴 팀이 한 명당 +${TEAM_WIN_POINT}P씩 받아요`
+      : "동점이라 포인트는 없어요";
+  return (
+    <div className="mp-final swap-in">
+      <div className="mp-final__head">
+        <span className="mp-reveal__label">최종 결과</span>
+        <button
+          type="button"
+          className="mp-final__help"
+          aria-label="포인트 받는 방법"
+          aria-expanded={ruleOpen}
+          onClick={() => setRuleOpen((open) => !open)}
+        >
+          ?
+        </button>
+      </div>
+      {ruleOpen && <p className="mp-final__rule">{TEAM_REWARD_RULE}</p>}
+      <strong className={`mp-final__winner ${winner ? `is-${winner}` : ""}`}>{winner ? `${TEAM_LABELS[winner]} 승리!` : "동점이에요!"}</strong>
+      <p className={`mp-final__note ${state.rewarded ? "is-rewarded" : ""}`}>
+        {forfeit && winner && loser && `${TEAM_LABELS[loser]}이 모두 나가서 ${TEAM_LABELS[winner]}이 이겼어요 · `}
+        {rewardNote}
+      </p>
+      <div className="mp-final__teams">
+        {TEAMS.map((team) => {
+          const members = state.players.filter((p) => p.team === team).sort((a, b) => b.points - a.points);
+          const points = teamOf(state, team).points;
+          return (
+            <section
+              key={team}
+              className={`mp-final__team mp-team--${team} ${winner === team ? "is-winner" : ""}`}
+              aria-label={`${TEAM_LABELS[team]} ${points}점`}
+            >
+              <h3 className="mp-team__head">
+                <i className="mp-team__mark" aria-hidden="true" />
+                {TEAM_LABELS[team]}
+                {winner === team && (
+                  <span className="mp-tag mp-tag--reward">
+                    <Icon name="crown" size={11} />
+                    승리
+                  </span>
+                )}
+                <b className="mp-team__score">{points.toLocaleString()}</b>
+              </h3>
+              <ol>
+                {members.map((p) => (
+                  <li key={p.key} className={p.key === mine?.key ? "is-mine" : ""}>
+                    <span className="mp-final__name">{p.nickname}</span>
+                    <span className="mp-final__count">{p.correctCount}문제</span>
+                    <span className="mp-final__points">{p.points}점</span>
+                    <span className="mp-final__reward">{p.reward ? <b>+{p.reward}P</b> : null}</span>
+                  </li>
+                ))}
+                {!members.length && <li className="mp-final__empty">끝까지 남은 사람이 없어요</li>}
+              </ol>
+            </section>
+          );
+        })}
+      </div>
+      {mine?.reward ? (
+        <p className="mp-final__mine">내 포인트 +{mine.reward}P · 누적과 사용 가능 포인트에 쌓였어요</p>
+      ) : state.rewarded && guest && mine?.team === winner ? (
+        <p className="mp-final__mine is-guest">로그인하면 다음 판부터 이긴 팀 포인트를 받아요</p>
+      ) : null}
+      <div className="mp-wait__actions">
+        <button type="button" className="btn btn--primary" onClick={onAgain}>
+          한 판 더
+        </button>
+        <Link to="/multi" className="btn btn--outline">
+          로비로
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 interface StageProps {
   state: RoomState;
   now: number;
@@ -407,9 +594,10 @@ interface StageProps {
   onInvite: () => void;
   onChangeTopic: () => void;
   onOpenDeck: () => void;
+  onSwitchTeam: () => void;
 }
 
-function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, onChangeTopic, onOpenDeck }: StageProps) {
+function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, onChangeTopic, onOpenDeck, onSwitchTeam }: StageProps) {
   const question = state.question;
   const image = question?.imageUrls[0];
   const topic = categoryLabel(state.category);
@@ -430,6 +618,32 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
         : cardTotal < state.questionCount
           ? `담은 카드의 문제가 ${cardTotal}개라 ${state.questionCount}문제를 낼 수 없어요.${isHost ? " 카드를 더 담아 주세요." : ""}`
           : null;
+    // 팀전은 두 팀 모두 1명 이상이고 인원 차이가 MAX_TEAM_GAP명까지여야 시작할 수 있다 (서버도 같은 조건으로 막는다)
+    const team = state.teamMode;
+    const [blueCount, redCount] = TEAMS.map((t) => state.players.filter((p) => p.team === t).length);
+    const teamEmpty = team && (blueCount === 0 || redCount === 0);
+    const teamUnbalanced = team && !teamEmpty && Math.abs(blueCount - redCount) > MAX_TEAM_GAP;
+    const teamBlocker = teamEmpty
+      ? "두 팀 모두 1명 이상 있어야 시작할 수 있어요."
+      : teamUnbalanced
+        ? `두 팀 인원 차이는 ${MAX_TEAM_GAP}명까지예요. 팀 바꾸기로 맞춰 주세요.`
+        : null;
+    const blocker = cardBlocker ?? teamBlocker;
+    const warn = cardBlocker ? state.cards.length > 0 : teamUnbalanced;
+    // 내가 옮겨 갈 수 있는 상대 팀 자리
+    const nextTeam = mine?.team && otherTeam(mine.team);
+    const nextSeats = nextTeam ? teamSize(state.maxPlayers) - state.players.filter((p) => p.team === nextTeam).length : 0;
+    const readyNote =
+      others.length === 0
+        ? isHost
+          ? "혼자서도 시작할 수 있어요. 친구를 부르려면 초대 링크를 보내세요."
+          : "방장을 기다리는 중이에요."
+        : isHost
+          ? allReady
+            ? "모두 준비됐어요. 게임을 시작하세요."
+            : `준비 ${readyCount}/${others.length} · 모두 준비하면 시작할 수 있어요`
+          : `준비 ${readyCount}/${others.length} · 모두 준비하면 방장이 시작해요`;
+    const seatNote = nextTeam ? ` · ${TEAM_LABELS[nextTeam]} ${nextSeats > 0 ? `자리 ${nextSeats}개 남음` : "자리 꽉 참"}` : "";
     return (
       <div className="mp-wait swap-in">
         {custom ? (
@@ -442,6 +656,13 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
           <h2 className="display">
             {topic}
             {custom && <small className="mp-wait__count">문제 카드 {state.cards.length}장</small>}
+            {team && (
+              <span className="mp-team-chip">
+                <i aria-hidden="true" />
+                <i aria-hidden="true" />
+                {teamModeLabel(state.maxPlayers)}
+              </span>
+            )}
           </h2>
           {custom &&
             (state.cards.length ? (
@@ -466,17 +687,23 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
             <li>{Math.floor(state.timeLimit / 2)}초 남으면 초성 힌트</li>
             <li>채팅창에 정답 입력</li>
             <li>빨리 맞힐수록 높은 점수</li>
-            <li>맞혀도 정답은 다른 사람에게 안 보여요</li>
+            {team ? <li className="is-key">팀에서 한 명만 맞혀도 팀 점수</li> : <li>맞혀도 정답은 다른 사람에게 안 보여요</li>}
           </ul>
           <div className="mp-wait__actions">
             {isHost ? (
-              <button type="button" className="btn btn--primary btn--lg" disabled={!allReady || !!cardBlocker} onClick={onStart}>
+              <button type="button" className="btn btn--primary btn--lg" disabled={!allReady || !!blocker} onClick={onStart}>
                 게임 시작
               </button>
             ) : (
               <button type="button" className={`btn btn--lg ${mine?.ready ? "btn--ready" : "btn--primary"}`} onClick={onReady}>
                 {mine?.ready && <Icon name="check" size={16} strokeWidth={3} />}
                 {mine?.ready ? "준비 완료" : "준비"}
+              </button>
+            )}
+            {team && (
+              <button type="button" className="btn btn--outline btn--lg" disabled={nextSeats <= 0} onClick={onSwitchTeam}>
+                <Icon name="swap" size={16} />
+                팀 바꾸기
               </button>
             )}
             {isHost && (
@@ -490,17 +717,9 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
               초대 코드 {state.no}
             </button>
           </div>
-          <p className={`mp-wait__note ${cardBlocker && state.cards.length ? "is-warn" : ""}`}>
-            {cardBlocker ??
-              (others.length === 0
-              ? isHost
-                ? "혼자서도 시작할 수 있어요. 친구를 부르려면 초대 링크를 보내세요."
-                : "방장을 기다리는 중이에요."
-              : isHost
-                ? allReady
-                  ? "모두 준비됐어요. 게임을 시작하세요."
-                  : `준비 ${readyCount}/${others.length} · 모두 준비하면 시작할 수 있어요`
-                : `준비 ${readyCount}/${others.length} · 모두 준비하면 방장이 시작해요`)}
+          <p className={`mp-wait__note ${warn ? "is-warn" : ""}`}>
+            {blocker ?? readyNote}
+            {seatNote}
           </p>
         </div>
       </div>
@@ -525,7 +744,7 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
             {winners.map((p, i) => (
               <li key={p.key}>
                 <MultiAvatar name={p.nickname} size="sm" />
-                {i + 1}. {p.nickname} <b>+{p.gain}</b>
+                {i + 1}. {p.team && <span className={`mp-reveal__team is-${p.team}`}>{TEAM_LABELS[p.team]}</span>} {p.nickname} <b>+{p.gain}</b>
               </li>
             ))}
           </ol>
@@ -539,7 +758,13 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
     );
   }
 
-  if (state.phase === "end") return <FinalStage state={state} mine={mine} onAgain={onAgain} />;
+  if (state.phase === "end") {
+    return state.teamMode ? (
+      <TeamFinalStage state={state} mine={mine} onAgain={onAgain} />
+    ) : (
+      <FinalStage state={state} mine={mine} onAgain={onAgain} />
+    );
+  }
 
   if (question?.soundUrl) return <SoundQuestion key={state.round} question={question} playAt={state.playAt ?? now} now={now} />;
 

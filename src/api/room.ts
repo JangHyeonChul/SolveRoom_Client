@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ChatLine, RoomState } from "../types/multi";
+import type { ChatLine, RoomState, TeamCode } from "../types/multi";
 import { accessToken, refreshAccessToken } from "./accessToken";
 
 // 멀티 서버 방 웹소켓. 방 번호마다 주소가 다르다 (/api/multi/ws/rooms/281)
@@ -13,11 +13,12 @@ type RoomEvent =
   | { type: "answer"; answer: string; gain: number }
   | { type: "error"; code: string; message: string };
 
-// 서버 RoomChatResponse
+// 서버 RoomChatResponse. team은 팀전 방에서 사람이 쓴 줄에만 온다
 interface RoomChatResponse {
   id: number;
   kind: "chat" | "system" | "correct";
   nickname?: string;
+  team?: TeamCode;
   message: string;
   sentAt: number;
 }
@@ -46,6 +47,7 @@ const toChatLine = (line: RoomChatResponse): ChatLine => ({
   id: line.id,
   kind: line.kind,
   nickname: line.nickname,
+  team: line.team,
   message: line.message,
   time: line.kind === "chat" ? clock(line.sentAt) : undefined,
 });
@@ -177,7 +179,9 @@ export function useRoom({ no, userId, ready, onError }: { no: number; userId?: n
   // 커스텀 주제 대기실에서 방장만. 담거나 빼면 서버가 다른 사람의 준비를 풀고, 담을 수 없는 카드는 error로 거절한다
   const addCard = useCallback((cardId: number) => send({ type: "addCard", cardId }), [send]);
   const removeCard = useCallback((cardId: number) => send({ type: "removeCard", cardId }), [send]);
+  // 팀전 대기실에서 상대 팀으로 옮긴다. 옮기면 서버가 내 준비를 풀고, 상대 팀이 꽉 찼으면 error로 거절한다
+  const switchTeam = useCallback(() => send({ type: "switchTeam" }), [send]);
   const serverNow = useCallback(() => Date.now() + offsetRef.current, []);
 
-  return { status, me, room, chat, closedReason, serverNow, sendChat, toggleReady, start, again, changeTopic, addCard, removeCard };
+  return { status, me, room, chat, closedReason, serverNow, sendChat, toggleReady, start, again, changeTopic, addCard, removeCard, switchTeam };
 }

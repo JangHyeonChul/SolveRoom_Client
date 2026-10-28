@@ -23,6 +23,7 @@ export interface Room {
   questionCount: number;
   timeLimit: number; // 문제당 제한 시간(초)
   maxPlayers: number;
+  teamMode: boolean;
   playerCount: number;
   hostNickname: string | null; // 만들고 아직 아무도 안 들어왔으면 null
   status: RoomStatus;
@@ -38,11 +39,13 @@ export interface LobbyUser {
   admin: boolean;
 }
 
-// 로비·방 채팅 한 줄. system은 입장·정답 안내처럼 사람이 쓰지 않은 줄, mine은 나에게만 보이는 줄
+// 로비·방 채팅 한 줄. system은 입장·정답 안내처럼 사람이 쓰지 않은 줄, mine은 나에게만 보이는 줄.
+// team은 팀전 방에서 사람이 쓴 줄에만 온다 (닉네임을 팀 색으로 보여 준다)
 export interface ChatLine {
   id: number;
   kind: "chat" | "system" | "correct" | "mine";
   nickname?: string;
+  team?: TeamCode;
   message: string;
   time?: string;
 }
@@ -50,7 +53,7 @@ export interface ChatLine {
 // 방 진행 단계. 대기실 → 문제 → 정답 공개 → … → 최종 순위
 export type RoomPhase = "wait" | "play" | "reveal" | "end";
 
-// 방 참가자. 멀티 서버 RoomStateResponse.PlayerResponse. points는 이번 판 점수, score는 누적 포인트(칭호용)
+// 방 참가자. 멀티 서버 RoomStateResponse.PlayerResponse. points는 이번 판 점수(팀전은 팀에 보탠 점수), score는 누적 포인트(칭호용)
 export interface RoomPlayer {
   key: string;
   nickname: string;
@@ -59,7 +62,9 @@ export interface RoomPlayer {
   admin: boolean;
   host: boolean;
   ready: boolean;
+  team?: TeamCode; // 팀전 방에서만 온다
   points: number;
+  correctCount: number; // 이번 판에 맞힌 문제 수
   correct: boolean; // 이번 문제를 맞혔는지
   gain: number; // 이번 문제에서 얻은 점수
   order: number; // 이번 문제를 맞힌 순서
@@ -86,11 +91,13 @@ export interface RoomState {
   questionCount: number;
   timeLimit: number;
   maxPlayers: number;
+  teamMode: boolean;
   phase: RoomPhase;
   round: number;
   totalRounds: number;
   hostKey?: string;
   players: RoomPlayer[];
+  teams?: TeamState[]; // 팀전 방에서만 온다 (블루, 레드 순)
   cards: RoomCard[];
   question?: RoomQuestion;
   answer?: string; // 정답 공개(reveal) 단계에만 온다
@@ -98,9 +105,30 @@ export interface RoomState {
   playAt?: number;
   deadlineAt?: number;
   nextAt?: number;
-  rewarded?: boolean; // 게임이 끝났을 때만: 순위대로 회원 포인트를 준 판인지
+  rewarded?: boolean; // 게임이 끝났을 때만: 회원 포인트를 준 판인지
+  winner?: TeamCode; // 팀전이 끝났을 때만: 이긴 팀. 동점이면 오지 않는다
   serverNow: number;
 }
+
+// 팀전 (멀티 서버 Team). 4·6·8명 방은 2:2·3:3·4:4로 나뉜다
+export type TeamCode = "blue" | "red";
+export const TEAMS: TeamCode[] = ["blue", "red"];
+export const TEAM_LABELS: Record<TeamCode, string> = { blue: "블루팀", red: "레드팀" };
+export const otherTeam = (team: TeamCode): TeamCode => (team === "blue" ? "red" : "blue");
+export const teamSize = (maxPlayers: number) => maxPlayers / 2;
+export const teamModeLabel = (maxPlayers: number) => `팀전 ${teamSize(maxPlayers)}:${teamSize(maxPlayers)}`;
+// 두 팀 모두 1명 이상이고 인원 차이가 이만큼까지면 시작할 수 있다 (멀티 서버 Room.MAX_TEAM_GAP과 같다)
+export const MAX_TEAM_GAP = 1;
+
+// 팀 하나의 이번 판 점수. 멀티 서버 RoomStateResponse.TeamResponse. answered는 이번 문제를 그 팀에서 누가 맞혔는지
+export interface TeamState {
+  team: TeamCode;
+  points: number;
+  answered: boolean;
+}
+
+export const teamOf = (state: RoomState, team: TeamCode): TeamState =>
+  state.teams?.find((t) => t.team === team) ?? { team, points: 0, answered: false };
 
 // 멀티플레이 순위 포인트 조건 (멀티 서버 RoomRewards와 같다)
 export const REWARD_MIN_PLAYERS = 3;
@@ -109,6 +137,11 @@ export const REWARD_RULE =
   "끝까지 남은 사람이 3명 이상이고 50문제 이상인 판이면 최종 순위대로 회원 포인트를 줘요. " +
   "3명이면 1등 3P · 2등 2P · 3등 1P, 4명 이상이면 1등 4P · 2등 3P · 3등 2P · 나머지 1P예요. " +
   "동점은 같은 등수로 같은 포인트를 받고, 0점과 비로그인은 받지 않아요.";
+// 팀전은 조건이 같고 이긴 팀 회원이 한 명당 이만큼 받는다 (멀티 서버 RoomRewards.TEAM_WIN_POINT와 같다)
+export const TEAM_WIN_POINT = 2;
+export const TEAM_REWARD_RULE =
+  "끝까지 남은 사람이 3명 이상이고 50문제 이상인 판이면 이긴 팀 회원이 한 명당 2P씩 받아요. " +
+  "개인 점수가 0이어도 받고, 진 팀과 동점, 비로그인은 받지 않아요. 한 팀이 모두 나가면 남은 팀이 이겨요.";
 
 // 나보다 점수가 높은 사람 수 + 1. 동점이면 같은 등수다
 export const rankOf = (players: RoomPlayer[], player: RoomPlayer) =>
@@ -121,6 +154,7 @@ export interface RoomSettings {
   questionCount: number;
   timeLimit: number;
   maxPlayers: number;
+  teamMode: boolean;
 }
 
 export const ROOM_BADGE_LABELS: Record<RoomBadge, string> = { wait: "대기 중", play: "게임 중", full: "가득 참" };
