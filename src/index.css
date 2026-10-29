@@ -541,7 +541,8 @@
   .error-page__detail summary { cursor: pointer; }
   .error-page__detail code { display: block; margin-top: 6px; padding: 8px 10px; border-radius: 6px; background: var(--bg-soft); white-space: pre-wrap; word-break: break-all; text-align: left; }
 
-  /* U-01 마이페이지 */
+  /* U-01 마이페이지. 헤더 검색창(topbar__inner)과 왼쪽 끝이 맞도록 메인 화면과 같은 폭을 쓴다 */
+  .mypage { max-width: 1600px; }
   .mypage__main, .mypage__side { display: flex; flex-direction: column; gap: 16px; }
   .mypage-profile__head { display: flex; align-items: center; gap: 12px; }
   .mypage-profile__name { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-weight: 700; font-size: 16px; }

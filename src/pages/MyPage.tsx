@@ -79,7 +79,7 @@ function MyPageView({ user }: { user: AuthUser }) {
   }, [user.score]);
 
   return (
-    <main className="wrap page page--wide">
+    <main className="wrap page mypage">
       <div className="page-head reveal">
         <h1 className="display">마이페이지</h1>
         <p>칭호와 포인트를 확인하고 닉네임을 꾸밀 수 있어요.</p>
