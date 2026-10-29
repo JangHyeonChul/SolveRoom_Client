@@ -61,9 +61,6 @@ export default function Sidebar() {
       <nav className="side-group side-group--nav" aria-label="주요 메뉴">
         <h2 className="side-group__title">탐색</h2>
         <div className="side-list">
-          <Link to="/" className="side-link" aria-current={current(isHome)}>
-            홈
-          </Link>
           <Link to="/multi" className="side-link" onClick={toMulti}>
             멀티플레이
           </Link>

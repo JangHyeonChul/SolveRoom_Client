@@ -10,6 +10,7 @@ import CommentSection from "../components/CommentSection";
 import Icon from "../components/Icon";
 import Nickname from "../components/Nickname";
 import ReportCardModal from "../components/ReportCardModal";
+import { useSceneNavigate } from "../components/SceneRoot";
 import { useToast } from "../components/Toast";
 import type { CardDetail } from "../types/card";
 import type { PlayLocationState } from "../types/play";
@@ -77,6 +78,7 @@ function CardDetailLoader({ cardId }: { cardId: number }) {
 
 function CardDetailView({ card }: { card: CardDetail }) {
   const navigate = useNavigate();
+  const sceneNavigate = useSceneNavigate();
   usePageMeta(card.title, card.description || `${card.title} 퀴즈 ${card.questionCount}문제. 퀴즈체크에서 풀어 보세요.`);
 
   // 카드의 문제 수보다 적은 개수만 보여 준다. 기본은 10개, 문제가 10개 이하면 모두 푼다
@@ -116,6 +118,9 @@ function CardDetailView({ card }: { card: CardDetail }) {
       setStarting(false);
     }
   };
+
+  // 같이하기: 멀티 로비에서 이 카드를 담을 커스텀 방 만들기 창을 띄운다
+  const together = () => sceneNavigate(`/multi?card=${card.id}`);
 
   return (
     <main className="wrap page page--wide">
@@ -201,10 +206,16 @@ function CardDetailView({ card }: { card: CardDetail }) {
             >
               {starting ? "시작하고 있어요..." : `시작하기 (${resolvedCount}문제)`}
             </button>
-            <button type="button" className="btn btn--outline btn--block" onClick={() => setRankingOpen(true)}>
-              <Icon name="crown" size={15} />
-              랭킹 보기
-            </button>
+            <div className="btn-pair">
+              <button type="button" className="btn btn--outline btn--block btn--together" onClick={together}>
+                <Icon name="users" size={15} />
+                같이하기
+              </button>
+              <button type="button" className="btn btn--outline btn--block" onClick={() => setRankingOpen(true)}>
+                <Icon name="crown" size={15} />
+                랭킹 보기
+              </button>
+            </div>
           </section>
         </aside>
       </div>

@@ -1,6 +1,7 @@
-import { useMemo, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLobby, type LobbyStatus } from "../api/lobby";
+import { fetchCardDetail } from "../api/quizCards";
 import { useAuth } from "../app/auth";
 import AuthModal, { type AuthMode } from "../components/AuthModal";
 import ChatBox from "../components/ChatBox";
@@ -14,6 +15,7 @@ import { useSceneNavigate } from "../components/SceneRoot";
 import { useToast } from "../components/Toast";
 import { CATEGORIES, CATEGORY_CODES } from "../types/card";
 import {
+  CUSTOM_TOPIC,
   MAX_PLAYER_OPTIONS,
   QUESTION_COUNT_OPTIONS,
   ROOM_BADGE_LABELS,
@@ -33,6 +35,12 @@ import { getTier } from "../utils/tier";
 type Filter = "all" | "wait" | "open";
 
 const FILTERS: Record<Filter, string> = { all: "전체", wait: "대기 중", open: "입장 가능" };
+
+// 카드 상세의 같이하기(/multi?card=id)로 들어오면 그 카드를 담을 커스텀 방 만들기 창을 띄운다
+interface PresetCard {
+  id: number;
+  title: string;
+}
 
 // 바로 들어갈 수 있는 방: 대기 중이고 자리가 남은 방
 const isOpen = (room: Room) => roomBadge(room) === "wait";
@@ -60,6 +68,7 @@ export default function MultiLobbyPage() {
   const navigate = useNavigate();
   const sceneNavigate = useSceneNavigate();
   const toast = useToast();
+  const [params, setParams] = useSearchParams();
   const [filter, setFilter] = useState<Filter>("all");
   const [keyword, setKeyword] = useState("");
   const [creating, setCreating] = useState(false);
@@ -70,14 +79,35 @@ export default function MultiLobbyPage() {
       setCreating(false);
       toast(message);
     },
-    onRoomCreated: (no) => navigate(`/multi/rooms/${no}`),
+    // 같이하기로 만든 방이면 대기실에서 그 카드를 담도록 번호를 넘긴다
+    onRoomCreated: (no) => navigate(modal?.kind === "create" && modal.card ? `/multi/rooms/${no}?card=${modal.card.id}` : `/multi/rooms/${no}`),
   });
   const onlineUsers = useMemo(() => [...lobby.users].sort(byScore), [lobby.users]);
   // 게스트는 서버가 지어 준 익명 닉네임을 쓴다
   const myNickname = user?.nickname ?? lobby.me?.nickname ?? "익명의여우";
   const [modal, setModal] = useState<
-    { kind: "create" | "code" } | { kind: "join"; room: Room } | { kind: "auth"; mode: AuthMode } | null
+    | { kind: "create"; card?: PresetCard }
+    | { kind: "code" }
+    | { kind: "join"; room: Room }
+    | { kind: "auth"; mode: AuthMode }
+    | null
   >(null);
+
+  const presetCardId = Number(params.get("card")) || null;
+  useEffect(() => {
+    if (!presetCardId) return;
+    const controller = new AbortController();
+    fetchCardDetail(presetCardId, controller.signal)
+      .then((card) => setModal({ kind: "create", card: { id: card.id, title: card.title } }))
+      .catch((e) => {
+        if (controller.signal.aborted) return;
+        console.error(e);
+        toast("문제 카드를 불러오지 못했어요. 방을 만든 뒤 카드 덱에서 담아 주세요");
+      })
+      // 새로 고침해도 창이 다시 뜨지 않게 주소에서 뺀다
+      .finally(() => !controller.signal.aborted && setParams({}, { replace: true }));
+    return () => controller.abort();
+  }, [presetCardId, setParams, toast]);
 
   const rooms = lobby.rooms.filter((r) => matches(r, filter, keyword.trim()));
   const waiting = rooms.filter((r) => r.status === "wait").length;
@@ -205,7 +235,13 @@ export default function MultiLobbyPage() {
       </div>
 
       {modal?.kind === "create" && (
-        <CreateRoomModal host={myNickname} creating={creating} onClose={() => setModal(null)} onCreate={createRoom} />
+        <CreateRoomModal
+          host={myNickname}
+          card={modal.card}
+          creating={creating}
+          onClose={() => setModal(null)}
+          onCreate={createRoom}
+        />
       )}
       {modal?.kind === "code" && (
         <CodeModal rooms={lobby.rooms} onClose={() => setModal(null)} onFind={(room) => setModal({ kind: "join", room })} />
@@ -251,17 +287,19 @@ type Mode = "solo" | "team";
 // 팀전은 최대 인원을 반씩 나눈 두 팀(4·6·8명 → 2:2·3:3·4:4)으로 겨룬다
 function CreateRoomModal({
   host,
+  card,
   creating,
   onClose,
   onCreate,
 }: {
   host: string;
+  card?: PresetCard;
   creating: boolean;
   onClose: () => void;
   onCreate: (settings: RoomSettings) => void;
 }) {
-  const [title, setTitle] = useState(`${host}님의 방`);
-  const [category, setCategory] = useState<string>(CATEGORY_CODES[CATEGORIES[0]]);
+  const [title, setTitle] = useState(card ? card.title.slice(0, 30) : `${host}님의 방`);
+  const [category, setCategory] = useState<string>(card ? CUSTOM_TOPIC : CATEGORY_CODES[CATEGORIES[0]]);
   const [questionCount, setQuestionCount] = useState(10);
   const [timeLimit, setTimeLimit] = useState(20);
   const [maxPlayers, setMaxPlayers] = useState(8);
@@ -285,10 +323,16 @@ function CreateRoomModal({
         {isCustomTopic(category) ? (
           <p className="callout callout--green">
             <Icon name="cards" size={15} />
-            <span>
-              방을 만든 뒤 <b>대기실의 카드 덱을 눌러 문제 카드를 담아요.</b> 담은 카드의 주관식 문제에서만 나오고, 들어온
-              사람도 어떤 카드인지 볼 수 있어요.
-            </span>
+            {card ? (
+              <span>
+                방을 만들면 <b>「{card.title}」 카드를 담아 둬요.</b> 대기실의 카드 덱에서 다른 카드를 더 담을 수도 있어요.
+              </span>
+            ) : (
+              <span>
+                방을 만든 뒤 <b>대기실의 카드 덱을 눌러 문제 카드를 담아요.</b> 담은 카드의 주관식 문제에서만 나오고, 들어온
+                사람도 어떤 카드인지 볼 수 있어요.
+              </span>
+            )}
           </p>
         ) : (
           <p className="hint">고른 주제의 공개 카드에서 주관식 문제가 무작위로 나와요.</p>

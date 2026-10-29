@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useRoom } from "../api/room";
 import { useAuth } from "../app/auth";
 import ChatBox from "../components/ChatBox";
@@ -84,6 +84,7 @@ function RoomView({ no }: { no: number }) {
   const navigate = useNavigate();
   const toast = useToast();
   const room = useRoom({ no, userId: user?.id, ready, onError: toast });
+  const [params, setParams] = useSearchParams();
   const [leaving, setLeaving] = useState(false);
   const [changingTopic, setChangingTopic] = useState(false);
   const [deckOpen, setDeckOpen] = useState(false);
@@ -98,6 +99,17 @@ function RoomView({ no }: { no: number }) {
     const id = window.setTimeout(() => void reloadMe(), REWARD_RELOAD_MS);
     return () => window.clearTimeout(id);
   }, [myReward, reloadMe]);
+
+  // 카드 상세의 같이하기로 만든 방(?card=id)이면 방장이 들어오자마자 그 카드를 담는다. 한 번만 보내고 주소에서 뺀다
+  const presetCardId = Number(params.get("card")) || null;
+  const hostKey = state?.hostKey;
+  const customWaiting = state?.phase === "wait" && isCustomTopic(state.category);
+  const { me, addCard } = room;
+  useEffect(() => {
+    if (!presetCardId || !me || !hostKey || !customWaiting) return;
+    if (hostKey === me) addCard(presetCardId);
+    setParams({}, { replace: true });
+  }, [presetCardId, me, addCard, hostKey, customWaiting, setParams]);
 
   if (room.closedReason) return <RoomMessage title={`${no}번 방에 들어갈 수 없어요`} message={room.closedReason} />;
   if (!state) {
