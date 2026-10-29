@@ -3,6 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 로고 아이콘. svg를 못 쓰는 브라우저는 ico, iOS 홈 화면은 apple-touch-icon을 쓴다 -->
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <!-- 카드 상세(/cards/번호)는 nginx가 SSI로 아래 기본값 대신 서버가 만든 카드 제목·설명을 넣는다.
          다른 화면에서는 SSI 주석이 무시되어 block 안의 기본값이 그대로 쓰인다 -->
     <!--# block name="site_head" -->
@@ -15,6 +19,7 @@
     <meta property="og:title" content="퀴즈체크 - 퀴즈 맞추기 · 상식 퀴즈 · 퀴즈 만들기" />
     <meta property="og:description" content="상식, 노래, 게임, 인물 퀴즈를 맞추고 랭킹에 도전하세요. 직접 퀴즈를 만들어 친구와 함께 풀 수 있어요." />
     <meta property="og:locale" content="ko_KR" />
+    <meta property="og:image" content="https://quizcheck.kr/icon-512.png" />
     <!--# endblock -->
     <!--# include virtual="/api/main/seo/cards/${seo_card}/head" stub="site_head" -->
     <!-- 구글 애드센스. 사이트 소유 확인과 광고 표시에 같이 쓴다 -->

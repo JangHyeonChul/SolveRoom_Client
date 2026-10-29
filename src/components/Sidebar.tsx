@@ -52,7 +52,7 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <Link to="/" className="logo">
-        <span className="logo__mark">S</span>
+        <img className="logo__mark" src="/favicon.svg" alt="" />
         <span className="logo__text">퀴즈 체크</span>
       </Link>
 
