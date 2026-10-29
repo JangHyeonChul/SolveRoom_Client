@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useRoom } from "../api/room";
 import { useAuth } from "../app/auth";
@@ -646,10 +646,11 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
     // 내가 옮겨 갈 수 있는 상대 팀 자리
     const nextTeam = mine?.team && otherTeam(mine.team);
     const nextSeats = nextTeam ? teamSize(state.maxPlayers) - state.players.filter((p) => p.team === nextTeam).length : 0;
+    // 방장 혼자일 때는 따로 안내하지 않는다 (게임 시작·초대 코드 버튼이 바로 보인다)
     const readyNote =
       others.length === 0
         ? isHost
-          ? "혼자서도 시작할 수 있어요. 친구를 부르려면 초대 링크를 보내세요."
+          ? null
           : "방장을 기다리는 중이에요."
         : isHost
           ? allReady
@@ -719,56 +720,48 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
                 팀 바꾸기
               </button>
             )}
-            {isHost && (
-              <button type="button" className="btn btn--outline btn--lg" onClick={onChangeTopic}>
-                <Icon name="edit" size={15} />
-                주제 바꾸기
+            <span className="mp-wait__extras">
+              {isHost && (
+                <button type="button" className="btn btn--outline btn--sm" onClick={onChangeTopic}>
+                  <Icon name="edit" size={13} />
+                  주제 바꾸기
+                </button>
+              )}
+              <button type="button" className="btn btn--outline btn--sm" onClick={onInvite}>
+                <Icon name="link" size={13} />
+                초대 코드 {state.no}
               </button>
-            )}
-            <button type="button" className="btn btn--outline btn--lg" onClick={onInvite}>
-              <Icon name="link" size={15} />
-              초대 코드 {state.no}
-            </button>
+            </span>
           </div>
-          <p className={`mp-wait__note ${warn ? "is-warn" : ""}`}>
-            {blocker ?? readyNote}
-            {seatNote}
-          </p>
+          {(blocker ?? readyNote ?? seatNote) && (
+            <p className={`mp-wait__note ${warn ? "is-warn" : ""}`}>
+              {blocker ?? readyNote}
+              {seatNote}
+            </p>
+          )}
         </div>
       </div>
     );
   }
 
+  // 소리 문제는 정답 공개 때도 같은 플레이어를 그대로 두어, 모두 맞혀 일찍 넘어가도 소리가 끊기지 않는다
+  if (question?.sound && (state.phase === "play" || state.phase === "reveal"))
+    return (
+      <SoundQuestion
+        key={state.round}
+        question={question}
+        playAt={state.playAt ?? now}
+        now={now}
+        solved={!!mine?.correct}
+        reveal={state.phase === "reveal" ? <RevealResult state={state} now={now} /> : undefined}
+      />
+    );
+
   if (state.phase === "reveal") {
-    // 이미지가 없는 소리 문제는 정답과 함께 영상 썸네일을 보여 준다
-    const revealImage = image ?? (question?.sound ? youTubeThumbnail(question.sound.videoId) : undefined);
-    const winners = state.players.filter((p) => p.gain).sort((a, b) => a.order - b.order);
     return (
       <div className="mp-reveal swap-in">
-        {revealImage && <img src={revealImage} alt="" className="mp-reveal__img" />}
-        <span className="mp-reveal__label">정답</span>
-        <strong className="mp-reveal__answer">{state.answer}</strong>
-        {question?.sound && (
-          <div className="mp-reveal__sound">
-            <SoundPlayer clip={question.sound} />
-            <small>다시 듣기는 나한테만 들려요</small>
-          </div>
-        )}
-        {winners.length ? (
-          <ol className="mp-reveal__who">
-            {winners.map((p, i) => (
-              <li key={p.key}>
-                <MultiAvatar name={p.nickname} size="sm" />
-                {i + 1}. {p.team && <span className={`mp-reveal__team is-${p.team}`}>{TEAM_LABELS[p.team]}</span>} {p.nickname} <b>+{p.gain}</b>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className="mp-reveal__none">아무도 맞히지 못했어요</p>
-        )}
-        <p className="mp-reveal__next">
-          {state.round >= state.totalRounds ? "최종 결과" : "다음 문제"}까지 {secondsUntil(state.nextAt, now)}초
-        </p>
+        {image && <img src={image} alt="" className="mp-reveal__img" />}
+        <RevealResult state={state} now={now} />
       </div>
     );
   }
@@ -780,11 +773,6 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
       <FinalStage state={state} mine={mine} onAgain={onAgain} />
     );
   }
-
-  if (question?.sound)
-    return (
-      <SoundQuestion key={state.round} question={question} playAt={state.playAt ?? now} now={now} solved={!!mine?.correct} />
-    );
 
   // 이미지형은 이미지와 질문 문구, 텍스트형은 문제 본문을 크게 보여 준다
   return (
@@ -802,19 +790,48 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
   );
 }
 
+// 정답 공개: 정답, 맞힌 사람(맞힌 순서), 다음 문제까지 남은 시간
+function RevealResult({ state, now }: { state: RoomState; now: number }) {
+  const winners = state.players.filter((p) => p.gain).sort((a, b) => a.order - b.order);
+  return (
+    <>
+      <span className="mp-reveal__label">정답</span>
+      <strong className="mp-reveal__answer">{state.answer}</strong>
+      {winners.length ? (
+        <ol className="mp-reveal__who">
+          {winners.map((p, i) => (
+            <li key={p.key}>
+              <MultiAvatar name={p.nickname} size="sm" />
+              {i + 1}. {p.team && <span className={`mp-reveal__team is-${p.team}`}>{TEAM_LABELS[p.team]}</span>} {p.nickname} <b>+{p.gain}</b>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="mp-reveal__none">아무도 맞히지 못했어요</p>
+      )}
+      <p className="mp-reveal__next">
+        {state.round >= state.totalRounds ? "최종 결과" : "다음 문제"}까지 {secondsUntil(state.nextAt, now)}초
+      </p>
+    </>
+  );
+}
+
 // 소리 문제 (시안 멀티 1·2·3). 카운트다운 동안 유튜브 플레이어를 미리 띄워 두고, 재생 시각(playAt)이 되면 모두 같이 재생한다.
 // 되감기·건너뛰기는 막고, 맞히거나 시간이 끝날 때까지 구간을 반복한다.
-// 브라우저가 자동 재생을 막으면 "소리 켜기"를 누른 순간 다른 사람이 듣는 곳부터 이어 듣는다
+// 브라우저가 자동 재생을 막으면 "소리 켜기"를 누른 순간 다른 사람이 듣는 곳부터 이어 듣는다.
+// 정답 공개(reveal)도 이 화면에서 질문 문구 자리에 정답을 띄우고, 플레이어는 다음 문제까지 계속 반복한다
 function SoundQuestion({
   question,
   playAt,
   now,
   solved,
+  reveal,
 }: {
   question: RoomQuestion;
   playAt: number;
   now: number;
   solved: boolean;
+  reveal?: ReactNode;
 }) {
   const [blocked, setBlocked] = useState(false);
   const playerRef = useRef<SoundPlayerHandle>(null);
@@ -838,18 +855,21 @@ function SoundQuestion({
       .catch(() => undefined);
   };
 
+  // 이미지가 없는 소리 문제는 정답과 함께 영상 썸네일을 보여 준다
+  const shown = image ?? (reveal ? youTubeThumbnail(question.sound!.videoId) : undefined);
+
   return (
     <figure className="mp-question swap-in">
-      <div className={`mp-sound ${image ? "" : "is-empty"}`}>
-        {image ? (
-          <img src={image} alt="문제 이미지" />
+      <div className={`mp-sound ${shown ? "" : "is-empty"} ${reveal ? "is-reveal" : ""}`}>
+        {shown ? (
+          <img src={shown} alt={reveal ? "" : "문제 이미지"} />
         ) : (
           <span className="mp-sound__icon" aria-hidden="true">
             <Icon name="speaker" size={48} strokeWidth={1.8} />
           </span>
         )}
         {/* 카운트다운 동안에도 그려 두어 유튜브 플레이어를 미리 띄운다 */}
-        <SoundPlayer ref={playerRef} clip={question.sound!} seekable={false} loop={!solved} />
+        <SoundPlayer ref={playerRef} clip={question.sound!} seekable={false} loop={!solved || !!reveal} />
         {counting && (
           <div className="mp-sound__count" role="status">
             <b>{Math.ceil((playAt - now) / 1000)}</b>
@@ -866,13 +886,17 @@ function SoundQuestion({
           </div>
         )}
       </div>
-      <figcaption>{question.prompt ?? "이 소리는 무엇일까요?"}</figcaption>
-      {question.description && <p className="mp-question__desc">{question.description}</p>}
-      {question.authorHint && (
-        <p className="mp-question__hint">
-          <b>힌트</b>
-          {question.authorHint}
-        </p>
+      {reveal ?? (
+        <>
+          <figcaption>{question.prompt ?? "이 소리는 무엇일까요?"}</figcaption>
+          {question.description && <p className="mp-question__desc">{question.description}</p>}
+          {question.authorHint && (
+            <p className="mp-question__hint">
+              <b>힌트</b>
+              {question.authorHint}
+            </p>
+          )}
+        </>
       )}
     </figure>
   );
