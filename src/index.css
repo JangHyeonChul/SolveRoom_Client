@@ -1021,13 +1021,40 @@
   .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
-/* 멀티플레이 방: 참가자를 문제 위로 올리고 두 줄 이상으로 나눈다 */
+/* 멀티플레이 방: 참가자를 문제 위 아바타 한 줄로 올린다 */
 @media (max-width: 1100px) {
   .mp-room__body { grid-template-columns: minmax(0, 1fr); }
   .mp-seats { order: -1; }
-  .mp-seats ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
-  .mp-seats li:first-child { border-top: 1px solid var(--line); }
-  .mp-seats ul > li:first-child { border-top: 0; }
+  /* 참가자는 문제 위 아바타 한 줄(빈 자리 없음, 맞히면 ✓). 좁은 PC 창에서도 카드 그리드 대신 이걸 써서 문제·채팅 자리를 남긴다 */
+  .mp-seats { border: 0; border-radius: 0; background: transparent; }
+  .mp-seats__title { display: none; }
+  .mp-seats ul { display: flex; gap: 4px; overflow-x: auto; padding: 2px 0 4px; scrollbar-width: none; }
+  .mp-seats ul > li.mp-seat { flex: 0 0 68px; flex-direction: column; gap: 3px; min-height: 0; padding: 4px 0; border-top: 0; background: transparent; text-align: center; }
+  .mp-seats ul > li.mp-seat.is-empty { display: none; }
+  .mp-seat .mp-avatar { position: relative; width: 42px; height: 42px; flex-basis: 42px; }
+  .mp-seat.is-me .mp-avatar { box-shadow: 0 0 0 2px var(--green-line); }
+  .mp-seat.is-correct .mp-avatar::after { content: "✓"; position: absolute; right: -3px; bottom: -3px; width: 16px; height: 16px; border: 2px solid var(--white); border-radius: 50%; background: var(--green); color: var(--white); font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  .mp-seat__name { flex: none; width: 100%; align-items: center; }
+  .mp-seat__nick { justify-content: center; max-width: 100%; font-size: 11px; }
+  .mp-seat__nick .nickname { overflow: hidden; text-overflow: ellipsis; }
+  .mp-seat__nick .badge, .mp-seat__name small { display: none; }
+  .mp-seat__points { align-items: center; font-size: 12px; }
+  .mp-seat .mp-tag { height: 16px; padding: 0 5px; font-size: 10px; }
+  /* 팀전: 팀 제목 줄을 작게 두고 그 아래에 팀원 아바타 줄을 놓는다 */
+  .mp-team__head { padding: 6px 10px; border-radius: 8px; }
+  .mp-team + .mp-team .mp-team__head { margin-top: 6px; border-top: 0; }
+  .mp-team__score { font-size: 16px; }
+  .mp-team__lead { display: none; }
+  /* 플레이·정답 공개 중에는 방을 한 화면 높이에 맞춘다. 남는 높이는 문제 칸이 갖고 사진이 그 안에 맞게 줄어,
+     문제가 바뀌어도 채팅(정답 입력)이 화면 밖으로 밀리지 않는다 */
+  .mp-room-page.is-playing { height: max(600px, calc(100dvh - var(--topbar-h))); gap: 10px; padding-top: 12px; padding-bottom: 12px; scroll-margin-top: var(--topbar-h); }
+  .mp-room-page.is-playing .mp-room__body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+  .mp-room-page.is-playing .mp-room__main { flex: 1; min-height: 0; gap: 8px; }
+  .mp-room-page.is-playing .mp-stage { flex: 1; min-height: 0; }
+  .mp-room-page.is-playing .mp-stage > * { min-height: 0; overflow-y: auto; }
+  .mp-room-page.is-playing .mp-question { gap: 10px; padding: 14px; }
+  .mp-room-page.is-playing .mp-question__img { flex: 1 1 0; min-height: 0; width: 100%; max-width: 640px; aspect-ratio: auto; }
+  .mp-room-page.is-playing .mp-chat--room { flex: none; height: 200px; }
 }
 
 /* 결과 화면은 두 칸이 위아래로 접히면 내 점수·랭킹 등록을 먼저 보여 준다 */
@@ -1110,26 +1137,7 @@
   .stage--play.stage--text { aspect-ratio: auto; min-height: 180px; padding: 24px; }
   .stage--play .stage__text { font-size: 17px; }
 
-  /* 멀티 방 모바일 (시안 6): 참가자는 문제 위 아바타 한 줄(빈 자리 없음, 맞히면 ✓), 채팅은 짧게 두고 오래된 줄을 흐린다 */
-  .mp-seats { border: 0; border-radius: 0; background: transparent; }
-  .mp-seats__title { display: none; }
-  .mp-seats ul { display: flex; gap: 4px; overflow-x: auto; padding: 2px 0 4px; scrollbar-width: none; }
-  .mp-seats ul > li.mp-seat { flex: 0 0 68px; flex-direction: column; gap: 3px; min-height: 0; padding: 4px 0; border-top: 0; background: transparent; text-align: center; }
-  .mp-seats ul > li.mp-seat.is-empty { display: none; }
-  .mp-seat .mp-avatar { position: relative; width: 42px; height: 42px; flex-basis: 42px; }
-  .mp-seat.is-me .mp-avatar { box-shadow: 0 0 0 2px var(--green-line); }
-  .mp-seat.is-correct .mp-avatar::after { content: "✓"; position: absolute; right: -3px; bottom: -3px; width: 16px; height: 16px; border: 2px solid var(--white); border-radius: 50%; background: var(--green); color: var(--white); font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
-  .mp-seat__name { flex: none; width: 100%; align-items: center; }
-  .mp-seat__nick { justify-content: center; max-width: 100%; font-size: 11px; }
-  .mp-seat__nick .nickname { overflow: hidden; text-overflow: ellipsis; }
-  .mp-seat__nick .badge, .mp-seat__name small { display: none; }
-  .mp-seat__points { align-items: center; font-size: 12px; }
-  .mp-seat .mp-tag { height: 16px; padding: 0 5px; font-size: 10px; }
-  /* 팀전: 팀 제목 줄을 작게 두고 그 아래에 팀원 아바타 줄을 놓는다 */
-  .mp-team__head { padding: 6px 10px; border-radius: 8px; }
-  .mp-team + .mp-team .mp-team__head { margin-top: 6px; border-top: 0; }
-  .mp-team__score { font-size: 16px; }
-  .mp-team__lead { display: none; }
+  /* 멀티 방 모바일 (시안 6): 채팅은 짧게 두고 오래된 줄을 흐린다 */
   .mp-final__teams { grid-template-columns: minmax(0, 1fr); }
   .mp-chat--room { height: 200px; }
   .mp-chat--room .mp-chat__log { -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 56px); mask-image: linear-gradient(to bottom, transparent 0, #000 56px); }

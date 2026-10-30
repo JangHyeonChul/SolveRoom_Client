@@ -42,6 +42,8 @@ import { youTubeThumbnail } from "../utils/youtube";
 const TICK_MS = 250;
 // 순위 포인트를 받고 내 정보를 다시 읽기까지. 멀티 서버가 메인 서버에 포인트를 보내는 시간을 기다린다
 const REWARD_RELOAD_MS = 2000;
+// index.css에서 방을 한 화면 높이로 바꾸는 폭과 같다
+const NARROW_ROOM_QUERY = "(max-width: 1100px)";
 
 // MP-02 멀티플레이 방. 시안 01_Design/multi-02-room.html #1(기본 2단): 왼쪽 문제·채팅, 오른쪽 참가자.
 // 팀전은 팀전 시안 1(기본형)대로 오른쪽 참가자를 블루·레드 팀별로 나누고 팀 제목 줄에 팀 점수를 둔다.
@@ -91,6 +93,12 @@ function RoomView({ no }: { no: number }) {
   const state = room.room;
   const inGame = state?.phase === "play" || state?.phase === "reveal";
   useTicker(inGame);
+
+  // 좁은 창에서는 방이 한 화면 높이로 바뀌므로 게임이 시작될 때 방 화면 맨 위로 한 번 올려 준다
+  const pageRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (inGame && window.matchMedia(NARROW_ROOM_QUERY).matches) pageRef.current?.scrollIntoView({ block: "start" });
+  }, [inGame]);
 
   // 순위 포인트를 받았으면 헤더·마이페이지 포인트가 맞도록 내 정보를 다시 읽는다
   const myReward = state?.phase === "end" ? state.players.find((p) => p.key === room.me)?.reward : undefined;
@@ -160,7 +168,7 @@ function RoomView({ no }: { no: number }) {
   const placeholder = chatPlaceholder(state, mine, teamDone);
 
   return (
-    <main className="wrap page page--wide mp-room-page">
+    <main ref={pageRef} className={`wrap page page--wide mp-room-page ${inGame ? "is-playing" : ""}`}>
       <header className="mp-room__head">
         <button type="button" className="btn btn--outline btn--sm" onClick={leave}>
           <Icon name="left" size={15} />
@@ -212,6 +220,8 @@ function RoomView({ no }: { no: number }) {
             onSend={send}
             disabled={room.status !== "open"}
             submitLabel={answering ? "제출" : "전송"}
+            captureTyping
+            focusKey={state.phase === "play" ? state.round : null}
           />
         </div>
 
