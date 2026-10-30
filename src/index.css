@@ -833,6 +833,8 @@
   .mp-final__mine { margin: 0; color: var(--green-deep); font-size: 13px; font-weight: 600; }
   .mp-final__mine.is-guest { color: var(--muted); font-weight: 500; }
   .mp-seats { border: 1px solid var(--line); border-radius: 12px; background: var(--white); }
+  /* 순위 바: 넓은 화면·대기실에선 숨기고 좁은 화면 게임 중에만 쓴다(@media 1100) */
+  .mp-rankbar { display: none; list-style: none; margin: 0; padding: 0; }
   .mp-seats__title { display: flex; justify-content: space-between; margin: 0; padding: 14px 16px; border-bottom: 1px solid var(--line); font-size: 14px; }
   .mp-seats__title em { font-style: normal; color: var(--muted); font-weight: 500; font-size: 13px; }
   .mp-seats ul { list-style: none; margin: 0; padding: 0; }
@@ -1040,6 +1042,19 @@
   .mp-seats ul { display: flex; gap: 4px; overflow-x: auto; padding: 2px 0 4px; scrollbar-width: none; }
   .mp-seats ul > li.mp-seat { flex: 0 0 68px; flex-direction: column; gap: 3px; min-height: 0; padding: 4px 0; border-top: 0; background: transparent; text-align: center; }
   .mp-seats ul > li.mp-seat.is-empty { display: none; }
+  /* 게임 중(문제·정답 공개)에는 아바타 줄 대신 순위 바(점수·등수 칩)를 쓴다 */
+  .mp-room-page.is-playing .mp-seats ul { display: none; }
+  .mp-room-page.is-playing .mp-rankbar { display: flex; gap: 5px; overflow-x: auto; padding: 2px 0 4px; scrollbar-width: none; }
+  .mp-room-page.is-playing .mp-rankbar::-webkit-scrollbar { display: none; }
+  .mp-rankpill { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 11px 0 5px; border: 1px solid var(--line); border-radius: 999px; background: var(--white); font-size: 12px; font-weight: 700; box-shadow: 0 2px 7px -4px rgba(29, 33, 39, .25); }
+  .mp-rankpill__no { flex: none; width: 21px; height: 21px; border-radius: 50%; background: var(--bg-soft); color: var(--ink-sub); font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
+  .mp-rankpill__nm { max-width: 7em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mp-rankpill__pt { flex: none; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .mp-rankpill__g { flex: none; color: var(--green-deep); font-weight: 800; }
+  .mp-rankpill.is-first { background: linear-gradient(90deg, var(--gold-soft), var(--white)); border-color: #e3d6a8; }
+  .mp-rankpill.is-first .mp-rankpill__no { background: #e0a800; color: var(--white); }
+  .mp-rankpill.is-me { outline: 2px solid var(--green-line); }
+  .mp-rankpill.is-correct .mp-rankpill__no { background: var(--green); color: var(--white); }
   .mp-seat .mp-avatar { position: relative; width: 42px; height: 42px; flex-basis: 42px; }
   .mp-seat.is-me .mp-avatar { box-shadow: 0 0 0 2px var(--green-line); }
   .mp-seat.is-correct .mp-avatar::after { content: "✓"; position: absolute; right: -3px; bottom: -3px; width: 16px; height: 16px; border: 2px solid var(--white); border-radius: 50%; background: var(--green); color: var(--white); font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; }

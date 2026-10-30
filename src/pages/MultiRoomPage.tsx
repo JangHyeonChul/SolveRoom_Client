@@ -233,12 +233,16 @@ function RoomView({ no }: { no: number }) {
           {state.teamMode ? (
             <TeamSeats state={state} me={room.me} />
           ) : (
-            <ul>
-              {state.players.map((p) => (
-                <Seat key={p.key} player={p} state={state} me={p.key === room.me} />
-              ))}
-              <EmptySeats count={state.maxPlayers - state.players.length} />
-            </ul>
+            <>
+              {/* 좁은 화면에서 게임 중(문제·정답 공개)에는 아바타 줄 대신 순위 바(점수·등수 칩)를 보여 준다. 데스크톱 사이드바·대기실은 아래 ul 그대로 */}
+              <RankBar state={state} me={room.me} />
+              <ul>
+                {state.players.map((p) => (
+                  <Seat key={p.key} player={p} state={state} me={p.key === room.me} />
+                ))}
+                <EmptySeats count={state.maxPlayers - state.players.length} />
+              </ul>
+            </>
           )}
         </aside>
       </div>
@@ -365,6 +369,30 @@ function EmptySeats({ count }: { count: number }) {
         </li>
       ))}
     </>
+  );
+}
+
+// 좁은 화면 게임 중 순위 바. 점수 높은 순으로 칩을 늘어놓고(1등 금색, 나는 테두리 강조), 가로로 스크롤한다.
+// 넓은 화면·대기실에서는 숨기고(index.css) 기존 참가자 목록을 쓴다
+function RankBar({ state, me }: { state: RoomState; me: string | null }) {
+  const ranked = [...state.players].sort((a, b) => b.points - a.points);
+  return (
+    <ol className="mp-rankbar" aria-label="순위">
+      {ranked.map((p) => {
+        const rank = rankOf(state.players, p);
+        return (
+          <li
+            key={p.key}
+            className={`mp-rankpill ${rank === 1 ? "is-first" : ""} ${p.key === me ? "is-me" : ""} ${state.phase === "play" && p.correct ? "is-correct" : ""}`}
+          >
+            <span className="mp-rankpill__no">{rank}</span>
+            <span className="mp-rankpill__nm">{p.nickname}</span>
+            <b className="mp-rankpill__pt">{p.points}</b>
+            {state.phase === "reveal" && p.gain ? <span className="mp-rankpill__g">+{p.gain}</span> : null}
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
