@@ -74,7 +74,7 @@ function CardForm({ card, gate, onError }: FormProps) {
 
   const pickThumb = (file?: File) => {
     if (!file) return;
-    if (file.type === "image/gif") return toast("GIF는 아직 올릴 수 없어요. JPG·PNG·WEBP로 올려 주세요");
+    if (file.type === "image/gif") return toast("썸네일은 GIF를 올릴 수 없어요. JPG·PNG·WEBP로 올려 주세요");
     if (!UPLOADABLE_TYPES.includes(file.type)) return toast("JPG·PNG·WEBP 이미지만 올릴 수 있어요");
     if (file.size > MAX_THUMB_MB * 1024 * 1024) return toast(`${MAX_THUMB_MB}MB 이하 이미지만 올릴 수 있어요`);
     setCropping({ file });

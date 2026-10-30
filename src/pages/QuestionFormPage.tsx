@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type DragEvent, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { UPLOADABLE_ACCEPT, UPLOADABLE_TYPES, uploadImage } from "../api/images";
+import { checkGif, QUESTION_IMAGE_ACCEPT, QUESTION_IMAGE_TYPES, uploadImage } from "../api/images";
 import { createQuestion, fetchManagedQuestions, updateQuestion } from "../api/questions";
 import { fetchManagedCard } from "../api/quizCards";
 import Icon from "../components/Icon";
@@ -109,11 +109,14 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
 
   const clearError = (key: FieldKey) => setErrors((prev) => ({ ...prev, [key]: undefined }));
 
-  const addImages = (files: FileList | null) => {
+  const addImages = async (files: FileList | null) => {
     if (!files) return;
-    const picked = [...files];
-    if (picked.some((f) => f.type === "image/gif")) toast("GIF는 아직 올릴 수 없어요. JPG·PNG·WEBP로 올려 주세요");
-    const list = picked.filter((f) => UPLOADABLE_TYPES.includes(f.type));
+    const picked = [...files].filter((f) => QUESTION_IMAGE_TYPES.includes(f.type));
+    // GIF는 줄이지 않고 올리므로 크기·재생 길이를 고를 때 먼저 확인한다
+    const problems = await Promise.all(picked.map((f) => (f.type === "image/gif" ? checkGif(f) : null)));
+    const rejected = problems.find((p) => p !== null);
+    if (rejected) toast(rejected);
+    const list = picked.filter((_, i) => problems[i] === null);
     const room = MAX_IMAGES - images.length;
     if (list.length > room) toast(`이미지는 최대 ${MAX_IMAGES}장까지예요. ${room}장만 추가했어요`);
     if (list.length === 0) return;
@@ -347,7 +350,7 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
                       <DropLabel className="slot slot--add" onFiles={addImages}>
                         <input
                           type="file"
-                          accept={UPLOADABLE_ACCEPT}
+                          accept={QUESTION_IMAGE_ACCEPT}
                           multiple
                           onChange={(e) => {
                             addImages(e.target.files);

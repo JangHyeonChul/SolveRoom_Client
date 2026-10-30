@@ -15,9 +15,17 @@ export interface CropArea {
 const MAX_SIDE: Record<ImagePurpose, number> = { THUMBNAIL: 800, QUESTION: 1280 };
 const QUALITY = 0.85;
 
-// GIF는 줄이면 첫 장면만 남아 움직임이 사라지므로 1차에서는 받지 않는다
+// 썸네일은 자르기와 공유 이미지를 거치므로 GIF를 받지 않는다
 export const UPLOADABLE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 export const UPLOADABLE_ACCEPT = UPLOADABLE_TYPES.join(", ");
+
+// 문제 이미지는 GIF도 받는다. GIF는 줄이면 첫 장면만 남으므로 원본 그대로 올린다
+export const QUESTION_IMAGE_TYPES = [...UPLOADABLE_TYPES, "image/gif"];
+export const QUESTION_IMAGE_ACCEPT = QUESTION_IMAGE_TYPES.join(", ");
+
+// 서버 ImagePurpose·ImageUploadService와 같은 값. 서버가 등록할 때 다시 확인한다
+const GIF_MAX_BYTES = 5 * 1024 * 1024;
+const GIF_MAX_DURATION_MS = 10_000;
 
 // 서버 PresignedUrlResponse
 interface PresignedUrl {
@@ -63,9 +71,77 @@ export async function uploadPrepared(blob: Blob, purpose: ImagePurpose): Promise
   return presigned.key;
 }
 
-// 자르지 않고 줄이기만 해서 올린다 (문제 이미지)
+// 자르지 않고 줄이기만 해서 올린다 (문제 이미지). GIF는 줄이지 않고 그대로 올린다
 export async function uploadImage(file: File, purpose: ImagePurpose): Promise<string> {
+  if (file.type === "image/gif") return uploadPrepared(file, purpose);
   return uploadPrepared(await prepareImage(file, purpose), purpose);
+}
+
+// 올릴 수 없는 GIF면 이유를, 올릴 수 있으면 null을 돌려준다
+export async function checkGif(file: File): Promise<string | null> {
+  if (file.size > GIF_MAX_BYTES) return `GIF는 ${GIF_MAX_BYTES / 1024 / 1024}MB 이하만 올릴 수 있어요`;
+  let duration: number;
+  try {
+    duration = gifDurationMs(new Uint8Array(await file.arrayBuffer()));
+  } catch {
+    return "GIF 파일을 읽을 수 없어요";
+  }
+  if (duration > GIF_MAX_DURATION_MS) return `GIF는 ${GIF_MAX_DURATION_MS / 1000}초 이하만 올릴 수 있어요`;
+  return null;
+}
+
+// GIF를 한 번 재생하는 데 걸리는 시간. 서버 GifInspector와 같은 방식으로, 블록 헤더만 따라가며
+// 프레임마다 앞의 Graphic Control Extension에 적힌 표시 시간(1/100초)을 더한다
+function gifDurationMs(data: Uint8Array): number {
+  let pos = 0;
+  const at = (index: number) => {
+    if (index >= data.length) throw new Error("GIF가 중간에 잘렸어요");
+    return data[index];
+  };
+  const skipColorTable = (flags: number) => {
+    if (flags & 0x80) pos += 3 * (1 << ((flags & 0x07) + 1));
+  };
+  // 크기 바이트 + 데이터가 이어지다 크기 0에서 끝난다
+  const skipSubBlocks = () => {
+    let size;
+    while ((size = at(pos++)) !== 0) pos += size;
+  };
+
+  const signature = String.fromCharCode(...data.subarray(0, 6));
+  if (signature !== "GIF87a" && signature !== "GIF89a") throw new Error("GIF가 아니에요");
+  // 논리 화면 설명자 7바이트. 다섯 번째 바이트에 전역 색상표 유무와 크기가 있다
+  const screenFlags = at(10);
+  pos = 13;
+  skipColorTable(screenFlags);
+
+  let totalCs = 0;
+  let frames = 0;
+  let delayCs = 0;
+  // 끝 표시(0x3B) 없이 끝나는 파일도 브라우저는 재생하므로 블록 경계에서 끝나면 받아 준다
+  while (pos < data.length) {
+    const block = at(pos++);
+    if (block === 0x3b) break;
+    if (block === 0x21) {
+      const label = at(pos++);
+      if (label === 0xf9 && at(pos) >= 4) delayCs = at(pos + 2) | (at(pos + 3) << 8);
+      skipSubBlocks();
+    } else if (block === 0x2c) {
+      // 이미지 설명자 9바이트 뒤에 지역 색상표, LZW 최소 코드 크기, 데이터 하위 블록이 온다
+      const imageFlags = at(pos + 8);
+      pos += 9;
+      skipColorTable(imageFlags);
+      pos++;
+      skipSubBlocks();
+      // 브라우저는 10ms 이하인 프레임을 100ms로 재생한다
+      totalCs += delayCs < 2 ? 10 : delayCs;
+      frames++;
+      delayCs = 0;
+    } else {
+      throw new Error("알 수 없는 GIF 블록이에요");
+    }
+  }
+  if (frames === 0) throw new Error("GIF에 프레임이 없어요");
+  return totalCs * 10;
 }
 
 function encode(
