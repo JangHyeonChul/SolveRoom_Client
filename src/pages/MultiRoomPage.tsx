@@ -222,6 +222,7 @@ function RoomView({ no }: { no: number }) {
             submitLabel={answering ? "제출" : "전송"}
             captureTyping
             focusKey={state.phase === "play" ? state.round : null}
+            collapsible
           />
         </div>
 
@@ -787,7 +788,12 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
   // 이미지형은 이미지와 질문 문구, 텍스트형은 문제 본문을 크게 보여 준다
   return (
     <figure key={state.round} className="mp-question swap-in">
-      {image && <img src={image} alt="문제 이미지" className="mp-question__img" />}
+      {/* 이미지는 프레임(div)으로 감싸 그 div가 높이를 갖게 한다. img를 직접 flex 아이템으로 두면 iOS Safari에서 비율대로 넘쳐 잘린다 */}
+      {image && (
+        <div className="mp-question__frame">
+          <img src={image} alt="문제 이미지" className="mp-question__img" />
+        </div>
+      )}
       <figcaption className={image ? "" : "mp-question__text"}>{question?.prompt ?? "이 이미지는 무엇일까요?"}</figcaption>
       {question?.description && <p className="mp-question__desc">{question.description}</p>}
       {question?.authorHint && (

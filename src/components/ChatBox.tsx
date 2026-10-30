@@ -21,6 +21,7 @@ export default function ChatBox({
   submitLabel = "전송",
   captureTyping = false,
   focusKey = null,
+  collapsible = false,
 }: {
   lines: ChatLine[];
   placeholder: string;
@@ -30,8 +31,11 @@ export default function ChatBox({
   submitLabel?: string;
   captureTyping?: boolean;
   focusKey?: string | number | null;
+  // 좁은 화면에서 채팅을 '마지막 한 줄'로 접고 눌러서 바텀시트로 펼친다(방 전용). 입력칸은 늘 아래 고정
+  collapsible?: boolean;
 }) {
   const [draft, setDraft] = useState("");
+  const [open, setOpen] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -61,6 +65,14 @@ export default function ChatBox({
     if (log) log.scrollTop = log.scrollHeight;
   }, [lines]);
 
+  // 새 문제·단계로 넘어가면 펼쳐 둔 채팅 시트를 닫아 문제가 다시 보이게 한다
+  useEffect(() => setOpen(false), [focusKey]);
+
+  // 시트를 펼치는 순간 맨 아래(최신 글)로 내린다
+  useEffect(() => {
+    if (open && logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [open]);
+
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     const message = draft.trim();
@@ -69,42 +81,84 @@ export default function ChatBox({
     setDraft("");
   };
 
-  return (
-    <div className={`mp-chat ${className}`}>
-      <div ref={logRef} className="mp-chat__log" aria-live="polite">
-        {lines.map((l) =>
-          l.kind === "chat" ? (
-            <p key={l.id}>
-              <b className={l.team ? `is-${l.team}` : undefined}>{l.nickname}</b>
-              <span>{l.message}</span>
-              {l.time && <time>{l.time}</time>}
-            </p>
-          ) : (
-            <p key={l.id} className={`is-${l.kind}`}>
-              {l.kind === "correct" && <Icon name="check" size={13} strokeWidth={3} />}
-              <span>{l.message}</span>
-              {l.kind === "mine" && <em>나만 보임</em>}
-            </p>
-          ),
-        )}
+  const log = (
+    <div ref={logRef} className="mp-chat__log" aria-live="polite">
+      {lines.map((l) =>
+        l.kind === "chat" ? (
+          <p key={l.id}>
+            <b className={l.team ? `is-${l.team}` : undefined}>{l.nickname}</b>
+            <span>{l.message}</span>
+            {l.time && <time>{l.time}</time>}
+          </p>
+        ) : (
+          <p key={l.id} className={`is-${l.kind}`}>
+            {l.kind === "correct" && <Icon name="check" size={13} strokeWidth={3} />}
+            <span>{l.message}</span>
+            {l.kind === "mine" && <em>나만 보임</em>}
+          </p>
+        ),
+      )}
+    </div>
+  );
+
+  const form = (
+    <form className="mp-chat__form" onSubmit={onSubmit}>
+      <input
+        ref={inputRef}
+        className="input"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        placeholder={placeholder}
+        aria-label={placeholder}
+        autoComplete="off"
+        maxLength={100}
+        disabled={disabled}
+      />
+      <button type="submit" className="btn btn--primary" disabled={disabled || !draft.trim()}>
+        <Icon name="send" size={15} />
+        {submitLabel}
+      </button>
+    </form>
+  );
+
+  if (!collapsible)
+    return (
+      <div className={`mp-chat ${className}`}>
+        {log}
+        {form}
       </div>
-      <form className="mp-chat__form" onSubmit={onSubmit}>
-        <input
-          ref={inputRef}
-          className="input"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder={placeholder}
-          aria-label={placeholder}
-          autoComplete="off"
-          maxLength={100}
-          disabled={disabled}
-        />
-        <button type="submit" className="btn btn--primary" disabled={disabled || !draft.trim()}>
-          <Icon name="send" size={15} />
-          {submitLabel}
-        </button>
-      </form>
+    );
+
+  // 접이식(방 전용). 평소엔 마지막 한 줄만(peek) 보여 주고, 누르면 백드롭 + 바텀시트로 전체 로그를 펼친다.
+  // peek·백드롭·시트는 좁은 화면에서만 나타나고(index.css), 넓은 화면에선 보통 채팅과 똑같이 로그가 그대로 보인다
+  const last = lines[lines.length - 1];
+  const peekLabel = last
+    ? last.kind === "chat" || last.kind === "mine"
+      ? last.nickname ?? "나"
+      : last.kind === "correct"
+        ? "정답"
+        : "안내"
+    : "채팅";
+  const peekMsg = last ? last.message : "눌러서 채팅을 펼쳐요";
+
+  return (
+    <div className={`mp-chat ${className} mp-chat--collapsible ${open ? "is-open" : ""}`}>
+      <button type="button" className="mp-chat__peek" onClick={() => setOpen(true)} aria-expanded={open}>
+        <b>{peekLabel}</b>
+        <span className="mp-chat__peek-msg">{peekMsg}</span>
+        <span className="mp-chat__peek-more">채팅 ▲</span>
+      </button>
+      <div className="mp-chat__backdrop" onClick={() => setOpen(false)} aria-hidden="true" />
+      <div className="mp-chat__panel">
+        <div className="mp-chat__sheet-head">
+          채팅
+          <button type="button" onClick={() => setOpen(false)} aria-label="채팅 닫기">
+            ✕
+          </button>
+        </div>
+        {log}
+        {form}
+      </div>
     </div>
   );
 }
