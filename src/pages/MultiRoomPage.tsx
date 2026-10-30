@@ -787,7 +787,7 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
 
   // 이미지형은 이미지와 질문 문구, 텍스트형은 문제 본문을 크게 보여 준다
   return (
-    <figure key={state.round} className="mp-question swap-in">
+    <figure key={state.round} className={`mp-question swap-in ${image ? "mp-question--image" : ""}`}>
       {/* 이미지는 프레임(div)으로 감싸 그 div가 높이를 갖게 한다. img를 직접 flex 아이템으로 두면 iOS Safari에서 비율대로 넘쳐 잘린다 */}
       {image && (
         <div className="mp-question__frame">
@@ -795,12 +795,17 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
         </div>
       )}
       <figcaption className={image ? "" : "mp-question__text"}>{question?.prompt ?? "이 이미지는 무엇일까요?"}</figcaption>
-      {question?.description && <p className="mp-question__desc">{question.description}</p>}
-      {question?.authorHint && (
-        <p className="mp-question__hint">
-          <b>힌트</b>
-          {question.authorHint}
-        </p>
+      {/* 좁은 화면 이미지 문제에서는 이미지를 위에 크게 고정하고, 설명·힌트만 이 칸에서 스크롤해 설명 길이와 무관하게 이미지 크기를 지킨다 */}
+      {(question?.description || question?.authorHint) && (
+        <div className="mp-question__meta">
+          {question?.description && <p className="mp-question__desc">{question.description}</p>}
+          {question?.authorHint && (
+            <p className="mp-question__hint">
+              <b>힌트</b>
+              {question.authorHint}
+            </p>
+          )}
+        </div>
       )}
     </figure>
   );

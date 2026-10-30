@@ -654,7 +654,8 @@
   .mp-chat__log .is-near { color: #c2410c; font-weight: 600; }
   .mp-chat__log em { flex: none; padding: 0 5px; border-radius: 4px; background: var(--bg-soft); color: var(--muted); font-style: normal; font-size: 10px; font-weight: 600; line-height: 17px; }
   .mp-chat__form { display: flex; gap: 6px; padding: 10px; border-top: 1px solid var(--line); }
-  .mp-chat__form .input { flex: 1; min-width: 0; }
+  /* 16px 미만이면 iOS Safari가 입력 포커스 때 페이지를 자동 확대해 위 사진을 가린다. 16px로 올려 막는다 */
+  .mp-chat__form .input { flex: 1; min-width: 0; font-size: 16px; }
   .mp-form { display: flex; flex-direction: column; gap: 14px; }
   .mp-form select.input { padding-right: 8px; }
   .mp-code { height: 56px; text-align: center; font-size: 26px; font-weight: 800; letter-spacing: .2em; }
@@ -715,8 +716,9 @@
   .mp-stage { min-height: clamp(320px, 46vh, 480px); display: flex; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-soft); overflow: hidden; }
   .mp-stage > * { flex: 1; }
   .mp-question { margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 28px; }
-  /* 평소엔 프레임이 없는 것처럼(contents) 둬 아래 img 규칙이 그대로 먹는다. 좁은 화면에선 프레임이 flex 높이를 갖는다(@media 1100) */
+  /* 평소엔 프레임·메타가 없는 것처럼(contents) 둬 아래 규칙이 그대로 먹는다. 좁은 화면에선 프레임이 flex 높이를 갖고, 메타(설명·힌트)가 스크롤 칸이 된다(@media 1100) */
   .mp-question__frame { display: contents; }
+  .mp-question__meta { display: contents; }
   .mp-question__img { width: min(100%, 460px); aspect-ratio: 16 / 10; object-fit: contain; border-radius: 6px; filter: drop-shadow(0 12px 24px rgba(0, 0, 0, .18)); }
   .mp-question figcaption { font-weight: 700; font-size: 18px; letter-spacing: -0.02em; }
 /* 텍스트형 문제: 이미지 없이 본문을 크게 */
@@ -1061,9 +1063,11 @@
   .mp-room-page.is-playing .mp-stage { flex: 1; min-height: 0; }
   .mp-room-page.is-playing .mp-stage > * { min-height: 0; overflow-y: auto; }
   .mp-room-page.is-playing .mp-question { gap: 10px; padding: 14px; }
-  /* 프레임(div)이 남는 높이를 받고, 이미지는 그 안에서 비율 유지하며 축소된다. img 자체를 flex 아이템으로 두면 iOS Safari에서 넘쳐 잘린다 */
-  .mp-room-page.is-playing .mp-question__frame { flex: 1 1 0; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; }
+  /* 이미지는 위에 크게 고정(58%), 프롬프트는 그 아래, 설명·힌트는 더 아래 칸에서 스크롤 → 설명 길이와 무관하게 이미지 크기가 일정하다.
+     프레임(div)이 높이를 갖고 img는 그 안에서 비율 유지. img 자체를 flex 아이템으로 두면 iOS Safari에서 넘쳐 잘린다 */
+  .mp-room-page.is-playing .mp-question__frame { flex: 0 0 58%; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; }
   .mp-room-page.is-playing .mp-question__img { flex: none; min-height: 0; width: auto; height: auto; max-width: min(100%, 640px); max-height: 100%; aspect-ratio: auto; }
+  .mp-room-page.is-playing .mp-question--image .mp-question__meta { flex: 1 1 0; min-height: 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px; overflow-y: auto; margin-top: 2px; padding-top: 8px; border-top: 1px solid var(--line); }
   .mp-room-page.is-playing .mp-chat--room { flex: none; height: 200px; }
 }
 
