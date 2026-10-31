@@ -25,6 +25,7 @@ export interface SoundClip {
   videoId: string;
   startSec: number;
   endSec: number;
+  loudnessDb?: number | null; // 영상의 체감 음량(dB). 서버가 저장할 때 읽고, 못 읽었거나 저장 전이면 없다
 }
 
 // 문제 관리(M-02)·문제 수정(M-03) 화면의 문제. 정답이 들어 있어 본인 확인을 거친 제작자만 받는다

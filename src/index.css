@@ -918,6 +918,11 @@
   .sound-bar__icon { width: 32px; height: 32px; flex: 0 0 32px; border: 1px solid var(--line); border-radius: 7px; background: var(--white); color: var(--ink-sub); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
   .sound-bar__icon:hover { color: var(--ink); border-color: var(--line-strong); }
   .sound-bar__error { flex: 1; min-width: 0; color: var(--red); font-weight: 600; font-size: 12px; }
+  .sound-bar__volume { flex: none; display: flex; align-items: center; gap: 6px; }
+  .sound-bar__volume-range { flex: none; width: 72px; }
+  .sound-bar__icon--muted { color: var(--red); }
+  /* 좁은 화면은 기기 볼륨 버튼이 있으니 음소거 버튼만 남긴다 */
+  @media (max-width: 480px) { .sound-bar__volume-range { display: none; } }
   /* 소리형의 유튜브 플레이어. 영상은 보이지 않게 두되 크기는 남긴다(0이면 재생을 막는 브라우저가 있다) */
   .yt-hidden { position: fixed; left: 0; bottom: 0; width: 200px; height: 113px; opacity: 0; pointer-events: none; z-index: -1; }
   .yt-hidden iframe, .yt-host iframe { width: 100%; height: 100%; border: 0; }

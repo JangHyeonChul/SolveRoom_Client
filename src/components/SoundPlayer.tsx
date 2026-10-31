@@ -1,5 +1,6 @@
 import { useEffect, useImperativeHandle, useRef, type CSSProperties, type Ref } from "react";
 import type { SoundClip } from "../types/question";
+import { loudnessGain, setVolume, useVolume } from "../utils/volume";
 import { formatSec } from "../utils/youtube";
 import Icon from "./Icon";
 import { useYouTubePlayer } from "./useYouTubePlayer";
@@ -31,7 +32,13 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 // 소리 재생 바. 문제 이미지(또는 소리 아이콘) 위에 얹는다 (시안 3).
 // 소리는 유튜브 영상의 한 구간이고, 영상은 보이지 않게 숨겨 둔다
 export default function SoundPlayer({ clip, seekable = true, autoPlay, startAt = 0, loop = false, onBlocked, ref }: Props) {
-  const yt = useYouTubePlayer(clip.videoId, { controls: false, trackTime: true });
+  // 고른 볼륨에 곡마다 음량 보정을 곱해, 영상마다 소리 크기가 들쭉날쭉하지 않게 한다
+  const volume = useVolume();
+  const yt = useYouTubePlayer(clip.videoId, {
+    controls: false,
+    trackTime: true,
+    volume: Math.round(volume * loudnessGain(clip.loudnessDb)),
+  });
   const { ready, playing, clipPlaying, playClip, stop, seek } = yt;
   const duration = clip.endSec - clip.startSec;
   const time = Math.min(Math.max(yt.currentTime - clip.startSec, 0), duration);
@@ -140,8 +147,40 @@ export default function SoundPlayer({ clip, seekable = true, autoPlay, startAt =
           <Icon name="replay" size={15} strokeWidth={2.4} />
         </button>
       )}
+      <VolumeControl volume={volume} />
       {/* 영상은 보이지 않게 두고 소리만 쓴다. 크기가 0이면 재생을 막는 브라우저가 있어 크기는 남겨 둔다 */}
       <div ref={yt.hostRef} className="yt-hidden" aria-hidden="true" />
+    </div>
+  );
+}
+
+// 전체 볼륨. 스피커 버튼은 음소거를 켜고 끄며, 끌 때 음소거 전 볼륨으로 돌아간다
+function VolumeControl({ volume }: { volume: number }) {
+  const beforeMuteRef = useRef(volume || 80);
+  if (volume > 0) beforeMuteRef.current = volume;
+  const muted = volume === 0;
+
+  return (
+    <div className="sound-bar__volume">
+      <button
+        type="button"
+        className={`sound-bar__icon${muted ? " sound-bar__icon--muted" : ""}`}
+        aria-label={muted ? "음소거 해제" : "음소거"}
+        onClick={() => setVolume(muted ? beforeMuteRef.current : 0)}
+      >
+        <Icon name="speaker" size={15} strokeWidth={2.4} />
+      </button>
+      <input
+        type="range"
+        className="sound-bar__track sound-bar__volume-range"
+        min={0}
+        max={100}
+        step={1}
+        value={volume}
+        aria-label="볼륨"
+        onChange={(e) => setVolume(Number(e.target.value))}
+        style={{ "--fill": `${volume}%` } as CSSProperties}
+      />
     </div>
   );
 }

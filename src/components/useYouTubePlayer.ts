@@ -8,6 +8,7 @@ interface YTPlayer {
   getCurrentTime(): number;
   getDuration(): number;
   cueVideoById(options: { videoId: string; startSeconds?: number }): void;
+  setVolume(volume: number): void;
   destroy(): void;
 }
 
@@ -76,10 +77,11 @@ const PLAYING = 1;
 interface Options {
   controls?: boolean; // 만드는 화면은 컨트롤을 보이고, 푸는 화면은 숨긴다
   trackTime?: boolean; // 재생 위치를 계속 읽어 currentTime을 갱신한다 (구간 편집용)
+  volume?: number; // 플레이어 볼륨(0~100). 없으면 건드리지 않는다
 }
 
 // videoId가 바뀌면 같은 플레이어에 새 영상을 올린다. playClip은 start부터 end까지만 재생하고 멈춘다
-export function useYouTubePlayer(videoId: string | null, { controls = true, trackTime = false }: Options = {}) {
+export function useYouTubePlayer(videoId: string | null, { controls = true, trackTime = false, volume }: Options = {}) {
   const hostRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YTPlayer | null>(null);
   const clipEndRef = useRef<number | null>(null);
@@ -151,6 +153,11 @@ export function useYouTubePlayer(videoId: string | null, { controls = true, trac
     clipEndRef.current = null;
     playerRef.current?.cueVideoById({ videoId });
   }, [ready, videoId]);
+
+  // 플레이어를 새로 만들어도(ready가 다시 true) 볼륨을 다시 넣는다
+  useEffect(() => {
+    if (ready && volume !== undefined) playerRef.current?.setVolume(volume);
+  }, [ready, volume]);
 
   // 구간 재생 중이면 끝 지점에서 멈추고, 편집 화면이면 재생 위치를 읽는다
   useEffect(() => {
