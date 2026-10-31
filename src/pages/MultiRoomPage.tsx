@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "rea
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useRoom } from "../api/room";
 import { useAuth } from "../app/auth";
+import BgmBar from "../components/BgmBar";
 import ChatBox from "../components/ChatBox";
 import ConfirmModal from "../components/ConfirmModal";
 import Icon from "../components/Icon";
@@ -34,6 +35,7 @@ import {
   type RoomQuestion,
   type RoomState,
 } from "../types/multi";
+import { duckBgm } from "../utils/bgm";
 import { copyText } from "../utils/clipboard";
 import { chosung } from "../utils/cover";
 import { youTubeThumbnail } from "../utils/youtube";
@@ -244,6 +246,8 @@ function RoomView({ no }: { no: number }) {
               </ul>
             </>
           )}
+          {/* 로비와 같은 배경음악 바. 로비에서 틀던 곡이 끊기지 않고 이어진다 */}
+          <BgmBar className="mp-seats__bgm" />
         </aside>
       </div>
 
@@ -887,6 +891,9 @@ function SoundQuestion({
   const image = question.imageUrls[0];
   const counting = now < playAt;
   const elapsed = () => Math.max(0, (now - playAt) / 1000);
+
+  // 문제 소리와 겹치지 않게 이 문제가 떠 있는 동안 배경음악을 끈다
+  useEffect(duckBgm, []);
 
   // 카운트다운이 끝나는 순간 같이 재생한다
   useEffect(() => {

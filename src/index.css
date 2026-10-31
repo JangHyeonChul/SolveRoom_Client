@@ -699,8 +699,33 @@
   .mp-room__count { font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
   .mp-room__lock { display: inline-flex; color: var(--ink-sub); }
   .mp-lobby__foot { border-top: 1px solid var(--line); }
-  .mp-me { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 16px; border-right: 1px solid var(--line); text-align: center; font-size: 15px; }
+  /* 왼쪽 아래: 내 정보 + 배경음악 바. 배경음악 바는 오른쪽 채팅 입력줄과 높이를 맞춘다 */
+  .mp-lobby__me { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); }
+  .mp-me { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 16px; text-align: center; font-size: 15px; }
   .mp-me__sub { color: var(--muted); font-size: 12px; }
+
+  /* 멀티 배경음악 바 (로비 왼쪽 아래 · 방 참가자 아래). 마우스를 올리면 곡 이름 자리에 볼륨 바가 나온다 */
+  .bgm-bar { position: relative; flex: none; display: flex; align-items: center; gap: 2px; height: 61px; padding: 0 10px; border-top: 1px solid var(--line); }
+  .bgm-bar__line { position: absolute; left: 0; right: 0; top: -1px; height: 2px; overflow: hidden; }
+  .bgm-bar__line i { display: block; height: 100%; background: var(--green); transition: width .25s linear; }
+  .bgm-bar:not(.is-on) .bgm-bar__line i { background: var(--line-strong); }
+  .bgm-bar__btn { width: 30px; height: 30px; flex: none; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 7px; background: transparent; color: var(--muted); cursor: pointer; transition: color .15s, background-color .15s; }
+  .bgm-bar__btn:hover { color: var(--ink); background: var(--bg-soft); }
+  .bgm-bar__btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+  .bgm-bar__btn[aria-pressed="true"] { color: var(--ink-sub); }
+  .bgm-bar__eq { flex: none; display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; margin: 0 4px 0 2px; }
+  .bgm-bar__eq i { width: 3px; height: 4px; border-radius: 1px; background: var(--line-strong); }
+  .bgm-bar.is-on .bgm-bar__eq i { background: var(--green); animation: bgm-eq 1s ease-in-out infinite; }
+  .bgm-bar.is-on .bgm-bar__eq i:nth-child(2) { animation-delay: .2s; }
+  .bgm-bar.is-on .bgm-bar__eq i:nth-child(3) { animation-delay: .4s; }
+  @keyframes bgm-eq { 0%, 100% { height: 3px; } 50% { height: 12px; } }
+  .bgm-bar__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 13px; }
+  .bgm-bar.is-on .bgm-bar__name { color: var(--ink); font-weight: 600; }
+  .bgm-bar__volume { display: none; flex: 1; min-width: 0; margin: 0 4px; accent-color: var(--green); }
+  .bgm-bar:hover .bgm-bar__volume, .bgm-bar:focus-within .bgm-bar__volume { display: block; }
+  .bgm-bar:hover .bgm-bar__name, .bgm-bar:focus-within .bgm-bar__name { display: none; }
+  /* 방: 참가자 목록 맨 아래 */
+  .mp-seats__bgm { height: 50px; border-radius: 0 0 12px 12px; }
 
   /* 멀티플레이 방 (MP-02). 왼쪽 문제 → 타이머 → 채팅(=정답 입력), 오른쪽 참가자 */
   /* 로비와 같은 폭·위 여백이라 나가기 버튼이 같은 자리에 온다 */
@@ -1047,6 +1072,9 @@
   .mp-seats ul { display: flex; gap: 4px; overflow-x: auto; padding: 2px 0 4px; scrollbar-width: none; }
   .mp-seats ul > li.mp-seat { flex: 0 0 68px; flex-direction: column; gap: 3px; min-height: 0; padding: 4px 0; border-top: 0; background: transparent; text-align: center; }
   .mp-seats ul > li.mp-seat.is-empty { display: none; }
+  /* 배경음악 바는 아바타 줄 아래 한 줄. 게임 중에는 문제 자리를 위해 숨긴다(곡은 계속 나온다) */
+  .mp-seats__bgm { height: 44px; margin-top: 6px; border: 1px solid var(--line); border-radius: 10px; background: var(--white); }
+  .mp-room-page.is-playing .mp-seats__bgm { display: none; }
   /* 게임 중(문제·정답 공개)에는 아바타 줄 대신 순위 바(점수·등수 칩)를 쓴다 */
   .mp-room-page.is-playing .mp-seats ul { display: none; }
   .mp-room-page.is-playing .mp-rankbar { display: flex; gap: 5px; overflow-x: auto; padding: 2px 0 4px; scrollbar-width: none; }
@@ -1102,6 +1130,9 @@
   .mp-lobby { grid-template-rows: auto auto auto; }
   .mp-lobby__body, .mp-lobby__foot { grid-template-columns: minmax(0, 1fr); }
   .mp-lobby__side, .mp-me { display: none; }
+  /* 내 정보가 빠지면 배경음악 바만 채팅 위 한 줄로 남는다 */
+  .mp-lobby__me { border-right: 0; }
+  .mp-lobby__me .bgm-bar { height: 48px; border-top: 0; border-bottom: 1px solid var(--line); }
   .mp-lobby__search { width: 100%; margin-left: 0; }
   .mp-lobby__sep { display: none; }
   .mp-rooms { grid-template-columns: minmax(0, 1fr); overflow: visible; }
