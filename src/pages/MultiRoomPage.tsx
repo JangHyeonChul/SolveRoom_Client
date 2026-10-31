@@ -229,6 +229,8 @@ function RoomView({ no }: { no: number }) {
         </div>
 
         <aside className="mp-seats" aria-label="참가자">
+          {/* 로비와 같은 배경음악 바(참가자 위). 로비에서 틀던 곡이 끊기지 않고 이어진다 */}
+          <BgmBar className="bgm-bar--top mp-seats__bgm" />
           <h2 className="mp-seats__title">
             참가자 <em>{state.players.length}/{state.maxPlayers}</em>
           </h2>
@@ -246,8 +248,6 @@ function RoomView({ no }: { no: number }) {
               </ul>
             </>
           )}
-          {/* 로비와 같은 배경음악 바. 로비에서 틀던 곡이 끊기지 않고 이어진다 */}
-          <BgmBar className="mp-seats__bgm" />
         </aside>
       </div>
 

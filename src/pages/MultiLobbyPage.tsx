@@ -169,6 +169,8 @@ export default function MultiLobbyPage() {
 
         <div className="mp-lobby__body">
           <aside className="mp-lobby__side" aria-label="접속자">
+            {/* 배경음악 바는 접속자 목록 위. 좁은 화면에선 이 바만 방 목록 위에 남는다 */}
+            <BgmBar className="bgm-bar--top" />
             <div className="mp-lobby__head">
               접속자 <em>{onlineUsers.length}명</em>
             </div>
@@ -232,7 +234,6 @@ export default function MultiLobbyPage() {
                 </>
               )}
             </div>
-            <BgmBar />
           </div>
           <ChatBox lines={lobby.chat} placeholder={CHAT_PLACEHOLDER[lobby.status]} onSend={sendChat} disabled={lobby.status !== "open"} />
         </div>
