@@ -36,6 +36,7 @@ import {
   type RoomState,
 } from "../types/multi";
 import { duckBgm } from "../utils/bgm";
+import { playCorrectSound } from "../utils/sfx";
 import { copyText } from "../utils/clipboard";
 import { chosung } from "../utils/cover";
 import { youTubeThumbnail } from "../utils/youtube";
@@ -120,6 +121,15 @@ function RoomView({ no }: { no: number }) {
     if (hostKey === me) addCard(presetCardId);
     setParams({}, { replace: true });
   }, [presetCardId, me, addCard, hostKey, customWaiting, setParams]);
+
+  // 이번 문제를 내가 맞힌 순간 정답 효과음을 한 번 튼다 (같은 문제에서 다시 그려도 또 틀지 않는다)
+  const myCorrectRound =
+    state?.phase === "play" && state.players.find((p) => p.key === room.me)?.correct ? state.round : null;
+  const correctRoundRef = useRef(myCorrectRound);
+  useEffect(() => {
+    if (myCorrectRound !== null && myCorrectRound !== correctRoundRef.current) playCorrectSound();
+    correctRoundRef.current = myCorrectRound;
+  }, [myCorrectRound]);
 
   if (room.closedReason) return <RoomMessage title={`${no}번 방에 들어갈 수 없어요`} message={room.closedReason} />;
   if (!state) {

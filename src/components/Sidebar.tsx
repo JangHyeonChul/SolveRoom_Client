@@ -69,7 +69,7 @@ export default function Sidebar() {
             className="side-link"
             aria-current={current(pathname.startsWith("/cards/") && !PLAY_PATH.test(pathname))}
           >
-            문제 만들기
+            문제만들기
           </Link>
         </div>
       </nav>

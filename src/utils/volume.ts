@@ -45,6 +45,10 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
+export function getVolume() {
+  return volume;
+}
+
 export function useVolume() {
   return useSyncExternalStore(subscribe, () => volume);
 }

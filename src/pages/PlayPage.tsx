@@ -7,6 +7,7 @@ import ConfirmModal from "../components/ConfirmModal";
 import ImageSlides from "../components/ImageSlides";
 import SoundStage from "../components/SoundStage";
 import type { AnswerResult, PlayLocationState, PlayQuestion } from "../types/play";
+import { playCorrectSound } from "../utils/sfx";
 
 // 답을 낸 뒤의 결과. 객관식은 고른 보기를, 주관식은 건너뛰었는지를 함께 둔다
 type Feedback = AnswerResult & { picked: number | null; skipped: boolean };
@@ -69,6 +70,7 @@ function PlayView({ cardId, sessionId, title }: { cardId: number } & PlayLocatio
     try {
       const result = await submitAnswer(sessionId, body);
       setFeedback({ ...result, picked, skipped });
+      if (result.correct) playCorrectSound();
     } catch (e) {
       if (hasErrorCode(e, "PLAY_ALREADY_FINISHED")) return goResult();
       setError(errorMessage(e));
