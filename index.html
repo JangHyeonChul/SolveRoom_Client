@@ -19,8 +19,8 @@
         "url": "https://quizcheck.kr/"
       }
     </script>
-    <!-- 카드 상세(/cards/번호)와 카테고리 목록(/?category=음식)은 nginx가 SSI로 아래 기본값 대신
-         서버가 만든 제목·설명을 넣는다($seo_page: cards/번호, categories/카테고리).
+    <!-- 메인(/), 카드 상세(/cards/번호), 카테고리 목록(/?category=음식), 고정 화면(/multi 등)은 nginx가 SSI로 아래 기본값 대신
+         서버가 만든 제목·설명을 넣는다($seo_page: home, cards/번호, categories/카테고리, pages/multi).
          다른 화면에서는 SSI 주석이 무시되어 block 안의 기본값이 그대로 쓰인다 -->
     <!--# block name="site_head" -->
     <title>퀴즈체크 - 퀴즈 맞추기 · 상식 퀴즈 · 퀴즈 만들기</title>
@@ -56,7 +56,7 @@
     </style>
   </head>
   <body>
-    <!-- 스크립트를 돌리지 않는 검색 로봇(네이버 등)이 읽을 소개글. 카드 상세·카테고리 목록은 그 소개로 바뀐다. 앱이 뜨면 React가 이 내용을 지우고 화면을 그린다 -->
+    <!-- 스크립트를 돌리지 않는 검색 로봇(네이버 등)이 읽을 소개글. 메인은 카테고리·인기 카드 링크가, 카드 상세·카테고리 목록은 그 소개가 대신 들어간다. 앱이 뜨면 React가 이 내용을 지우고 화면을 그린다 -->
     <div id="root">
       <!--# block name="site_intro" -->
       <h1>퀴즈체크 - 퀴즈 맞추기</h1>
