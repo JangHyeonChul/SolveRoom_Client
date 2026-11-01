@@ -5,6 +5,7 @@ import { useAuth } from "../app/auth";
 import CardItem from "../components/CardItem";
 import LatestCards from "../components/LatestCards";
 import { isCategory, type CardSummary } from "../types/card";
+import { usePageMeta } from "../utils/pageMeta";
 
 // 인기순은 좋아요 수 기준이다. 조회수 정렬·좋아요순은 서버 설계(V8)에서 인기순 하나로 합쳤다.
 const SORTS: Record<QuizCardSort, string> = {
@@ -13,6 +14,21 @@ const SORTS: Record<QuizCardSort, string> = {
 };
 
 const isSort = (value: string | null): value is QuizCardSort => !!value && value in SORTS;
+
+// 검색 결과 설명에 이어 붙일 카드 이름 길이 상한 (서버 CategoryPageService와 같은 값)
+const DESCRIPTION_TITLES_LENGTH = 90;
+
+function categoryDescription(category: string, cards: CardSummary[]) {
+  const titles: string[] = [];
+  let length = 0;
+  for (const card of cards) {
+    if (length + card.title.length > DESCRIPTION_TITLES_LENGTH) break;
+    titles.push(card.title);
+    length += card.title.length + (titles.length > 1 ? 2 : 0);
+  }
+  const list = titles.length ? ` ${titles.join(", ")} 등` : "";
+  return `퀴즈체크에서 ${category} 퀴즈를 풀어 보세요.${list}`;
+}
 
 // H-01 메인 홈 (검색 결과 H-02도 이 화면에서 ?q= 로 처리)
 export default function HomePage() {
@@ -72,6 +88,12 @@ export default function HomePage() {
     else next.delete(name);
     setParams(next, { preventScrollReset: true });
   };
+
+  // 카테고리 목록은 "음식 맞추기"처럼 사람들이 검색하는 말로 제목을 단다. 서버 CategoryPageService와 같은 문구
+  usePageMeta(
+    category && !q ? `${category} 퀴즈 · ${category} 맞추기` : null,
+    category ? categoryDescription(category, cards) : undefined,
+  );
 
   // 검색 결과 수는 마지막 페이지까지 읽었을 때만 정확하다
   const heading = q
