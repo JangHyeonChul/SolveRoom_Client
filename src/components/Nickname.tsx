@@ -1,4 +1,5 @@
-import { getTier, NICKNAME_DECORATION_SCORE } from "../utils/tier";
+import { NICKNAME_DECORATION_SCORE } from "../utils/tier";
+import TierBadge from "./TierBadge";
 
 interface Props {
   nickname: string;
@@ -9,15 +10,8 @@ interface Props {
 }
 
 export default function Nickname({ nickname, score, color, badgeAfter, admin }: Props) {
-  const tier = score === undefined ? null : getTier(score);
   const canDecorate = score !== undefined && score >= NICKNAME_DECORATION_SCORE;
-  const badge = admin ? (
-    <span className="badge badge--sm badge--admin" title="관리자">
-      ADMIN
-    </span>
-  ) : (
-    tier && <span className={`badge badge--sm ${tier.className}`}>{tier.label}</span>
-  );
+  const badge = score !== undefined ? <TierBadge score={score} /> : null;
 
   return (
     <span className="nickname">
