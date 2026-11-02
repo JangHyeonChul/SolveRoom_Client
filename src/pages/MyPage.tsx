@@ -17,6 +17,7 @@ import Nickname from "../components/Nickname";
 import { useToast } from "../components/Toast";
 import { formatRelative } from "../utils/format";
 import { getTier, NICKNAME_DECORATION_SCORE, nextTierScore, TIER_STEPS } from "../utils/tier";
+import TierBadge from "../components/TierBadge";
 
 // 서버 NicknameUpdateRequest와 같은 규칙. 서버도 다시 확인한다
 const NICKNAME_MIN = 2;
@@ -146,7 +147,6 @@ function MyPageView({ user }: { user: AuthUser }) {
 }
 
 function ProfilePanel({ user }: { user: AuthUser }) {
-  const tier = getTier(user.score);
   const next = nextTierScore(user.score);
   return (
     <section className="panel mypage-profile">
@@ -172,7 +172,7 @@ function ProfilePanel({ user }: { user: AuthUser }) {
         </div>
         <div>
           <dt>칭호</dt>
-          <dd>{tier.label}</dd>
+          <dd><TierBadge score={user.score} /></dd>
         </div>
         <div>
           <dt>정복</dt>
@@ -197,7 +197,6 @@ function ProfilePanel({ user }: { user: AuthUser }) {
 
 // 칭호 단계표. 지금 칭호를 강조하고, 관리자는 포인트와 상관없이 관리자 칭호를 단다
 function TierPanel({ user }: { user: AuthUser }) {
-  const admin = user.role === "ADMIN";
   const current = getTier(user.score);
   return (
     <section className="panel" aria-labelledby="tier-title">
@@ -205,19 +204,12 @@ function TierPanel({ user }: { user: AuthUser }) {
         칭호
       </h2>
       <ul className="tier-steps">
-        {admin && (
-          <li className="is-current">
-            <span className="badge badge--sm badge--admin">ADMIN</span>
-            <span>관리자 전용 칭호</span>
-            <span className="tier-steps__range">관리자</span>
-          </li>
-        )}
         {TIER_STEPS.map((step) => {
           const tier = getTier(step.min);
           return (
-            <li key={step.min} className={!admin && tier.label === current.label ? "is-current" : undefined}>
-              <span className={`badge badge--sm ${tier.className}`}>{tier.label}</span>
-              <span>{!admin && tier.label === current.label ? "지금 칭호" : ""}</span>
+            <li key={step.min} className={tier.label === current.label ? "is-current" : undefined}>
+              <TierBadge score={step.min} />
+              <span>{tier.label === current.label ? "지금 칭호" : ""}</span>
               <span className="tier-steps__range">
                 {step.max === null ? `${step.min.toLocaleString()}P 이상` : `${step.min.toLocaleString()}~${step.max.toLocaleString()}P`}
               </span>
@@ -225,7 +217,7 @@ function TierPanel({ user }: { user: AuthUser }) {
           );
         })}
       </ul>
-      <p className="hint">칭호는 누적 포인트로 정해지고 내려가지 않아요. 1001P 이상 칭호 이름은 아직 정해지지 않았어요.</p>
+      <p className="hint">칭호는 누적 포인트로 정해지고 내려가지 않아요. F부터 Z까지 10단계로, 등급이 오를수록 더 화려해져요.</p>
     </section>
   );
 }

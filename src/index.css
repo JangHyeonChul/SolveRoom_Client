@@ -285,6 +285,49 @@
   .badge--new { background: var(--green); color: var(--white); }
   .badge--white { background: var(--white); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
 
+  /* 칭호 등급 배지 (점수 10등급). 낮은등급=연한 칩 → 높은등급=다크 홀로그램. utils/tier.ts의 GRADES와 함께 바꾼다 */
+  .tier-ch { position: relative; z-index: 2; }
+  /* 1~3등급: 연한 단색 */
+  .badge--g0 { background: hsl(230 14% 96.3%); color: hsl(230 24% 44%); }
+  .badge--g1 { background: hsl(250 20% 95.8%); color: hsl(250 30% 44%); }
+  .badge--g2 { background: hsl(272 26% 95%); color: hsl(272 36% 44%); }
+  /* 4등급: 그라데이션 */
+  .badge--g3 { background: linear-gradient(160deg, hsl(292 46% 97%), hsl(292 32% 93.5%)); color: hsl(292 42% 44%); }
+  /* 5등급: 그라데이션 + 빛 스침 */
+  .badge--g4 { position: relative; overflow: hidden; background: linear-gradient(160deg, hsl(314 52% 96.5%), hsl(314 38% 92.5%)); color: hsl(314 48% 44%); }
+  /* 6등급: 흐르는 그라데이션 + 스침 */
+  .badge--g5 { position: relative; overflow: hidden; color: hsl(338 54% 44%); background: linear-gradient(90deg, hsl(338 44% 91.5%), hsl(338 58% 95.5%), hsl(338 44% 91.5%)); background-size: 220% 100%; animation: tier-flow 3s linear infinite; }
+  /* 7등급: 비비드 흐름 + 테두리 + 스침 */
+  .badge--g6 { position: relative; overflow: hidden; color: hsl(4 60% 44%); border: 1px solid hsl(4 60% 44% / .45); background: linear-gradient(90deg, hsl(4 52% 90.5%), hsl(4 64% 95.5%), hsl(4 52% 90.5%)); background-size: 220% 100%; animation: tier-flow 2s linear infinite; }
+  .badge--g4::after, .badge--g5::after, .badge--g6::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, .72) 50%, transparent 60%); transform: translateX(-150%); }
+  .badge--g4::after { animation: tier-sheen 3.6s ease-in-out infinite; }
+  .badge--g5::after { animation: tier-sheen 2.6s ease-in-out infinite; }
+  .badge--g6::after { animation: tier-sheen 1.8s ease-in-out infinite; }
+  /* 8~10등급: 다크 홀로그램 (재질 전환) */
+  .badge--g7, .badge--g8, .badge--g9 { position: relative; overflow: hidden; color: #fff; background: #2a2348; border: 1px solid rgba(255, 255, 255, .22); }
+  .badge--g7::before, .badge--g8::before, .badge--g9::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 200%; background: linear-gradient(100deg, #ffbcd6, #d9c0ff, #b4e2ff, #bcf2dc, #ffeec0, #ffbcd6, #d9c0ff, #b4e2ff, #bcf2dc, #ffeec0, #ffbcd6); mix-blend-mode: screen; will-change: transform; }
+  .badge--g7::before { opacity: .32; animation: tier-holo 3.6s linear infinite; }
+  .badge--g8::before { opacity: .44; animation: tier-holo 2.6s linear infinite; }
+  .badge--g9::before { opacity: .58; animation: tier-holo 1.7s linear infinite; }
+  .badge--g9 { border-color: rgba(255, 255, 255, .4); }
+  .badge--g9 .tier-ch { background: linear-gradient(90deg, #fff, #fff0c8, #d4f3ff, #fff); background-size: 220% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: tier-text 2.2s linear infinite; }
+  /* 반짝이 = 4방향 빛(✦), 배지 안에서 반짝 */
+  .tier-spark { position: absolute; width: 6px; height: 6px; z-index: 3; opacity: 0; background: #fff; pointer-events: none; clip-path: polygon(50% 0, 59% 41%, 100% 50%, 59% 59%, 50% 100%, 41% 59%, 0 50%, 41% 41%); }
+  .tier-spark--1 { top: 1px; left: 3px; animation: tier-tw 1.3s ease-in-out infinite; }
+  .tier-spark--2 { bottom: 1px; right: 4px; animation: tier-tw 1.3s .45s ease-in-out infinite; }
+  .tier-spark--3 { bottom: 1px; left: 4px; animation: tier-tw 1.3s .85s ease-in-out infinite; }
+  @keyframes tier-flow { 0% { background-position: 0 0; } 100% { background-position: 220% 0; } }
+  @keyframes tier-sheen { 0% { transform: translateX(-150%); } 50%, 100% { transform: translateX(160%); } }
+  @keyframes tier-holo { to { transform: translateX(-50%); } }
+  @keyframes tier-text { 0% { background-position: 0 50%; } 100% { background-position: 220% 50%; } }
+  @keyframes tier-tw { 0%, 100% { opacity: 0; transform: scale(.2) rotate(0deg); } 50% { opacity: 1; transform: scale(1) rotate(60deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .badge--g5, .badge--g6, .badge--g9 .tier-ch,
+    .badge--g4::after, .badge--g5::after, .badge--g6::after,
+    .badge--g7::before, .badge--g8::before, .badge--g9::before, .tier-spark { animation: none; }
+    .badge--g4::after, .badge--g5::after, .badge--g6::after, .tier-spark { display: none; }
+  }
+
   /* 안내 박스 */
   .callout { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 8px; background: var(--gold-soft); color: #6b4b00; font-size: 13px; line-height: 1.6; }
   .callout svg { flex: 0 0 auto; margin-top: 2px; }
@@ -592,6 +635,8 @@
   .mypage__tab { display: flex; flex-direction: column; gap: 16px; }
   .tier-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
   .tier-steps li { display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; }
+  /* grid 칸을 꽉 채워 늘어나지 않고 내용만큼만(댓글·프로필과 같은 크기) */
+  .tier-steps li > .badge { justify-self: start; }
   .tier-steps li.is-current { border-color: var(--green); background: var(--green-soft); font-weight: 600; }
   .tier-steps__range { color: var(--muted); font-variant-numeric: tabular-nums; }
   .count-input { width: 110px; height: 32px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--white); padding: 0 14px; font: inherit; font-weight: 500; font-size: 13px; color: var(--ink); transition: border-color .15s, background-color .15s; }
