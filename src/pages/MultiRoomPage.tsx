@@ -347,7 +347,7 @@ function Seat({ player: p, state, me }: { player: RoomPlayer; state: RoomState; 
       <MultiAvatar name={p.nickname} />
       <span className="mp-seat__name">
         <span className="mp-seat__nick">
-          <Nickname nickname={p.nickname} score={p.score} color={p.nicknameColor} admin={p.admin} />
+          <Nickname nickname={p.nickname} score={p.score} color={p.nicknameColor} admin={p.admin} tierIconOnly />
           {me && <em>나</em>}
           {!waiting && p.host && <Icon name="crown" size={12} className="mp-seat__crown" />}
         </span>

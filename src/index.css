@@ -102,6 +102,8 @@
   .side-link em { font-style: normal; color: var(--muted); font-size: 12px; font-weight: 500; }
   .side-me { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 12px 8px 0; border-top: 1px solid var(--line); font-size: 13px; }
   .side-me__info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .side-me__info .nickname { max-width: 100%; }
+  .side-me__info .nickname > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .side-me__sub { color: var(--muted); font-size: 12px; }
   .account__logout { border: 0; background: none; padding: 4px; color: var(--muted); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; }
   .account__logout:hover { color: var(--ink); }
@@ -591,8 +593,22 @@
   .tabs__tab[aria-selected="true"]::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--green); }
   .mypage__tab { display: flex; flex-direction: column; gap: 16px; }
   .tier-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-  .tier-steps li { display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; }
-  .tier-steps li.is-current { border-color: var(--green); background: var(--green-soft); font-weight: 600; }
+  .tier-steps li { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; font-weight: 600; }
+  .tier-steps li.is-current { border-color: var(--green); background: var(--green-soft); }
+  .tier-steps li.is-locked { color: var(--muted); font-weight: 500; }
+  .tier-steps img, .tier-material img, .tier-hero__icon { display: block; }
+  .tier-steps .is-locked img, .tier-material.is-locked img { filter: grayscale(1); opacity: .42; }
+  .tier-hero { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 10px; background: var(--bg-soft); }
+  .tier-hero__icon { flex: none; }
+  .tier-hero__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .tier-hero__head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .tier-hero__head b { font-size: 17px; font-weight: 800; }
+  .tier-hero .progress { flex: none; display: block; background: #e3e5e8; }
+  .tier-materials { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
+  .tier-material { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 0 6px; border: 1px solid transparent; border-radius: 8px; background: none; color: var(--ink-sub); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; transition: background-color .15s, border-color .15s; }
+  .tier-material:hover { background: var(--bg-soft); }
+  .tier-material.is-locked { color: var(--muted); font-weight: 500; }
+  .tier-material[aria-pressed="true"] { border-color: var(--green); background: var(--green-soft); color: var(--green-dark); }
   .tier-steps__range { color: var(--muted); font-variant-numeric: tabular-nums; }
   .count-input { width: 110px; height: 32px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--white); padding: 0 14px; font: inherit; font-weight: 500; font-size: 13px; color: var(--ink); transition: border-color .15s, background-color .15s; }
   .count-input:focus { outline: none; border-color: var(--green); box-shadow: var(--focus-ring); }
@@ -625,6 +641,8 @@
   .comment__actions { display: flex; gap: 12px; margin-top: 6px; }
   .replies { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; padding-left: 14px; border-left: 2px solid var(--line); }
   .nickname { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
+  .tier-chip { flex: none; display: inline-flex; align-items: center; gap: 3px; height: 20px; padding: 0 6px 0 3px; border-radius: 4px; background: #eef0f2; color: var(--ink-sub); font-size: 11px; font-weight: 700; white-space: nowrap; letter-spacing: 0; }
+  .tier-chip img, .tier-icon { flex: none; display: block; width: 16px; height: 16px; }
   /* 관리자 칭호와 닉네임: 무지개 그라데이션이 흐르고 배지는 빛이 지나가며 반짝인다 (애니메이션 줄이기를 켜면 멈춘 그라데이션만 남는다) */
   .badge--admin { position: relative; overflow: hidden; color: var(--white); letter-spacing: .04em; background: linear-gradient(90deg, #ff4d6d, #ff9f1c, #ffd60a, #2ec4b6, #4361ee, #b5179e, #ff4d6d); background-size: 300% 100%; box-shadow: 0 0 0 1px rgba(255, 255, 255, .4) inset, 0 1px 6px rgba(181, 23, 158, .35); animation: admin-flow 4s linear infinite, admin-glow 2s ease-in-out infinite; }
   .badge--admin::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .75) 50%, transparent 70%); transform: translateX(-120%); animation: admin-shine 2.4s ease-in-out infinite; }
@@ -1098,7 +1116,7 @@
   .mp-seat__name { flex: none; width: 100%; align-items: center; }
   .mp-seat__nick { justify-content: center; max-width: 100%; font-size: 11px; }
   .mp-seat__nick .nickname { overflow: hidden; text-overflow: ellipsis; }
-  .mp-seat__nick .badge, .mp-seat__name small { display: none; }
+  .mp-seat__nick .badge, .mp-seat__nick .tier-icon, .mp-seat__name small { display: none; }
   .mp-seat__points { align-items: center; font-size: 12px; }
   .mp-seat .mp-tag { height: 16px; padding: 0 5px; font-size: 10px; }
   /* 팀전: 팀 제목 줄을 작게 두고 그 아래에 팀원 아바타 줄을 놓는다 */
@@ -1177,6 +1195,7 @@
 }
 
 @media (max-width: 640px) {
+  .tier-materials { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .wrap { padding: 0 16px; }
   .mp-lobby__tools .btn { flex: 1 1 auto; }
   .mp-room { grid-template-columns: 48px minmax(0, 1fr) auto; gap: 10px; padding: 14px 14px 14px 16px; }

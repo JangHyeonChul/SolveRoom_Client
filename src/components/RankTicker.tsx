@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { fetchPointRanking, type PointRank } from "../api/users";
 import { getTier } from "../utils/tier";
 import Icon from "./Icon";
+import TierChip from "./TierChip";
 
 const INTERVAL = 2600;
 
@@ -13,7 +14,7 @@ function RankRow({ rank, className }: { rank: PointRank; className?: string }) {
       {rank.admin ? (
         <span className="badge badge--sm badge--admin">ADMIN</span>
       ) : (
-        <span className={`badge badge--sm ${tier.className}`}>{tier.label}</span>
+        <TierChip tier={tier} iconOnly />
       )}
       <span className={`ticker__name ${rank.admin ? "nickname--admin" : ""}`}>{rank.nickname}</span>
       <span className="ticker__pt">{rank.point.toLocaleString()}P</span>
