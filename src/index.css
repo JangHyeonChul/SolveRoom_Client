@@ -102,6 +102,8 @@
   .side-link em { font-style: normal; color: var(--muted); font-size: 12px; font-weight: 500; }
   .side-me { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 12px 8px 0; border-top: 1px solid var(--line); font-size: 13px; }
   .side-me__info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .side-me__info .nickname { max-width: 100%; }
+  .side-me__info .nickname > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .side-me__sub { color: var(--muted); font-size: 12px; }
   .account__logout { border: 0; background: none; padding: 4px; color: var(--muted); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; }
   .account__logout:hover { color: var(--ink); }
@@ -284,49 +286,6 @@
   .badge--purple { background: var(--purple-soft); color: var(--purple); }
   .badge--new { background: var(--green); color: var(--white); }
   .badge--white { background: var(--white); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
-
-  /* 칭호 등급 배지 (점수 10등급). 낮은등급=연한 칩 → 높은등급=다크 홀로그램. utils/tier.ts의 GRADES와 함께 바꾼다 */
-  .tier-ch { position: relative; z-index: 2; }
-  /* 1~3등급: 연한 단색 */
-  .badge--g0 { background: hsl(230 14% 96.3%); color: hsl(230 24% 44%); }
-  .badge--g1 { background: hsl(250 20% 95.8%); color: hsl(250 30% 44%); }
-  .badge--g2 { background: hsl(272 26% 95%); color: hsl(272 36% 44%); }
-  /* 4등급: 그라데이션 */
-  .badge--g3 { background: linear-gradient(160deg, hsl(292 46% 97%), hsl(292 32% 93.5%)); color: hsl(292 42% 44%); }
-  /* 5등급: 그라데이션 + 빛 스침 */
-  .badge--g4 { position: relative; overflow: hidden; background: linear-gradient(160deg, hsl(314 52% 96.5%), hsl(314 38% 92.5%)); color: hsl(314 48% 44%); }
-  /* 6등급: 흐르는 그라데이션 + 스침 */
-  .badge--g5 { position: relative; overflow: hidden; color: hsl(338 54% 44%); background: linear-gradient(90deg, hsl(338 44% 91.5%), hsl(338 58% 95.5%), hsl(338 44% 91.5%)); background-size: 220% 100%; animation: tier-flow 3s linear infinite; }
-  /* 7등급: 비비드 흐름 + 테두리 + 스침 */
-  .badge--g6 { position: relative; overflow: hidden; color: hsl(4 60% 44%); border: 1px solid hsl(4 60% 44% / .45); background: linear-gradient(90deg, hsl(4 52% 90.5%), hsl(4 64% 95.5%), hsl(4 52% 90.5%)); background-size: 220% 100%; animation: tier-flow 2s linear infinite; }
-  .badge--g4::after, .badge--g5::after, .badge--g6::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, .72) 50%, transparent 60%); transform: translateX(-150%); }
-  .badge--g4::after { animation: tier-sheen 3.6s ease-in-out infinite; }
-  .badge--g5::after { animation: tier-sheen 2.6s ease-in-out infinite; }
-  .badge--g6::after { animation: tier-sheen 1.8s ease-in-out infinite; }
-  /* 8~10등급: 다크 홀로그램 (재질 전환) */
-  .badge--g7, .badge--g8, .badge--g9 { position: relative; overflow: hidden; color: #fff; background: #2a2348; border: 1px solid rgba(255, 255, 255, .22); }
-  .badge--g7::before, .badge--g8::before, .badge--g9::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 200%; background: linear-gradient(100deg, #ffbcd6, #d9c0ff, #b4e2ff, #bcf2dc, #ffeec0, #ffbcd6, #d9c0ff, #b4e2ff, #bcf2dc, #ffeec0, #ffbcd6); mix-blend-mode: screen; will-change: transform; }
-  .badge--g7::before { opacity: .32; animation: tier-holo 3.6s linear infinite; }
-  .badge--g8::before { opacity: .44; animation: tier-holo 2.6s linear infinite; }
-  .badge--g9::before { opacity: .58; animation: tier-holo 1.7s linear infinite; }
-  .badge--g9 { border-color: rgba(255, 255, 255, .4); }
-  .badge--g9 .tier-ch { background: linear-gradient(90deg, #fff, #fff0c8, #d4f3ff, #fff); background-size: 220% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: tier-text 2.2s linear infinite; }
-  /* 반짝이 = 4방향 빛(✦), 배지 안에서 반짝 */
-  .tier-spark { position: absolute; width: 6px; height: 6px; z-index: 3; opacity: 0; background: #fff; pointer-events: none; clip-path: polygon(50% 0, 59% 41%, 100% 50%, 59% 59%, 50% 100%, 41% 59%, 0 50%, 41% 41%); }
-  .tier-spark--1 { top: 1px; left: 3px; animation: tier-tw 1.3s ease-in-out infinite; }
-  .tier-spark--2 { bottom: 1px; right: 4px; animation: tier-tw 1.3s .45s ease-in-out infinite; }
-  .tier-spark--3 { bottom: 1px; left: 4px; animation: tier-tw 1.3s .85s ease-in-out infinite; }
-  @keyframes tier-flow { 0% { background-position: 0 0; } 100% { background-position: 220% 0; } }
-  @keyframes tier-sheen { 0% { transform: translateX(-150%); } 50%, 100% { transform: translateX(160%); } }
-  @keyframes tier-holo { to { transform: translateX(-50%); } }
-  @keyframes tier-text { 0% { background-position: 0 50%; } 100% { background-position: 220% 50%; } }
-  @keyframes tier-tw { 0%, 100% { opacity: 0; transform: scale(.2) rotate(0deg); } 50% { opacity: 1; transform: scale(1) rotate(60deg); } }
-  @media (prefers-reduced-motion: reduce) {
-    .badge--g5, .badge--g6, .badge--g9 .tier-ch,
-    .badge--g4::after, .badge--g5::after, .badge--g6::after,
-    .badge--g7::before, .badge--g8::before, .badge--g9::before, .tier-spark { animation: none; }
-    .badge--g4::after, .badge--g5::after, .badge--g6::after, .tier-spark { display: none; }
-  }
 
   /* 안내 박스 */
   .callout { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 8px; background: var(--gold-soft); color: #6b4b00; font-size: 13px; line-height: 1.6; }
@@ -634,10 +593,22 @@
   .tabs__tab[aria-selected="true"]::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--green); }
   .mypage__tab { display: flex; flex-direction: column; gap: 16px; }
   .tier-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-  .tier-steps li { display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; }
-  /* grid 칸을 꽉 채워 늘어나지 않고 내용만큼만(댓글·프로필과 같은 크기) */
-  .tier-steps li > .badge { justify-self: start; }
-  .tier-steps li.is-current { border-color: var(--green); background: var(--green-soft); font-weight: 600; }
+  .tier-steps li { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; font-weight: 600; }
+  .tier-steps li.is-current { border-color: var(--green); background: var(--green-soft); }
+  .tier-steps li.is-locked { color: var(--muted); font-weight: 500; }
+  .tier-steps img, .tier-material img, .tier-hero__icon { display: block; }
+  .tier-steps .is-locked img, .tier-material.is-locked img { filter: grayscale(1); opacity: .42; }
+  .tier-hero { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 10px; background: var(--bg-soft); }
+  .tier-hero__icon { flex: none; }
+  .tier-hero__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .tier-hero__head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .tier-hero__head b { font-size: 17px; font-weight: 800; }
+  .tier-hero .progress { flex: none; display: block; background: #e3e5e8; }
+  .tier-materials { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
+  .tier-material { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 0 6px; border: 1px solid transparent; border-radius: 8px; background: none; color: var(--ink-sub); font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; transition: background-color .15s, border-color .15s; }
+  .tier-material:hover { background: var(--bg-soft); }
+  .tier-material.is-locked { color: var(--muted); font-weight: 500; }
+  .tier-material[aria-pressed="true"] { border-color: var(--green); background: var(--green-soft); color: var(--green-dark); }
   .tier-steps__range { color: var(--muted); font-variant-numeric: tabular-nums; }
   .count-input { width: 110px; height: 32px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--white); padding: 0 14px; font: inherit; font-weight: 500; font-size: 13px; color: var(--ink); transition: border-color .15s, background-color .15s; }
   .count-input:focus { outline: none; border-color: var(--green); box-shadow: var(--focus-ring); }
@@ -670,6 +641,8 @@
   .comment__actions { display: flex; gap: 12px; margin-top: 6px; }
   .replies { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; padding-left: 14px; border-left: 2px solid var(--line); }
   .nickname { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
+  .tier-chip { flex: none; display: inline-flex; align-items: center; gap: 3px; height: 20px; padding: 0 6px 0 3px; border-radius: 4px; background: #eef0f2; color: var(--ink-sub); font-size: 11px; font-weight: 700; white-space: nowrap; letter-spacing: 0; }
+  .tier-chip img, .tier-icon { flex: none; display: block; width: 16px; height: 16px; }
   /* 관리자 칭호와 닉네임: 무지개 그라데이션이 흐르고 배지는 빛이 지나가며 반짝인다 (애니메이션 줄이기를 켜면 멈춘 그라데이션만 남는다) */
   .badge--admin { position: relative; overflow: hidden; color: var(--white); letter-spacing: .04em; background: linear-gradient(90deg, #ff4d6d, #ff9f1c, #ffd60a, #2ec4b6, #4361ee, #b5179e, #ff4d6d); background-size: 300% 100%; box-shadow: 0 0 0 1px rgba(255, 255, 255, .4) inset, 0 1px 6px rgba(181, 23, 158, .35); animation: admin-flow 4s linear infinite, admin-glow 2s ease-in-out infinite; }
   .badge--admin::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .75) 50%, transparent 70%); transform: translateX(-120%); animation: admin-shine 2.4s ease-in-out infinite; }
@@ -1143,7 +1116,7 @@
   .mp-seat__name { flex: none; width: 100%; align-items: center; }
   .mp-seat__nick { justify-content: center; max-width: 100%; font-size: 11px; }
   .mp-seat__nick .nickname { overflow: hidden; text-overflow: ellipsis; }
-  .mp-seat__nick .badge, .mp-seat__name small { display: none; }
+  .mp-seat__nick .badge, .mp-seat__nick .tier-icon, .mp-seat__name small { display: none; }
   .mp-seat__points { align-items: center; font-size: 12px; }
   .mp-seat .mp-tag { height: 16px; padding: 0 5px; font-size: 10px; }
   /* 팀전: 팀 제목 줄을 작게 두고 그 아래에 팀원 아바타 줄을 놓는다 */
@@ -1222,6 +1195,7 @@
 }
 
 @media (max-width: 640px) {
+  .tier-materials { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .wrap { padding: 0 16px; }
   .mp-lobby__tools .btn { flex: 1 1 auto; }
   .mp-room { grid-template-columns: 48px minmax(0, 1fr) auto; gap: 10px; padding: 14px 14px 14px 16px; }

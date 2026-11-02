@@ -100,6 +100,7 @@ export default function Sidebar() {
                 color={user.nicknameColor}
                 admin={user.role === "ADMIN"}
                 badgeAfter
+                tierIconOnly
               />
               <span className="side-me__sub">
                 {user.score.toLocaleString()}P ·{" "}

@@ -179,7 +179,7 @@ export default function MultiLobbyPage() {
                 <li key={u.key}>
                   <MultiAvatar name={u.nickname} size="sm" />
                   <span className="mp-users__name">
-                    <Nickname nickname={u.nickname} score={u.score} color={u.nicknameColor} admin={u.admin} />
+                    <Nickname nickname={u.nickname} score={u.score} color={u.nicknameColor} admin={u.admin} tierIconOnly />
                   </span>
                   <span className="mp-users__loc">{u.key === lobby.me?.key ? "나" : "로비"}</span>
                 </li>

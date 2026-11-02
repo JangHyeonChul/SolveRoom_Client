@@ -16,8 +16,15 @@ import CardCover from "../components/CardCover";
 import Nickname from "../components/Nickname";
 import { useToast } from "../components/Toast";
 import { formatRelative } from "../utils/format";
-import { getTier, NICKNAME_DECORATION_SCORE, nextTierScore, TIER_STEPS } from "../utils/tier";
-import TierBadge from "../components/TierBadge";
+import {
+  getTier,
+  NICKNAME_DECORATION_SCORE,
+  nextTierScore,
+  TIER_MATERIALS,
+  tierMaterialIcon,
+  tierProgress,
+  TIERS,
+} from "../utils/tier";
 
 // 서버 NicknameUpdateRequest와 같은 규칙. 서버도 다시 확인한다
 const NICKNAME_MIN = 2;
@@ -29,12 +36,13 @@ type Load<T> = { status: "loading" } | { status: "error" } | { status: "done"; d
 // 탭은 주소(?tab=)에 남겨 새로고침해도 그대로 둔다
 const TABS = [
   { key: "info", label: "정보관리" },
+  { key: "tier", label: "칭호" },
   { key: "deco", label: "치장" },
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
-// U-01 마이페이지. 위에 내 칭호·포인트를 두고, 탭으로 정보관리(닉네임, 내가 만든 카드, 정복한 카드, 포인트 내역)와
-// 치장(칭호 단계, 닉네임 색)을 나눈다
+// U-01 마이페이지. 위에 내 칭호·포인트를 두고, 탭으로 정보관리(닉네임, 내가 만든 카드, 정복한 카드, 포인트 내역),
+// 칭호(지금 칭호, 재질별 단계), 치장(닉네임 색)을 나눈다
 export default function MyPage() {
   const { user, ready } = useAuth();
   const location = useLocation();
@@ -54,7 +62,7 @@ export default function MyPage() {
 
 function MyPageView({ user }: { user: AuthUser }) {
   const [params, setParams] = useSearchParams();
-  const tab: TabKey = params.get("tab") === "deco" ? "deco" : "info";
+  const tab: TabKey = TABS.find((t) => t.key === params.get("tab"))?.key ?? "info";
   const [myCards, setMyCards] = useState<Load<MyQuizCard[]>>({ status: "loading" });
   const [cards, setCards] = useState<Load<ConqueredCard[]>>({ status: "loading" });
   const [histories, setHistories] = useState<Load<PointHistory[]>>({ status: "loading" });
@@ -105,7 +113,7 @@ function MyPageView({ user }: { user: AuthUser }) {
             ))}
           </div>
 
-          {tab === "info" ? (
+          {tab === "info" && (
             <div role="tabpanel" id="mypage-panel-info" aria-labelledby="mypage-tab-info" className="mypage__tab">
               <NicknamePanel user={user} />
 
@@ -130,9 +138,14 @@ function MyPageView({ user }: { user: AuthUser }) {
                 <PointHistories state={histories} />
               </section>
             </div>
-          ) : (
-            <div role="tabpanel" id="mypage-panel-deco" aria-labelledby="mypage-tab-deco" className="mypage__tab">
+          )}
+          {tab === "tier" && (
+            <div role="tabpanel" id="mypage-panel-tier" aria-labelledby="mypage-tab-tier" className="mypage__tab">
               <TierPanel user={user} />
+            </div>
+          )}
+          {tab === "deco" && (
+            <div role="tabpanel" id="mypage-panel-deco" aria-labelledby="mypage-tab-deco" className="mypage__tab">
               <NicknameColorPanel user={user} />
             </div>
           )}
@@ -172,7 +185,7 @@ function ProfilePanel({ user }: { user: AuthUser }) {
         </div>
         <div>
           <dt>칭호</dt>
-          <dd><TierBadge score={user.score} /></dd>
+          <dd>{getTier(user.score).label}</dd>
         </div>
         <div>
           <dt>정복</dt>
@@ -195,29 +208,78 @@ function ProfilePanel({ user }: { user: AuthUser }) {
   );
 }
 
-// 칭호 단계표. 지금 칭호를 강조하고, 관리자는 포인트와 상관없이 관리자 칭호를 단다
+// 칭호 탭. 위에 지금 칭호와 다음 칭호까지 남은 포인트를 두고, 재질을 고르면 그 재질의 5단계만 보인다.
+// 처음엔 지금 칭호의 재질이 열려 있다
 function TierPanel({ user }: { user: AuthUser }) {
   const current = getTier(user.score);
+  const next = nextTierScore(user.score);
+  const [materialKey, setMaterialKey] = useState(current.materialKey);
+  const isReached = (index: number) => index <= current.index;
+
   return (
     <section className="panel" aria-labelledby="tier-title">
       <h2 className="panel__title" id="tier-title">
         칭호
       </h2>
-      <ul className="tier-steps">
-        {TIER_STEPS.map((step) => {
-          const tier = getTier(step.min);
+
+      <div className="tier-hero">
+        <img className="tier-hero__icon" src={current.icon} alt="" width={52} height={52} />
+        <div className="tier-hero__body">
+          <div className="tier-hero__head">
+            <b>{current.label}</b>
+            <span className="tier-steps__range">{user.score.toLocaleString()}P</span>
+          </div>
+          <span className="progress">
+            <span className="progress__bar" style={{ width: `${tierProgress(user.score)}%` }} />
+          </span>
+          <p className="hint">
+            {next === null
+              ? "가장 높은 칭호예요."
+              : `${getTier(next).label}까지 ${(next - user.score).toLocaleString()}P 남았어요.`}
+          </p>
+        </div>
+      </div>
+
+      <div className="tier-materials" role="group" aria-label="칭호 재질">
+        {TIER_MATERIALS.map((material) => {
+          const first = TIERS.find((tier) => tier.materialKey === material.key);
+          const locked = !first || !isReached(first.index);
           return (
-            <li key={step.min} className={tier.label === current.label ? "is-current" : undefined}>
-              <TierBadge score={step.min} />
-              <span>{tier.label === current.label ? "지금 칭호" : ""}</span>
+            <button
+              key={material.key}
+              type="button"
+              className={`tier-material ${locked ? "is-locked" : ""}`}
+              aria-pressed={materialKey === material.key}
+              onClick={() => setMaterialKey(material.key)}
+            >
+              <img src={tierMaterialIcon(material.key)} alt="" width={28} height={28} />
+              {material.name}
+            </button>
+          );
+        })}
+      </div>
+
+      <ul className="tier-steps">
+        {TIERS.filter((tier) => tier.materialKey === materialKey).map((tier) => {
+          const isCurrent = tier.index === current.index;
+          return (
+            <li
+              key={tier.index}
+              className={`${isCurrent ? "is-current" : ""} ${isReached(tier.index) ? "" : "is-locked"}`}
+              aria-current={isCurrent ? "true" : undefined}
+            >
+              <img src={tier.icon} alt="" width={24} height={24} />
+              <span>{isCurrent ? `${tier.label} · 지금 칭호` : tier.label}</span>
               <span className="tier-steps__range">
-                {step.max === null ? `${step.min.toLocaleString()}P 이상` : `${step.min.toLocaleString()}~${step.max.toLocaleString()}P`}
+                {tier.max === null
+                  ? `${tier.min.toLocaleString()}P 이상`
+                  : `${tier.min.toLocaleString()}~${tier.max.toLocaleString()}P`}
               </span>
             </li>
           );
         })}
       </ul>
-      <p className="hint">칭호는 누적 포인트로 정해지고 내려가지 않아요. F부터 Z까지 10단계로, 등급이 오를수록 더 화려해져요.</p>
+      <p className="hint">칭호는 누적 포인트로 정해지고 내려가지 않아요.</p>
     </section>
   );
 }
