@@ -22,6 +22,7 @@ interface LobbyChatResponse {
   nickname: string;
   score?: number;
   nicknameColor?: string;
+  nicknameEffect?: string;
   admin: boolean;
   message: string;
   sentAt: number;

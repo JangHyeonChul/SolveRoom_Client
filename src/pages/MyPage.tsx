@@ -2,11 +2,13 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom";
 import { errorMessage } from "../api/apiResponse";
 import {
+  applyNicknameEffect,
   changeNickname,
   changeNicknameColor,
   fetchConqueredCards,
   fetchMyQuizCards,
   fetchPointHistories,
+  purchaseNicknameEffect,
   type ConqueredCard,
   type MyQuizCard,
   type PointHistory,
@@ -14,8 +16,11 @@ import {
 import { useAuth, type AuthUser } from "../app/auth";
 import CardCover from "../components/CardCover";
 import Nickname from "../components/Nickname";
+import NicknameText from "../components/NicknameText";
+import TierChip from "../components/TierChip";
 import { useToast } from "../components/Toast";
 import { formatRelative } from "../utils/format";
+import { NICKNAME_EFFECT_PRICE, NICKNAME_EFFECTS } from "../utils/nicknameEffect";
 import {
   getTier,
   NICKNAME_DECORATION_SCORE,
@@ -42,7 +47,7 @@ const TABS = [
 type TabKey = (typeof TABS)[number]["key"];
 
 // U-01 마이페이지. 위에 내 칭호·포인트를 두고, 탭으로 정보관리(닉네임, 내가 만든 카드, 정복한 카드, 포인트 내역),
-// 칭호(지금 칭호, 재질별 단계), 치장(닉네임 색)을 나눈다
+// 칭호(지금 칭호, 재질별 단계), 치장(닉네임 색·효과)을 나눈다
 export default function MyPage() {
   const { user, ready } = useAuth();
   const location = useLocation();
@@ -146,7 +151,7 @@ function MyPageView({ user }: { user: AuthUser }) {
           )}
           {tab === "deco" && (
             <div role="tabpanel" id="mypage-panel-deco" aria-labelledby="mypage-tab-deco" className="mypage__tab">
-              <NicknameColorPanel user={user} />
+              <NicknameDecoPanel user={user} />
             </div>
           )}
         </div>
@@ -170,6 +175,7 @@ function ProfilePanel({ user }: { user: AuthUser }) {
             nickname={user.nickname}
             score={user.score}
             color={user.nicknameColor}
+            effect={user.nicknameEffect}
             admin={user.role === "ADMIN"}
           />
         </div>
@@ -347,22 +353,30 @@ function NicknamePanel({ user }: { user: AuthUser }) {
   );
 }
 
-// 닉네임 꾸미기(글자색). 5000점부터 해금되고, 기본 색으로 되돌리기는 언제든 된다
-function NicknameColorPanel({ user }: { user: AuthUser }) {
+// 닉네임 꾸미기: 색(5000점부터)과 효과(하나에 500P)를 한 패널에서 고른다.
+// 효과는 사지 않아도 눌러서 미리 볼 수 있고, 목록에서는 고른 효과와 마우스를 올린 효과만 움직인다
+function NicknameDecoPanel({ user }: { user: AuthUser }) {
   const { reloadMe } = useAuth();
   const toast = useToast();
-  const unlocked = user.score >= NICKNAME_DECORATION_SCORE;
+  const colorUnlocked = user.score >= NICKNAME_DECORATION_SCORE;
   const [color, setColor] = useState(user.nicknameColor ?? DEFAULT_COLOR);
+  const [picked, setPicked] = useState<string | null>(user.nicknameEffect ?? null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const save = async (next: string | null) => {
+  const owned = user.ownedNicknameEffects;
+  const applied = user.nicknameEffect ?? null;
+  const previewColor = colorUnlocked ? color : undefined;
+  const isOwned = picked !== null && owned.includes(picked);
+  const canBuy = user.availablePoint >= NICKNAME_EFFECT_PRICE;
+
+  const run = async (action: () => Promise<unknown>, done: string) => {
     setSaving(true);
     setError(null);
     try {
-      await changeNicknameColor(next);
+      await action();
       await reloadMe();
-      toast(next ? "닉네임 색을 바꿨어요" : "기본 색으로 되돌렸어요");
+      toast(done);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -370,50 +384,113 @@ function NicknameColorPanel({ user }: { user: AuthUser }) {
     }
   };
 
+  const actLabel =
+    picked === null
+      ? "효과를 골라 주세요"
+      : picked === applied
+        ? "적용 중"
+        : isOwned
+          ? "적용하기"
+          : canBuy
+            ? `${NICKNAME_EFFECT_PRICE}P로 구매`
+            : "포인트 부족";
+  const actDisabled = saving || picked === null || picked === applied || (!isOwned && !canBuy);
+
+  const act = () => {
+    if (picked === null) return;
+    if (isOwned) void run(() => applyNicknameEffect(picked), "닉네임 효과를 바꿨어요");
+    else void run(() => purchaseNicknameEffect(picked), "닉네임 효과를 샀어요");
+  };
+
+  const reset = () => {
+    setPicked(null);
+    setColor(DEFAULT_COLOR);
+    void run(async () => {
+      if (user.nicknameColor) await changeNicknameColor(null);
+      if (applied) await applyNicknameEffect(null);
+    }, "기본 닉네임으로 되돌렸어요");
+  };
+
   return (
     <section className="panel">
+      <h2 className="panel__title">닉네임 꾸미기</h2>
+      <div className="nick-deco__preview">
+        <TierChip tier={getTier(user.score)} iconOnly />
+        <b><NicknameText nickname={user.nickname} color={previewColor} effect={picked} /></b>
+      </div>
+
       <div className="field">
-        <label className="label" htmlFor="mypage-color">
-          닉네임 색
-        </label>
+        <label className="label" htmlFor="mypage-color">색</label>
         <div className="mypage-row">
           <input
             id="mypage-color"
             type="color"
             className="mypage-color"
             value={color}
-            disabled={!unlocked || saving}
+            disabled={!colorUnlocked || saving}
             onChange={(e) => setColor(e.target.value)}
           />
-          <span className="mypage-color__preview" style={{ color }}>
-            {user.nickname}
-          </span>
+          <p className="hint nick-deco__grow">
+            {colorUnlocked
+              ? "오로라와 황금은 효과 색으로 보여요."
+              : `${NICKNAME_DECORATION_SCORE.toLocaleString()}P부터 바꿀 수 있어요. 지금 ${user.score.toLocaleString()}P예요.`}
+          </p>
           <button
             type="button"
-            className="btn btn--primary btn--sm"
-            disabled={!unlocked || saving}
-            onClick={() => save(color)}
+            className="btn btn--outline btn--sm"
+            disabled={!colorUnlocked || saving}
+            onClick={() => void run(() => changeNicknameColor(color), "닉네임 색을 바꿨어요")}
           >
-            저장
+            색 저장
           </button>
-          {user.nicknameColor && (
-            <button type="button" className="btn btn--outline btn--sm" disabled={saving} onClick={() => save(null)}>
-              기본 색
+        </div>
+      </div>
+
+      <div className="field">
+        <span className="label">효과</span>
+        <div className="nick-deco__grid">
+          {NICKNAME_EFFECTS.map((fx) => (
+            <button
+              key={fx.key}
+              type="button"
+              className={`nick-deco__opt ${picked === fx.key ? "is-on" : ""}`}
+              aria-pressed={picked === fx.key}
+              onClick={() => setPicked(fx.key)}
+            >
+              <b><NicknameText nickname={user.nickname} color={previewColor} effect={fx.key} /></b>
+              <span className="nick-deco__name">{fx.label}</span>
+              {applied === fx.key ? (
+                <span className="mp-tag mp-tag--ready">적용 중</span>
+              ) : owned.includes(fx.key) ? (
+                <span className="mp-tag">보유</span>
+              ) : (
+                <span className="mp-tag mp-tag--reward">{NICKNAME_EFFECT_PRICE}P</span>
+              )}
             </button>
-          )}
+          ))}
         </div>
         <p className={error ? "error" : "hint"}>
-          {error ??
-            (unlocked
-              ? "댓글과 사이드바에서 이 색으로 보여요."
-              : `${NICKNAME_DECORATION_SCORE.toLocaleString()}P부터 바꿀 수 있어요. 지금 ${user.score.toLocaleString()}P예요.`)}
+          {error ?? `효과마다 ${NICKNAME_EFFECT_PRICE}P예요. 사용 가능 ${user.availablePoint.toLocaleString()}P. 마우스를 올린 효과와 고른 효과만 움직여요.`}
         </p>
+      </div>
+
+      <div className="mypage-row">
+        <button type="button" className="btn btn--primary btn--sm" disabled={actDisabled} onClick={act}>
+          {actLabel}
+        </button>
+        <button
+          type="button"
+          className="btn btn--outline btn--sm"
+          disabled={saving || (!user.nicknameColor && !applied)}
+          onClick={reset}
+        >
+          기본으로
+        </button>
       </div>
     </section>
   );
 }
 
-// 비공개 카드는 상세 화면이 없어 문제 관리 화면으로 보낸다
 function MyQuizCards({ state }: { state: Load<MyQuizCard[]> }) {
   if (state.status === "loading") return <p className="hint">불러오고 있어요.</p>;
   if (state.status === "error") return <p className="error">내가 만든 카드를 불러오지 못했어요.</p>;

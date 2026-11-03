@@ -13,6 +13,8 @@ export interface MyInfoResponse {
   point: number;
   availablePoint?: number; // 서버가 이 필드보다 먼저 배포된 경우에만 없다
   nicknameColor: string | null;
+  nicknameEffect?: string | null; // 적용 중인 닉네임 효과. 서버가 이 필드보다 먼저 배포된 경우에만 없다
+  ownedNicknameEffects?: string[]; // 산 닉네임 효과
   role: UserRole;
   conqueredCardIds?: number[]; // 서버가 이 필드보다 먼저 배포된 경우에만 없다
 }

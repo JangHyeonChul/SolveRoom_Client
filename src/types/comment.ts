@@ -10,6 +10,7 @@ export interface Comment {
   authorId: number | null; // 회원 댓글을 쓴 회원 id. 내 댓글이면 비밀번호 없이 수정·삭제한다
   point: number | null; // 회원의 누적 포인트(칭호 표시). 비로그인 댓글은 null
   nicknameColor: string | null;
+  nicknameEffect?: string | null;
   content: string | null;
   blinded: boolean;
   deleted: boolean;

@@ -345,7 +345,7 @@ function Seat({ player: p, state, me }: { player: RoomPlayer; state: RoomState; 
     <li className={`mp-seat ${me ? "is-me" : ""} ${state.phase === "play" && p.correct ? "is-correct" : ""}`}>
       <span className="mp-seat__name">
         <span className="mp-seat__nick">
-          <Nickname nickname={p.nickname} score={p.score} color={p.nicknameColor} admin={p.admin} tierIconOnly />
+          <Nickname nickname={p.nickname} score={p.score} color={p.nicknameColor} effect={p.nicknameEffect} admin={p.admin} tierIconOnly />
           {me && <em>나</em>}
           {!waiting && p.host && <Icon name="crown" size={12} className="mp-seat__crown" />}
         </span>

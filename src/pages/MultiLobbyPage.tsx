@@ -177,7 +177,7 @@ export default function MultiLobbyPage() {
               {onlineUsers.map((u) => (
                 <li key={u.key}>
                   <span className="mp-users__name">
-                    <Nickname nickname={u.nickname} score={u.score} color={u.nicknameColor} admin={u.admin} tierIconOnly />
+                    <Nickname nickname={u.nickname} score={u.score} color={u.nicknameColor} effect={u.nicknameEffect} admin={u.admin} tierIconOnly />
                   </span>
                   <span className="mp-users__loc">{u.key === lobby.me?.key ? "나" : "로비"}</span>
                 </li>
@@ -211,7 +211,7 @@ export default function MultiLobbyPage() {
             <div className="mp-me">
               {user ? (
                 <>
-                  <Nickname nickname={user.nickname} score={user.score} color={user.nicknameColor} badgeAfter />
+                  <Nickname nickname={user.nickname} score={user.score} color={user.nicknameColor} effect={user.nicknameEffect} badgeAfter />
                   <span className="mp-me__sub">
                     누적 {user.score.toLocaleString()}P · 칭호 {getTier(user.score).label}
                   </span>

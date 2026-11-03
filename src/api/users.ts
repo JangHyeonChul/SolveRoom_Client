@@ -7,6 +7,7 @@ export interface PointRank {
   nickname: string;
   point: number;
   nicknameColor: string | null;
+  nicknameEffect?: string | null;
   admin: boolean; // 관리자면 관리자 칭호를 붙인다
 }
 
@@ -63,6 +64,22 @@ export function fetchPointHistories(signal?: AbortSignal) {
 // 2~12자. 다른 회원과 겹치면 NICKNAME_DUPLICATED, "익명"으로 시작하면 NICKNAME_NOT_ALLOWED
 export function changeNickname(nickname: string) {
   return request<MyInfoResponse>("/api/main/users/me/nickname", "닉네임 변경", { method: "PATCH", body: { nickname } });
+}
+
+// 500P. 사면 바로 적용된다. 모자라면 POINT_NOT_ENOUGH, 이미 샀으면 NICKNAME_EFFECT_ALREADY_OWNED
+export function purchaseNicknameEffect(effect: string) {
+  return request<MyInfoResponse>("/api/main/users/me/nickname-effects", "닉네임 효과 구매", {
+    method: "POST",
+    body: { effect },
+  });
+}
+
+// 산 효과만 적용한다(NICKNAME_EFFECT_NOT_OWNED). null이면 효과를 끈다
+export function applyNicknameEffect(effect: string | null) {
+  return request<MyInfoResponse>("/api/main/users/me/nickname-effect", "닉네임 효과 적용", {
+    method: "PATCH",
+    body: { effect },
+  });
 }
 
 // #RRGGBB. 5000점 전이면 NICKNAME_COLOR_LOCKED이고, null이면 기본 색으로 돌아간다(언제든 된다)

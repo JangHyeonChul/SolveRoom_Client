@@ -37,6 +37,7 @@ export interface LobbyUser {
   nickname: string;
   score?: number; // 비로그인 사용자는 점수가 없다
   nicknameColor?: string;
+  nicknameEffect?: string;
   admin: boolean;
 }
 
@@ -60,6 +61,7 @@ export interface RoomPlayer {
   nickname: string;
   score?: number;
   nicknameColor?: string;
+  nicknameEffect?: string;
   admin: boolean;
   host: boolean;
   ready: boolean;

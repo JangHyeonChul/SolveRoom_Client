@@ -98,6 +98,7 @@ export default function Sidebar() {
                 nickname={user.nickname}
                 score={user.score}
                 color={user.nicknameColor}
+                effect={user.nicknameEffect}
                 admin={user.role === "ADMIN"}
                 badgeAfter
                 tierIconOnly

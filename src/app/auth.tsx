@@ -9,6 +9,8 @@ export interface AuthUser {
   score: number; // 누적 포인트. 랭킹·칭호에 쓰고 줄지 않는다
   availablePoint: number; // 사용 가능 포인트. 치장 아이템을 사면 준다
   nicknameColor?: string;
+  nicknameEffect?: string; // 적용 중인 닉네임 효과
+  ownedNicknameEffects: string[]; // 산 닉네임 효과
   role: UserRole;
   // 모두 풀기로 모두 맞혀 정복한 카드. 목록에 정복 표시를 하고 사이드바에 수를 보인다
   conqueredCardIds: number[];
@@ -36,6 +38,9 @@ const toUser = (me: MyInfoResponse): AuthUser => ({
   // 예전 서버는 포인트를 나누지 않아 누적이 곧 잔액이다
   availablePoint: me.availablePoint ?? me.point,
   nicknameColor: me.nicknameColor ?? undefined,
+  nicknameEffect: me.nicknameEffect ?? undefined,
+  // 프론트가 먼저 배포돼 예전 서버가 응답하면 이 값이 없어 빈 목록으로 둔다
+  ownedNicknameEffects: me.ownedNicknameEffects ?? [],
   role: me.role,
   // 프론트가 먼저 배포돼 예전 서버가 응답하면 이 값이 없어 빈 목록으로 둔다
   conqueredCardIds: me.conqueredCardIds ?? [],

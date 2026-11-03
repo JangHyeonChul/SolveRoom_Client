@@ -648,6 +648,35 @@
   .badge--admin::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .75) 50%, transparent 70%); transform: translateX(-120%); animation: admin-shine 2.4s ease-in-out infinite; }
   .nickname--admin { font-weight: 800; color: #b5179e; background: linear-gradient(90deg, #ff4d6d, #ff9f1c, #ffd60a, #2ec4b6, #4361ee, #b5179e, #ff4d6d); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: admin-flow 4s linear infinite; filter: drop-shadow(0 0 4px rgba(181, 23, 158, .25)); }
 
+  /* 닉네임 효과(치장 아이템). 글자는 항상 읽혀야 하므로 흐려져도 완전히 사라지지 않는다 */
+  .nick-fx { display: inline-block; }
+  .nick-fx i { font-style: normal; animation-delay: calc(var(--i) * .12s); }
+  .nick-fx--sweep { -webkit-mask-image: linear-gradient(90deg, rgba(0,0,0,.15) 0 12%, #000 38% 62%, rgba(0,0,0,.15) 88% 100%); mask-image: linear-gradient(90deg, rgba(0,0,0,.15) 0 12%, #000 38% 62%, rgba(0,0,0,.15) 88% 100%); -webkit-mask-size: 300% 100%; mask-size: 300% 100%; animation: nick-sweep 2.8s linear infinite; }
+  .nick-fx--shine { background: linear-gradient(100deg, currentColor 42%, color-mix(in srgb, currentColor 25%, #fff) 50%, currentColor 58%) 0 0 / 260% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: nick-shine 3s ease-in-out infinite; }
+  .nick-fx--breath { animation: nick-breath 2.4s ease-in-out infinite; }
+  .nick-fx--neon { animation: nick-neon 1.8s ease-in-out infinite alternate; }
+  /* 오로라는 관리자 무지개와 겹치지 않게 초록·청록·파랑만 쓴다 */
+  .nick-fx--aurora { background: linear-gradient(90deg, #2f9e44, #12a594, #2f6fa3, #6a5acd, #2f6fa3, #12a594, #2f9e44) 0 0 / 300% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: nick-flow 5s linear infinite; }
+  .nick-fx--gold { background: linear-gradient(90deg, #8a6200, #d29a00, #f5cf4e, #d29a00, #8a6200) 0 0 / 300% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: nick-flow 3.6s linear infinite; }
+  .nick-fx--wave i, .nick-fx--bounce i { display: inline-block; white-space: pre; }
+  .nick-fx--wave i { animation-name: nick-wave; animation-duration: 1.6s; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+  .nick-fx--bounce i { animation-name: nick-bounce; animation-duration: 2.4s; animation-timing-function: cubic-bezier(.3, 1.6, .5, 1); animation-iteration-count: infinite; }
+  .nick-fx--type i { animation-name: nick-type; animation-duration: 3.2s; animation-timing-function: linear; animation-iteration-count: infinite; }
+  .nick-fx--glitch { animation: nick-glitch 3.4s steps(1) infinite; }
+
+  /* 마이페이지 닉네임 꾸미기 */
+  .nick-deco__preview { display: flex; align-items: center; gap: 8px; min-height: 56px; padding: 0 16px; border-radius: 8px; background: var(--bg-soft); font-size: 17px; }
+  .nick-deco__grow { flex: 1; min-width: 0; }
+  .nick-deco__grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+  .nick-deco__opt { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; padding: 16px 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); color: var(--ink); font: inherit; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; }
+  .nick-deco__opt:hover { border-color: var(--line-strong); }
+  .nick-deco__opt.is-on { border-color: var(--green); background: var(--green-soft); }
+  .nick-deco__opt > b { max-width: 100%; overflow: hidden; white-space: nowrap; }
+  .nick-deco__name { color: var(--ink-sub); font-size: 12px; font-weight: 600; }
+  .nick-deco__opt.is-on .nick-deco__name { color: var(--green-deep); }
+  /* 목록은 고른 효과와 마우스를 올린 효과만 움직인다 */
+  .nick-deco__opt:not(:hover):not(:focus-visible):not(.is-on) .nick-fx, .nick-deco__opt:not(:hover):not(:focus-visible):not(.is-on) .nick-fx i { animation: none; -webkit-mask-image: none; mask-image: none; }
+
   /* 멀티플레이 공통: 아바타·상태 배지·채팅 */
   .btn--lg { height: 48px; padding: 0 24px; font-size: 15px; border-radius: 10px; }
   .btn--ready { border: 1px solid var(--green-line); background: var(--green-soft); color: var(--green-deep); }
@@ -1060,6 +1089,15 @@
 @keyframes shake { 0%, 100% { transform: none; } 25% { transform: translateX(-4px); } 50% { transform: translateX(4px); } 75% { transform: translateX(-2px); } }
 @keyframes slot-in { from { opacity: 0; transform: scale(.95); } }
 @keyframes result-in { from { opacity: 0; transform: translateY(6px); } }
+@keyframes nick-sweep { from { -webkit-mask-position: 150% 0; mask-position: 150% 0; } to { -webkit-mask-position: 0% 0; mask-position: 0% 0; } }
+@keyframes nick-shine { 0% { background-position: 120% 0; } 70%, 100% { background-position: -20% 0; } }
+@keyframes nick-breath { 50% { opacity: .4; } }
+@keyframes nick-neon { from { text-shadow: 0 0 1px currentColor; } to { text-shadow: 0 0 3px currentColor, 0 0 10px currentColor, 0 0 18px currentColor; } }
+@keyframes nick-flow { to { background-position: -300% 0; } }
+@keyframes nick-wave { 0%, 60%, 100% { transform: none; } 30% { transform: translateY(-3px); } }
+@keyframes nick-bounce { 0%, 22%, 100% { transform: none; } 10% { transform: translateY(-4px) scale(1.08); } }
+@keyframes nick-type { 0% { opacity: .15; } 6%, 72% { opacity: 1; } 82%, 100% { opacity: .15; } }
+@keyframes nick-glitch { 0%, 88%, 100% { transform: none; text-shadow: none; } 90% { transform: translateX(-1px); text-shadow: 2px 0 #e8590c, -2px 0 #1c7ed6; } 93% { transform: translateX(1px); text-shadow: -2px 0 #e8590c, 2px 0 #1c7ed6; } 96% { transform: none; text-shadow: 1px 0 #e8590c; } }
 @keyframes admin-flow { to { background-position: 300% 0; } }
 @keyframes admin-glow { 50% { box-shadow: 0 0 0 1px rgba(255, 255, 255, .4) inset, 0 0 12px rgba(255, 77, 109, .55); } }
 @keyframes admin-shine { 60%, 100% { transform: translateX(120%); } }
@@ -1186,6 +1224,7 @@
 }
 
 @media (max-width: 640px) {
+  .nick-deco__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tier-materials { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .wrap { padding: 0 16px; }
   .mp-lobby__tools .btn { flex: 1 1 auto; }
@@ -1241,6 +1280,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .nick-fx--sweep { -webkit-mask-image: none; mask-image: none; }
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   .ticker__row.is-out { display: none; }
 }

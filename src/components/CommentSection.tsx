@@ -382,6 +382,7 @@ function CommentItem({
           nickname={comment.nickname}
           score={comment.point ?? undefined}
           color={comment.nicknameColor ?? undefined}
+          effect={comment.nicknameEffect}
           admin={comment.admin}
         />
         <span className="comment__time">{formatRelative(comment.createdAt)}</span>
