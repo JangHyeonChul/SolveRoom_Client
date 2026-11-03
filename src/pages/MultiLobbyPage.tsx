@@ -8,7 +8,6 @@ import BgmBar from "../components/BgmBar";
 import ChatBox from "../components/ChatBox";
 import Icon from "../components/Icon";
 import Modal from "../components/Modal";
-import MultiAvatar from "../components/MultiAvatar";
 import Nickname from "../components/Nickname";
 import OptionSeg from "../components/OptionSeg";
 import { RoomCardList } from "../components/RoomCards";
@@ -177,7 +176,6 @@ export default function MultiLobbyPage() {
             <ul className="mp-users">
               {onlineUsers.map((u) => (
                 <li key={u.key}>
-                  <MultiAvatar name={u.nickname} size="sm" />
                   <span className="mp-users__name">
                     <Nickname nickname={u.nickname} score={u.score} color={u.nicknameColor} admin={u.admin} tierIconOnly />
                   </span>
@@ -213,7 +211,6 @@ export default function MultiLobbyPage() {
             <div className="mp-me">
               {user ? (
                 <>
-                  <MultiAvatar name={user.nickname} size="lg" />
                   <Nickname nickname={user.nickname} score={user.score} color={user.nicknameColor} badgeAfter />
                   <span className="mp-me__sub">
                     누적 {user.score.toLocaleString()}P · 칭호 {getTier(user.score).label}
@@ -221,7 +218,6 @@ export default function MultiLobbyPage() {
                 </>
               ) : (
                 <>
-                  <span className="mp-avatar mp-avatar--lg mp-avatar--guest" aria-hidden="true">?</span>
                   <b>{myNickname}</b>
                   <span className="mp-me__sub">로그인하면 닉네임 옆에 칭호가 보여요</span>
                   {/* 로비를 나가면 연결이 끊기므로 모달로 로그인한다. 로그인하면 useLobby가 회원으로 다시 접속한다 */}

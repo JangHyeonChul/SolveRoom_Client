@@ -7,7 +7,6 @@ import ChatBox from "../components/ChatBox";
 import ConfirmModal from "../components/ConfirmModal";
 import Icon from "../components/Icon";
 import Modal from "../components/Modal";
-import MultiAvatar from "../components/MultiAvatar";
 import Nickname from "../components/Nickname";
 import OptionSeg from "../components/OptionSeg";
 import { CardDeckModal, RoomCardsModal, RoomDeck } from "../components/RoomCards";
@@ -344,7 +343,6 @@ function Seat({ player: p, state, me }: { player: RoomPlayer; state: RoomState; 
 
   return (
     <li className={`mp-seat ${me ? "is-me" : ""} ${state.phase === "play" && p.correct ? "is-correct" : ""}`}>
-      <MultiAvatar name={p.nickname} />
       <span className="mp-seat__name">
         <span className="mp-seat__nick">
           <Nickname nickname={p.nickname} score={p.score} color={p.nicknameColor} admin={p.admin} tierIconOnly />
@@ -378,7 +376,6 @@ function EmptySeats({ count }: { count: number }) {
     <>
       {Array.from({ length: Math.max(0, count) }, (_, i) => (
         <li key={`empty-${i}`} className="mp-seat is-empty">
-          <span className="mp-seat__hole" />
           빈 자리
         </li>
       ))}
@@ -864,7 +861,6 @@ function RevealResult({ state, now }: { state: RoomState; now: number }) {
         <ol className="mp-reveal__who">
           {winners.map((p, i) => (
             <li key={p.key}>
-              <MultiAvatar name={p.nickname} size="sm" />
               {i + 1}. {p.team && <span className={`mp-reveal__team is-${p.team}`}>{TEAM_LABELS[p.team]}</span>} {p.nickname} <b>+{p.gain}</b>
             </li>
           ))}
