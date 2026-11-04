@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { fetchQuizCards, fetchTodayCards, type PageCursor, type QuizCardSort } from "../api/quizCards";
 import { useAuth } from "../app/auth";
@@ -46,7 +46,10 @@ export default function HomePage() {
   const [nextCursor, setNextCursor] = useState<PageCursor | null>(null);
   const [status, setStatus] = useState<"loading" | "error" | "done">("loading");
   const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreFailed, setLoadMoreFailed] = useState(false);
   const [retry, setRetry] = useState(0);
+  const moreRef = useRef<HTMLDivElement>(null);
+  const loadMoreAbort = useRef<AbortController | null>(null);
 
   // 인기순(검색 아님)이면 오늘 많이 풀린 카드를 목록 앞에 Today로 놓는다. 카테고리를 고르면 그 카테고리 안에서 고른다
   const withToday = !q && sort === "popular";
@@ -58,6 +61,8 @@ export default function HomePage() {
     if (!ready) return;
     const controller = new AbortController();
     setStatus("loading");
+    setLoadingMore(false);
+    setLoadMoreFailed(false);
     const today = withToday
       ? fetchTodayCards(category || undefined, controller.signal).catch((e) => {
           if (!controller.signal.aborted) console.error(e);
@@ -77,26 +82,59 @@ export default function HomePage() {
           setStatus("error");
         }
       });
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      // 조건이 바뀌면 불러오던 다음 페이지도 버린다. 이전 조건의 카드가 새 목록에 붙지 않게 한다
+      loadMoreAbort.current?.abort();
+    };
   }, [category, q, sort, withToday, retry, ready, isAdmin]);
 
-  // Today 카드는 인기순 목록에도 들어 있으므로 목록 쪽에서 뺀다 (더 보기로 붙는 페이지도)
+  // Today 카드는 인기순 목록에도 들어 있으므로 목록 쪽에서 뺀다 (이어서 붙는 페이지도)
   const todayIds = new Set(todayCards.map((c) => c.id));
   const shown = [...todayCards, ...cards.filter((c) => !todayIds.has(c.id))];
 
-  const loadMore = async () => {
-    if (!nextCursor || loadingMore) return;
+  const loadMore = useCallback(async () => {
+    if (!nextCursor) return;
+    const controller = new AbortController();
+    loadMoreAbort.current = controller;
     setLoadingMore(true);
+    setLoadMoreFailed(false);
     try {
-      const page = await fetchQuizCards({ category: category || undefined, q, sort, cursor: nextCursor });
+      const page = await fetchQuizCards({
+        category: category || undefined,
+        q,
+        sort,
+        cursor: nextCursor,
+        signal: controller.signal,
+      });
       setCards((prev) => [...prev, ...page.cards]);
       setNextCursor(page.nextCursor);
     } catch (e) {
+      if (controller.signal.aborted) return;
       console.error(e);
+      setLoadMoreFailed(true);
     } finally {
-      setLoadingMore(false);
+      if (!controller.signal.aborted) setLoadingMore(false);
     }
-  };
+  }, [category, q, sort, nextCursor]);
+
+  // 목록 끝이 화면에 가까워지면 다음 페이지를 읽는다. 다 읽은 뒤에도 끝이 보이면(큰 화면) 관찰을 다시 걸어 이어서 읽는다.
+  // 실패하면 자동으로 다시 읽지 않고 버튼을 보여 준다. 그러지 않으면 실패할 때마다 요청을 반복한다
+  useEffect(() => {
+    const target = moreRef.current;
+    if (!target || status !== "done" || !nextCursor || loadingMore || loadMoreFailed) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          observer.disconnect();
+          void loadMore();
+        }
+      },
+      { rootMargin: "400px 0px" },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [status, nextCursor, loadingMore, loadMoreFailed, loadMore]);
 
   const setParam = (name: string, value: string) => {
     const next = new URLSearchParams(params);
@@ -175,10 +213,14 @@ export default function HomePage() {
               ))}
             </div>
             {nextCursor && (
-              <div className="more">
-                <button type="button" className="btn btn--outline" onClick={loadMore} disabled={loadingMore}>
-                  {loadingMore ? "불러오는 중..." : "더 보기"}
-                </button>
+              <div className="more" ref={moreRef} aria-live="polite">
+                {loadMoreFailed ? (
+                  <button type="button" className="btn btn--outline" onClick={loadMore}>
+                    다시 시도
+                  </button>
+                ) : (
+                  loadingMore && <span>불러오는 중...</span>
+                )}
               </div>
             )}
           </>
