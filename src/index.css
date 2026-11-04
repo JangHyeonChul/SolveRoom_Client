@@ -162,11 +162,10 @@
   /* 넓은 화면에서 한 줄 5개. 카드 폭이 180px보다 좁아지면 아래 미디어 쿼리에서 4개·3개·2개로 줄인다 */
   .cards { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
   .more { display: flex; justify-content: center; }
-  /* Today 배지가 카드 모서리 밖으로 튀어나오므로 카드는 넘침을 자르지 않고, 표지가 위쪽 둥근 모서리를 자른다 */
+  /* 카드는 넘침을 자르지 않고(포커스 링·그림자), 표지가 위쪽 둥근 모서리와 확대된 그림을 자른다 */
   .card { position: relative; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 10px; background: var(--white); color: var(--ink); text-decoration: none; transition: border-color .2s, box-shadow .2s; }
   a.card:hover { color: var(--ink); border-color: var(--line-strong); box-shadow: 0 4px 16px rgba(0, 0, 0, .06); }
   .card--conquered { border-color: #ead49c; }
-  .card--today { border-color: #f3c3a5; }
   /* 관리자 목록에만 오는 비공개 카드. 정복 테두리보다 우선하고 hover에도 유지한다 */
   a.card--private, a.card--private:hover { border-color: #9aa1ab; }
   .card__cover { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 9px 9px 0 0; }
@@ -192,10 +191,9 @@
   .card__type--sound { background: var(--blue); }
   .card__type--text { background: var(--purple); }
 
-  /* 오늘 많이 풀린 카드 배지 (시안 Today D). 카드 왼쪽 위 모서리 밖으로 비스듬히 튀어나온다 */
-  .today-tag { position: absolute; top: -10px; left: -8px; z-index: 2; display: inline-flex; align-items: center; gap: 3px; padding: 3px 11px; border: 2px solid var(--white); border-radius: 8px; background: #d9480f; color: var(--white); font-size: 13px; font-weight: 800; letter-spacing: .02em; transform: rotate(-12deg); box-shadow: 0 4px 10px rgba(217, 72, 15, .35); transition: transform .4s var(--ease); }
-  a.card:hover .today-tag { transform: rotate(-12deg) scale(1.06); }
-  .today-tag__flame { flex: none; margin-right: -2px; }
+  /* 오늘 많이 풀린 카드 배지 (시안 작은 Today F). 표지 왼쪽 위 모서리에 붙은 탭이고, 표지가 바깥 모서리를 둥글게 자른다 */
+  .today-tag { position: absolute; top: 0; left: 0; z-index: 1; display: inline-flex; align-items: center; gap: 3px; height: 22px; padding: 0 9px 0 10px; border-radius: 0 0 8px 0; background: #d9480f; color: var(--white); font-size: 11px; font-weight: 800; letter-spacing: .02em; }
+  .today-tag__flame { flex: none; }
   .today-tag__flame-out { fill: var(--white); }
   .today-tag__flame-in { fill: #ffd43b; }
 

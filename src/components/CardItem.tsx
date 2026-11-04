@@ -65,17 +65,16 @@ export default function CardItem({ card, conquered, index = 0 }: Props) {
   return (
     <Link
       to={isPrivate ? `/cards/${card.id}/questions` : `/cards/${card.id}`}
-      className={`card pop-in ${conquered ? "card--conquered" : ""} ${isPrivate ? "card--private" : ""} ${isToday ? "card--today" : ""}`}
+      className={`card pop-in ${conquered ? "card--conquered" : ""} ${isPrivate ? "card--private" : ""}`}
       style={{ "--delay": `${Math.min(index * 55, 450)}ms` } as CSSProperties}
     >
-      {/* 표지 밖으로 비스듬히 튀어나오게 표지가 아닌 카드에 붙인다 */}
-      {isToday && (
-        <span className="today-tag" title={`오늘 ${card.todayPlayCount?.toLocaleString()}번 풀렸어요`}>
-          Today
-          <Flame />
-        </span>
-      )}
       <CardCover id={card.id} title={card.title} thumbnailUrl={card.thumbnailUrl} className="card__cover" zoom>
+        {isToday && (
+          <span className="today-tag" title={`오늘 ${card.todayPlayCount?.toLocaleString()}번 풀렸어요`}>
+            Today
+            <Flame />
+          </span>
+        )}
         {/* Today 배지가 왼쪽 위를 쓰므로 정복 표시는 오른쪽 위로 옮긴다 (Today는 공개 카드만이라 비공개 표시와 안 겹친다) */}
         {conquered && (
           <span className={`badge badge--gold card__tag ${isToday ? "card__tag--right" : ""}`}>정복 완료</span>
