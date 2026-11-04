@@ -2,14 +2,14 @@ import { Link } from "react-router-dom";
 
 const CONTACT_EMAIL = "wkdgus1139@gmail.com";
 
-// 개인정보처리방침. 실제로 모으는 정보(구글 로그인, 비회원 닉네임·비밀번호, 접속 IP, 광고 쿠키)와 맞춰 둔다
+// 개인정보처리방침. 실제로 모으는 정보(구글 로그인, 비회원 닉네임·비밀번호, 접속 IP, 광고·통계 쿠키)와 맞춰 둔다
 export default function PrivacyPage() {
   return (
     <main className="wrap page page--narrow">
       <article className="terms reveal">
         <div className="page-head">
           <h1 className="display">개인정보처리방침</h1>
-          <p>시행일 2026년 10월 27일</p>
+          <p>시행일 2026년 11월 4일</p>
         </div>
 
         <p>
@@ -34,7 +34,7 @@ export default function PrivacyPage() {
               <b>서비스를 이용하며 생기는 정보</b>: 문제 풀이 기록, 포인트, 좋아요, 댓글, 올린 문제 카드와 이미지
             </li>
             <li>
-              <b>자동으로 수집되는 정보</b>: 접속 IP 주소, 접속 일시, 브라우저 정보, 로그인 유지 쿠키, 광고 쿠키(5항 참고)
+              <b>자동으로 수집되는 정보</b>: 접속 IP 주소, 접속 일시, 브라우저 정보, 로그인 유지 쿠키, 광고·통계 쿠키(5항 참고)
             </li>
           </ul>
         </section>
@@ -45,7 +45,7 @@ export default function PrivacyPage() {
             <li>회원 식별, 로그인과 로그인 유지</li>
             <li>문제 카드 만들기·풀기, 랭킹, 포인트, 댓글, 멀티플레이 등 서비스 제공</li>
             <li>부정 이용 방지: 반복 요청 제한, 비밀번호 대입 차단, 같은 사람의 중복 신고 방지</li>
-            <li>문의와 신고 처리, 광고 게재</li>
+            <li>문의와 신고 처리, 광고 게재, 이용 통계 분석</li>
           </ul>
         </section>
 
@@ -77,8 +77,8 @@ export default function PrivacyPage() {
               이용할 때 네트워크로 전송됩니다. 보유 기간은 3항과 같습니다.
             </li>
             <li>
-              <b>Google LLC</b>: Google 계정 로그인 인증, 광고 게재(Google 애드센스). 이전 국가는 미국 등이며, 로그인하거나
-              광고가 표시될 때 네트워크로 전송됩니다.
+              <b>Google LLC</b>: Google 계정 로그인 인증, 광고 게재(Google 애드센스), 이용 통계 분석(Google 애널리틱스). 이전
+              국가는 미국 등이며, 로그인하거나 서비스 화면을 보거나 광고가 표시될 때 네트워크로 전송됩니다.
             </li>
           </ul>
           <p>국외 이전을 원하지 않으면 서비스 이용을 멈추거나 7항의 연락처로 회원 정보 삭제를 요청할 수 있습니다.</p>
@@ -104,6 +104,14 @@ export default function PrivacyPage() {
                 Google 광고 정책
               </a>
               에서 볼 수 있습니다.
+            </li>
+            <li>
+              서비스는 이용 현황을 파악하려고 Google 애널리틱스를 씁니다. Google은 쿠키로 방문한 페이지, 접속 기기, 대략적인
+              위치 같은 정보를 모으며,{" "}
+              <a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noreferrer">
+                Google 애널리틱스 차단 부가기능
+              </a>
+              으로 수집을 막을 수 있습니다.
             </li>
             <li>브라우저 설정에서 쿠키를 막을 수 있습니다. 다만 쿠키를 막으면 로그인이 유지되지 않습니다.</li>
           </ul>

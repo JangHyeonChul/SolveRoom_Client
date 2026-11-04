@@ -9,6 +9,7 @@ import Icon from "../components/Icon";
 import ImageCropModal from "../components/ImageCropModal";
 import { useToast } from "../components/Toast";
 import { useManagedData } from "../components/useManagedData";
+import { trackEvent } from "../utils/analytics";
 import { CATEGORIES, THUMBNAIL_ASPECT, type Category, type ManagedCard } from "../types/card";
 
 const MAX_THUMB_MB = 5;
@@ -138,6 +139,7 @@ function CardForm({ card, gate, onError }: FormProps) {
       const createdId = await createQuizCard(
         asGuest ? { ...input, guest: { nickname: nickname.trim(), password } } : input,
       );
+      trackEvent("card_create", { card_id: createdId });
       // 문제 관리 화면이 관리 주소 안내를 한 번 띄운다
       navigate(`/cards/${createdId}/questions`, { state: { created: true } });
     } catch (err) {

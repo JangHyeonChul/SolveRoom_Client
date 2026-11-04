@@ -17,6 +17,7 @@ import type { PlayLocationState } from "../types/play";
 import { formatCount } from "../utils/format";
 import { usePageMeta } from "../utils/pageMeta";
 import NotFoundPage from "./NotFoundPage";
+import { trackEvent } from "../utils/analytics";
 
 const PRESET_COUNTS = [10, 20, 30] as const;
 
@@ -111,6 +112,7 @@ function CardDetailView({ card }: { card: CardDetail }) {
       // 모두 풀기는 개수를 비워 보내 서버가 시작하는 순간의 문제를 모두 낸다
       const playAll = custom === null && count === "all";
       const { sessionId } = await startPlay(card.id, playAll ? null : resolvedCount);
+      trackEvent("quiz_start", { card_id: card.id });
       const state: PlayLocationState = { sessionId, title: card.title };
       navigate(`/cards/${card.id}/play`, { state });
     } catch (e) {

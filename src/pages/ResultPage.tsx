@@ -7,6 +7,7 @@ import Icon from "../components/Icon";
 import RankItem from "../components/RankItem";
 import { useToast } from "../components/Toast";
 import { CORRECT_SCORE, GUEST_PREFIX, type PlayLocationState, type PlayResult, type RankingRow } from "../types/play";
+import { trackEvent } from "../utils/analytics";
 import { copyText } from "../utils/clipboard";
 
 // Q-05 결과·랭킹. 다 푼 풀이를 history state로 받는다
@@ -135,6 +136,7 @@ function ResultView({ initial, sessionId }: { initial: PlayResult; sessionId: st
     setReplayError(null);
     try {
       const { sessionId: nextSessionId } = await startPlay(result.cardId, result.playAll ? null : result.questionCount);
+      trackEvent("quiz_start", { card_id: result.cardId });
       const state: PlayLocationState = { sessionId: nextSessionId, title: result.cardTitle };
       navigate(`/cards/${result.cardId}/play`, { replace: true, state });
     } catch (err) {

@@ -34,6 +34,7 @@ import {
   type RoomQuestion,
   type RoomState,
 } from "../types/multi";
+import { trackEvent } from "../utils/analytics";
 import { duckBgm } from "../utils/bgm";
 import { playCorrectSound } from "../utils/sfx";
 import { copyText } from "../utils/clipboard";
@@ -120,6 +121,14 @@ function RoomView({ no }: { no: number }) {
     if (hostKey === me) addCard(presetCardId);
     setParams({}, { replace: true });
   }, [presetCardId, me, addCard, hostKey, customWaiting, setParams]);
+
+  // 재접속해도 joined가 다시 오므로 방에 처음 들어왔을 때만 센다
+  const joinTracked = useRef(false);
+  useEffect(() => {
+    if (!me || joinTracked.current) return;
+    joinTracked.current = true;
+    trackEvent("multi_join");
+  }, [me]);
 
   // 이번 문제를 내가 맞힌 순간 정답 효과음을 한 번 튼다 (같은 문제에서 다시 그려도 또 틀지 않는다)
   const myCorrectRound =
