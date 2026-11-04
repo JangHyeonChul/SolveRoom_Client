@@ -75,8 +75,9 @@ export interface RoomPlayer {
 }
 
 // 지금 문제. 정답은 오지 않고 초성 칸 수(answerLength)와 시간이 절반 지난 뒤의 초성 힌트(hint)만 온다.
-// 부가 설명(description)과 소리(sound, 유튜브 구간)는 처음부터, 제작자 힌트(authorHint)는 초성 힌트와 같이 온다
+// 카드 이름(cardTitle)·부가 설명(description)·소리(sound, 유튜브 구간)는 처음부터, 제작자 힌트(authorHint)는 초성 힌트와 같이 온다
 export interface RoomQuestion {
+  cardTitle?: string;
   prompt?: string;
   description?: string;
   imageUrls: string[];

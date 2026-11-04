@@ -832,6 +832,10 @@
   .mp-room__main { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
   .mp-stage { min-height: clamp(320px, 46vh, 480px); display: flex; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-soft); overflow: hidden; }
   .mp-stage > * { flex: 1; }
+  /* 문제 카드 이름. 문제 위에 겹치지 않게 내용을 그만큼 아래로 내린다 */
+  .mp-stage { position: relative; }
+  .mp-room-page .mp-stage > .mp-stage__card { position: absolute; top: 10px; left: 12px; z-index: 3; flex: none; max-width: calc(100% - 24px); overflow: hidden; padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--white); color: var(--ink-sub); font-size: 13px; font-weight: 700; line-height: 1.4; white-space: nowrap; text-overflow: ellipsis; }
+  .mp-room-page .mp-stage.has-card > :not(.mp-stage__card) { padding-top: 44px; }
   .mp-question { margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 28px; }
   /* 평소엔 프레임·메타가 없는 것처럼(contents) 둬 아래 규칙이 그대로 먹는다. 좁은 화면에선 프레임이 flex 높이를 갖고, 메타(설명·힌트)가 스크롤 칸이 된다(@media 1100) */
   .mp-question__frame { display: contents; }
@@ -1214,6 +1218,7 @@
   .mp-room-page.is-playing .mp-question__img { flex: none; min-height: 0; width: auto; height: auto; max-width: min(100%, 640px); max-height: 100%; aspect-ratio: auto; }
   .mp-room-page.is-playing .mp-question--image .mp-question__meta { flex: 1 1 0; min-height: 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 6px; overflow-y: auto; margin-top: 2px; padding-top: 8px; border-top: 1px solid var(--line); }
   .mp-room-page.is-playing .mp-chat--room { flex: none; height: 200px; }
+  .mp-room-page.is-playing .mp-stage > .mp-stage__card { overflow: hidden; }
 }
 
 /* 결과 화면은 두 칸이 위아래로 접히면 내 점수·랭킹 등록을 먼저 보여 준다 */

@@ -187,6 +187,8 @@ function RoomView({ no }: { no: number }) {
   const answering = state.phase === "play" && !!mine && !done;
   const placeholder = chatPlaceholder(state, mine, teamDone);
 
+  const cardTitle = state.phase === "play" || state.phase === "reveal" ? state.question?.cardTitle : undefined;
+
   return (
     <main ref={pageRef} className={`wrap page page--wide mp-room-page ${inGame ? "is-playing" : ""}`}>
       <header className="mp-room__head">
@@ -217,7 +219,13 @@ function RoomView({ no }: { no: number }) {
 
       <div className="mp-room__body">
         <div className="mp-room__main">
-          <div className="mp-stage">
+          <div className={`mp-stage ${cardTitle ? "has-card" : ""}`}>
+            {/* 카테고리 문제를 섞어 내므로 어떤 카드의 문제인지 문제 중과 정답 공개 때 보여 준다 */}
+            {cardTitle && (
+              <span className="mp-stage__card" title={cardTitle}>
+                {cardTitle}
+              </span>
+            )}
             <Stage
               state={state}
               now={now}
