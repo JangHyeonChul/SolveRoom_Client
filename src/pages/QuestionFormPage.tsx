@@ -84,6 +84,9 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
   const [images, setImages] = useState<ImageItem[]>(
     () => original?.images.map((image) => ({ id: image.key, url: image.url, key: image.key })) ?? [],
   );
+  const [answerImage, setAnswerImage] = useState<ImageItem | null>(() =>
+    original?.answerImage ? { id: original.answerImage.key, url: original.answerImage.url, key: original.answerImage.key } : null,
+  );
   const [sound, setSound] = useState<SoundClip | null>(() =>
     original?.sound ?? null,
   );
@@ -129,6 +132,19 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
     clearError("images");
   };
 
+  const pickAnswerImage = async (files: FileList | null) => {
+    const file = files && [...files].find((f) => QUESTION_IMAGE_TYPES.includes(f.type));
+    if (!file) return;
+    const problem = file.type === "image/gif" ? await checkGif(file) : null;
+    if (problem) {
+      toast(problem);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    created.current.add(url);
+    setAnswerImage({ id: url, url, file });
+  };
+
   const changeSound = (next: SoundClip | null) => {
     setSound(next);
     if (next) clearError("sound");
@@ -169,6 +185,7 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
 
   const resetForm = () => {
     setImages([]);
+    setAnswerImage(null);
     setSound(null);
     setPrompt("");
     setText("");
@@ -204,6 +221,11 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
         ? await Promise.all(images.map((image) => ("key" in image ? image.key : uploadImage(image.file, "QUESTION"))))
         : [];
       if (withImages) setImages(images.map((image, i) => ({ id: image.id, url: image.url, key: imageKeys[i] })));
+      let answerImageKey: string | null = null;
+      if (type !== "sound" && answerImage) {
+        answerImageKey = "key" in answerImage ? answerImage.key : await uploadImage(answerImage.file, "QUESTION");
+        setAnswerImage({ id: answerImage.id, url: answerImage.url, key: answerImageKey });
+      }
 
       const input = {
         type,
@@ -218,6 +240,7 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
         aliases,
         options: options.map((o) => o.trim()),
         correctIndex: correct,
+        answerImageKey,
       };
       if (original) await updateQuestion(card.id, original.id, input);
       else await createQuestion(card.id, input);
@@ -248,6 +271,42 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
   const fieldRef = (key: FieldKey) => (el: HTMLElement | null) => {
     fieldRefs.current[key] = el;
   };
+
+  // 정답 이미지 칸. 이미지형은 문제 이미지 아래, 텍스트형은 문제 내용 아래에 둔다 (소리형은 영상을 대신 보여 주므로 없다)
+  const answerImageField = (
+    <div className="field swap-in">
+      <div className="field__row">
+        <span className="label">
+          정답 이미지 <small>선택</small>
+        </span>
+      </div>
+      <div className="slots">
+        {answerImage ? (
+          <div className="slot">
+            <img src={answerImage.url} alt="정답 이미지" />
+            <span className="slot__no slot__no--cover">정답</span>
+            <button type="button" className="slot__del" aria-label="정답 이미지 지우기" onClick={() => setAnswerImage(null)}>
+              <Icon name="close" size={14} strokeWidth={3} />
+            </button>
+          </div>
+        ) : (
+          <DropLabel className="slot slot--add" onFiles={pickAnswerImage}>
+            <input
+              type="file"
+              accept={QUESTION_IMAGE_ACCEPT}
+              onChange={(e) => {
+                pickAnswerImage(e.target.files);
+                e.target.value = "";
+              }}
+            />
+            <Icon name="plus" size={26} strokeWidth={2.6} />
+            정답 이미지 추가
+          </DropLabel>
+        )}
+      </div>
+      <p className="hint">답을 낸 뒤 문제 칸에 크게 보여요. 없으면 문제 칸을 그대로 둬요.</p>
+    </div>
+  );
 
   return (
     <main className="wrap page page--wide">
@@ -370,6 +429,7 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
                     <Link to="/terms">이용약관</Link>
                   </p>
                 </div>
+                {type === "image" && answerImageField}
                 <div className="field">
                   <div className="field__row">
                     <label className="label" htmlFor="q-prompt">
@@ -388,6 +448,8 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
                 </div>
               </>
             )}
+
+            {type === "text" && answerImageField}
 
             <div className="field">
               <div className="field__row">
@@ -573,6 +635,7 @@ function QuestionForm({ card, original, order: initialOrder, gate, onError }: Fo
             text={text}
             description={description}
             hint={hint}
+            answerImage={type === "sound" ? null : (answerImage?.url ?? null)}
             answer={answer}
             aliases={aliases}
             options={options}
@@ -635,6 +698,7 @@ interface PreviewProps {
   text: string;
   description: string;
   hint: string;
+  answerImage: string | null;
   answer: string;
   aliases: string[];
   options: string[];
@@ -645,7 +709,7 @@ const normalize = (s: string) => s.replace(/\s+/g, "").toLowerCase();
 
 // 실제 풀이 화면 모양의 미리보기. 직접 답을 넣어 채점해 볼 수 있다
 function PlayPreview(props: PreviewProps) {
-  const { cardTitle, type, mode, images, sound, prompt, text, description, hint, answer, aliases, options, correct } = props;
+  const { cardTitle, type, mode, images, sound, prompt, text, description, hint, answerImage, answer, aliases, options, correct } = props;
   const [imgIdx, setImgIdx] = useState(0);
   const [hintOpen, setHintOpen] = useState(false);
   const [guess, setGuess] = useState("");
@@ -673,7 +737,12 @@ function PlayPreview(props: PreviewProps) {
         <span className={`badge ${TYPE_BADGE[type]}`}>{QUESTION_TYPE_LABEL[type]}</span>
       </div>
 
-      {type === "sound" ? (
+      {result !== null && answerImage ? (
+        <div key="answer" className="stage">
+          <span className="stage__badge">정답 사진</span>
+          <img src={answerImage} alt="정답 이미지" />
+        </div>
+      ) : type === "sound" ? (
         sound ? (
           <SoundStage
             key="sound"

@@ -37,6 +37,7 @@ export interface Question {
   prompt: string; // 질문 문구. 텍스트형은 본문(text)이 문제라 비어 있다
   images: QuestionImage[]; // 이미지형(1장 이상), 소리형(없어도 된다)
   sound: SoundClip | null; // 소리형
+  answerImage: QuestionImage | null; // 정답 이미지(선택). 이미지형·텍스트형만 쓴다
   text?: string; // 텍스트형 본문
   description: string; // 부가 설명. 풀 때 질문 문구와 함께 보인다 (없으면 빈 값)
   hint: string; // 힌트. 혼자 풀기는 힌트 버튼을 눌러야, 멀티는 시간이 절반 지나야 보인다 (없으면 빈 값)

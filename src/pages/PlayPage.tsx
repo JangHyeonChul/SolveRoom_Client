@@ -190,10 +190,16 @@ function PlayView({ cardId, sessionId, title }: { cardId: number } & PlayLocatio
             clip={question.sound!}
             autoPlay
             loop={!feedback}
+            showVideo={!!feedback}
             images={question.imageUrls}
             imageIndex={imageIndex}
             onImageChange={setImageIndex}
           />
+        ) : feedback?.answerImageUrl ? (
+          <div className="stage stage--play">
+            <span className="stage__badge">정답 사진</span>
+            <img src={feedback.answerImageUrl} alt={`정답 사진: ${feedback.answer ?? ""}`} />
+          </div>
         ) : isImage ? (
           <div className="stage stage--play">
             <ImageSlides images={question.imageUrls} index={imageIndex} onChange={setImageIndex} />
@@ -206,6 +212,8 @@ function PlayView({ cardId, sessionId, title }: { cardId: number } & PlayLocatio
 
         <section className="play-side panel" aria-label="답하기">
           {prompt && <p className="play__prompt">{prompt}</p>}
+          {/* 텍스트형 문제 칸이 정답 사진으로 바뀌어도 문제 글은 읽을 수 있게 남긴다 */}
+          {!prompt && feedback?.answerImageUrl && <p className="play__prompt">{question.text}</p>}
           {question.description && <p className="play__desc">{question.description}</p>}
           {question.hint ? (
             <p className="play__hint">

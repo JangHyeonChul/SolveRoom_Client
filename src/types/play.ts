@@ -15,11 +15,12 @@ export interface PlayQuestion {
   choices: string[]; // 객관식 보기
 }
 
-// 답을 낸 결과. 정답은 맞혔을 때만 온다 (기획: 오답이면 정답을 보여 주지 않는다)
+// 답을 낸 결과. 맞히든 틀리든(건너뛰기 포함) 정답과 정답 이미지가 온다
 export interface AnswerResult {
   correct: boolean;
   answer: string | null;
   finished: boolean; // 마지막 문제였으면 true
+  answerImageUrl: string | null; // 제작자가 올린 정답 이미지. 없으면 문제 칸을 그대로 둔다
 }
 
 export interface RankingRow {

@@ -1044,7 +1044,16 @@
   @media (max-width: 480px) { .sound-bar__volume-range { display: none; } }
   /* 소리형의 유튜브 플레이어. 영상은 보이지 않게 두되 크기는 남긴다(0이면 재생을 막는 브라우저가 있다) */
   .yt-hidden { position: fixed; left: 0; bottom: 0; width: 200px; height: 113px; opacity: 0; pointer-events: none; z-index: -1; }
-  .yt-hidden iframe, .yt-host iframe { width: 100%; height: 100%; border: 0; }
+  .yt-hidden iframe, .yt-host iframe, .yt-video iframe { width: 100%; height: 100%; border: 0; display: block; }
+  /* 정답 공개: 재생 바를 흐름에 놓아 문제 칸이 영상의 기준이 되게 하고, 영상은 재생 바 위를 채운다 */
+  .yt-video { position: absolute; inset: 0 0 64px; z-index: 1; background: #000; }
+  .stage--sound.is-video { background: #16181c; }
+  .stage--sound.is-video .stage__nav, .stage--sound.is-video .stage__dots { display: none; }
+  .stage--sound.is-video .sound-bar { position: static; align-self: stretch; margin: auto 8px 8px; }
+  .mp-sound.is-reveal.is-video { background: #16181c; width: min(100%, 420px); }
+  .mp-sound.is-video .sound-bar { position: static; align-self: stretch; margin: auto 10px 10px; }
+  .stage__badge { position: absolute; top: 12px; left: 12px; z-index: 2; padding: 3px 10px; border-radius: 999px; background: var(--green-deep); color: var(--white); font-size: 12px; font-weight: 700; }
+  .mp-reveal__img--answer { width: min(100%, 420px); }
   .yt-host { position: relative; width: 100%; height: 100%; }
   .yt-host iframe { position: absolute; inset: 0; }
   /* 소리형 구간 편집 (M-03, 시안 D: 확대 타임라인) */

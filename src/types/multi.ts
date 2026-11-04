@@ -85,6 +85,7 @@ export interface RoomQuestion {
   answerLength: number;
   hint?: string;
   authorHint?: string;
+  answerImageUrl?: string; // 정답 이미지. 정답 공개 때만 온다
 }
 
 // 방 상태 전체. 멀티 서버 RoomStateResponse. 시각(deadlineAt·nextAt·serverNow)은 서버 시계 기준 epoch ms

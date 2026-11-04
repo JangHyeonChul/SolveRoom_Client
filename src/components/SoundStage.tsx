@@ -13,7 +13,7 @@ type Props = ComponentProps<typeof SoundPlayer> & {
 // 소리형 문제 칸 (시안 3). 이미지가 있으면 이미지 위에, 없으면 소리 아이콘 위에 재생 바를 얹는다
 export default function SoundStage({ images, imageIndex, onImageChange, className = "", ...player }: Props) {
   return (
-    <div className={`stage stage--sound ${images.length ? "" : "is-empty"} ${className}`}>
+    <div className={`stage stage--sound ${images.length ? "" : "is-empty"} ${player.showVideo ? "is-video" : ""} ${className}`}>
       {images.length ? (
         <ImageSlides images={images} index={imageIndex} onChange={onImageChange} />
       ) : (

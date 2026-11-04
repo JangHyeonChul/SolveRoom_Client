@@ -18,6 +18,7 @@ interface Props {
   autoPlay?: boolean;
   startAt?: number; // 자동 재생할 때 시작할 곳(구간 안에서 초)
   loop?: boolean; // 구간 끝까지 들으면 잠깐 쉬고 처음부터 다시 들려준다. 답을 내거나 맞히면 false로 바꿔 멈춘다
+  showVideo?: boolean; // 정답을 공개하면 숨겨 둔 영상을 보여 준다. 같은 플레이어라 소리가 끊기지 않는다
   onBlocked?: () => void; // 브라우저가 자동 재생을 막았을 때
   ref?: Ref<SoundPlayerHandle>;
 }
@@ -30,8 +31,8 @@ const LOOP_GAP_MS = 1000;
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // 소리 재생 바. 문제 이미지(또는 소리 아이콘) 위에 얹는다 (시안 3).
-// 소리는 유튜브 영상의 한 구간이고, 영상은 보이지 않게 숨겨 둔다
-export default function SoundPlayer({ clip, seekable = true, autoPlay, startAt = 0, loop = false, onBlocked, ref }: Props) {
+// 소리는 유튜브 영상의 한 구간이고, 영상은 정답을 공개할 때까지 보이지 않게 숨겨 둔다
+export default function SoundPlayer({ clip, seekable = true, autoPlay, startAt = 0, loop = false, showVideo = false, onBlocked, ref }: Props) {
   // 고른 볼륨에 곡마다 음량 보정을 곱해, 영상마다 소리 크기가 들쭉날쭉하지 않게 한다
   const volume = useVolume();
   const yt = useYouTubePlayer(clip.videoId, {
@@ -148,8 +149,8 @@ export default function SoundPlayer({ clip, seekable = true, autoPlay, startAt =
         </button>
       )}
       <VolumeControl volume={volume} />
-      {/* 영상은 보이지 않게 두고 소리만 쓴다. 크기가 0이면 재생을 막는 브라우저가 있어 크기는 남겨 둔다 */}
-      <div ref={yt.hostRef} className="yt-hidden" aria-hidden="true" />
+      {/* 정답 전에는 영상을 숨기고 소리만 쓴다. 크기가 0이면 재생을 막는 브라우저가 있어 크기는 남겨 둔다 */}
+      <div ref={yt.hostRef} className={showVideo ? "yt-video" : "yt-hidden"} aria-hidden={!showVideo} />
     </div>
   );
 }

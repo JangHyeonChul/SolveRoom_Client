@@ -15,6 +15,7 @@ interface QuestionManageResponse {
   aliases: string[];
   choices: string[];
   correctChoiceIndex: number | null;
+  answerImage: QuestionImage | null;
 }
 
 // 서버 QuestionDeleteResponse. 공개 카드가 10개 이하로 내려가 비공개로 바뀌면 unpublished가 true다
@@ -38,6 +39,7 @@ export interface QuestionInput {
   aliases: string[];
   options: string[];
   correctIndex: number;
+  answerImageKey: string | null; // 정답 이미지(선택)
 }
 
 const questionsUrl = (cardId: number) => `/api/main/quiz-cards/${cardId}/questions`;
@@ -56,6 +58,7 @@ const questionBody = (input: QuestionInput) => ({
   aliases: input.mode === "short" ? input.aliases : [],
   choices: input.mode === "choice" ? input.options : [],
   correctChoiceIndex: input.mode === "choice" ? input.correctIndex : null,
+  answerImageKey: input.type === "sound" ? null : input.answerImageKey,
 });
 
 const toQuestion = (cardId: number, q: QuestionManageResponse): Question => ({
@@ -69,6 +72,7 @@ const toQuestion = (cardId: number, q: QuestionManageResponse): Question => ({
   hint: q.hint ?? "",
   images: q.images,
   sound: q.sound,
+  answerImage: q.answerImage,
   answer: q.answer,
   aliases: q.aliases,
   options: q.choices,

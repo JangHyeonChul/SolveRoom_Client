@@ -39,7 +39,6 @@ import { duckBgm } from "../utils/bgm";
 import { playCorrectSound } from "../utils/sfx";
 import { copyText } from "../utils/clipboard";
 import { chosung } from "../utils/cover";
-import { youTubeThumbnail } from "../utils/youtube";
 
 // 남은 시간 표시를 갱신하는 간격. 1초보다 짧게 잡아 초가 바뀌는 순간과 크게 어긋나지 않게 한다
 const TICK_MS = 250;
@@ -827,7 +826,11 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
   if (state.phase === "reveal") {
     return (
       <div className="mp-reveal swap-in">
-        {image && <img src={image} alt="" className="mp-reveal__img" />}
+        {question?.answerImageUrl ? (
+          <img src={question.answerImageUrl} alt="정답 사진" className="mp-reveal__img mp-reveal__img--answer" />
+        ) : (
+          image && <img src={image} alt="" className="mp-reveal__img" />
+        )}
         <RevealResult state={state} now={now} />
       </div>
     );
@@ -895,7 +898,7 @@ function RevealResult({ state, now }: { state: RoomState; now: number }) {
 // 소리 문제 (시안 멀티 1·2·3). 카운트다운 동안 유튜브 플레이어를 미리 띄워 두고, 재생 시각(playAt)이 되면 모두 같이 재생한다.
 // 되감기·건너뛰기는 막고, 맞히거나 시간이 끝날 때까지 구간을 반복한다.
 // 브라우저가 자동 재생을 막으면 "소리 켜기"를 누른 순간 다른 사람이 듣는 곳부터 이어 듣는다.
-// 정답 공개(reveal)도 이 화면에서 질문 문구 자리에 정답을 띄우고, 플레이어는 다음 문제까지 계속 반복한다
+// 정답 공개(reveal)도 이 화면에서 질문 문구 자리에 정답을 띄우고, 숨겨 둔 영상을 보여 주며 다음 문제까지 계속 반복한다
 function SoundQuestion({
   question,
   playAt,
@@ -934,21 +937,18 @@ function SoundQuestion({
       .catch(() => undefined);
   };
 
-  // 이미지가 없는 소리 문제는 정답과 함께 영상 썸네일을 보여 준다
-  const shown = image ?? (reveal ? youTubeThumbnail(question.sound!.videoId) : undefined);
-
   return (
     <figure className="mp-question swap-in">
-      <div className={`mp-sound ${shown ? "" : "is-empty"} ${reveal ? "is-reveal" : ""}`}>
-        {shown ? (
-          <img src={shown} alt={reveal ? "" : "문제 이미지"} />
+      <div className={`mp-sound ${image ? "" : "is-empty"} ${reveal ? "is-reveal is-video" : ""}`}>
+        {reveal ? null : image ? (
+          <img src={image} alt="문제 이미지" />
         ) : (
           <span className="mp-sound__icon" aria-hidden="true">
             <Icon name="speaker" size={48} strokeWidth={1.8} />
           </span>
         )}
         {/* 카운트다운 동안에도 그려 두어 유튜브 플레이어를 미리 띄운다 */}
-        <SoundPlayer ref={playerRef} clip={question.sound!} seekable={false} loop={!solved || !!reveal} />
+        <SoundPlayer ref={playerRef} clip={question.sound!} seekable={false} loop={!solved || !!reveal} showVideo={!!reveal} />
         {counting && (
           <div className="mp-sound__count" role="status">
             <b>{Math.ceil((playAt - now) / 1000)}</b>
