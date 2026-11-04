@@ -14,6 +14,7 @@ import LoginPage from "../pages/LoginPage";
 import LoginCallbackPage from "../pages/LoginCallbackPage";
 import SignupPage from "../pages/SignupPage";
 import MyPage from "../pages/MyPage";
+import RankingPage from "../pages/RankingPage";
 import TermsPage from "../pages/TermsPage";
 import PrivacyPage from "../pages/PrivacyPage";
 import AdminReportsPage from "../pages/AdminReportsPage";
@@ -46,6 +47,7 @@ export const router = createBrowserRouter([
               { path: "/login/callback", element: <LoginCallbackPage /> }, // A-01 소셜 로그인에서 돌아오는 화면
               { path: "/signup", element: <SignupPage /> }, // A-02
               { path: "/me", element: <MyPage /> }, // U-01 마이페이지
+              { path: "/ranking", element: <RankingPage /> }, // R-01 랭킹
               { path: "/terms", element: <TermsPage /> }, // 이용약관
               { path: "/privacy", element: <PrivacyPage /> }, // 개인정보처리방침
               { path: "/admin/reports", element: <AdminReportsPage /> }, // AD-01 관리자 신고 목록

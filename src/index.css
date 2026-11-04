@@ -162,14 +162,19 @@
   /* 넓은 화면에서 한 줄 5개. 카드 폭이 180px보다 좁아지면 아래 미디어 쿼리에서 4개·3개·2개로 줄인다 */
   .cards { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
   .more { display: flex; justify-content: center; }
-  .card { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: var(--white); color: var(--ink); text-decoration: none; transition: border-color .2s, box-shadow .2s; }
+  /* Today 배지가 카드 모서리 밖으로 튀어나오므로 카드는 넘침을 자르지 않고, 표지가 위쪽 둥근 모서리를 자른다 */
+  .card { position: relative; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 10px; background: var(--white); color: var(--ink); text-decoration: none; transition: border-color .2s, box-shadow .2s; }
   a.card:hover { color: var(--ink); border-color: var(--line-strong); box-shadow: 0 4px 16px rgba(0, 0, 0, .06); }
   .card--conquered { border-color: #ead49c; }
+  .card--today { border-color: #f3c3a5; }
   /* 관리자 목록에만 오는 비공개 카드. 정복 테두리보다 우선하고 hover에도 유지한다 */
   a.card--private, a.card--private:hover { border-color: #9aa1ab; }
-  .card__cover { position: relative; aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; background-size: cover; background-position: center; }
+  .card__cover { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 9px 9px 0 0; }
+  /* 그림만 따로 깔아 hover 때 그림만 살짝 확대한다 (배지·유형 아이콘은 그대로) */
+  .card__cover .cover-img { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background-size: cover; background-position: center; transition: transform .4s var(--ease); }
+  a.card:hover .cover-img, a.card:focus-visible .cover-img { transform: scale(1.06); }
   .card__hint { font-weight: 700; font-size: 22px; letter-spacing: .12em; }
-  .card__tag { position: absolute; top: 8px; left: 8px; }
+  .card__tag { position: absolute; top: 8px; left: 8px; z-index: 1; }
   .card__tag--right { left: auto; right: 8px; }
   .card__tag.badge--gold { background: #c99a2e; color: var(--white); }
   .card__tag.badge--gray { background: #5f6773; color: var(--white); }
@@ -178,6 +183,21 @@
   .card__title { font-weight: 600; font-size: 14px; line-height: 1.4; }
   .card__meta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 2px; color: var(--muted); font-size: 12px; }
   .card__meta span { display: inline-flex; align-items: center; gap: 3px; }
+
+  /* 표지 오른쪽 아래 문제 유형 아이콘 (시안 아이콘 B). 이미지·소리·텍스트 순으로 겹쳐 쌓고 왼쪽 원이 위에 온다 */
+  .card__types { position: absolute; right: 8px; bottom: 8px; z-index: 1; display: flex; flex-direction: row-reverse; }
+  .card__type { display: grid; place-items: center; width: 28px; height: 28px; margin-left: -7px; box-sizing: border-box; border: 2px solid var(--white); border-radius: 50%; color: var(--white); box-shadow: 0 1px 4px rgba(0, 0, 0, .16); }
+  .card__type:last-child { margin-left: 0; }
+  .card__type--image { background: var(--green); }
+  .card__type--sound { background: var(--blue); }
+  .card__type--text { background: var(--purple); }
+
+  /* 오늘 많이 풀린 카드 배지 (시안 Today D). 카드 왼쪽 위 모서리 밖으로 비스듬히 튀어나온다 */
+  .today-tag { position: absolute; top: -10px; left: -8px; z-index: 2; display: inline-flex; align-items: center; gap: 3px; padding: 3px 11px; border: 2px solid var(--white); border-radius: 8px; background: #d9480f; color: var(--white); font-size: 13px; font-weight: 800; letter-spacing: .02em; transform: rotate(-12deg); box-shadow: 0 4px 10px rgba(217, 72, 15, .35); transition: transform .4s var(--ease); }
+  a.card:hover .today-tag { transform: rotate(-12deg) scale(1.06); }
+  .today-tag__flame { flex: none; margin-right: -2px; }
+  .today-tag__flame-out { fill: var(--white); }
+  .today-tag__flame-in { fill: #ffd43b; }
 
   .tone-1 { background-color: #f3ede1; color: #a8843f; }
   .tone-2 { background-color: #e6eef5; color: #4f7896; }
@@ -499,6 +519,34 @@
   .rank__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
   .rank__me { margin-left: 6px; vertical-align: 1px; background: var(--green); color: var(--white); }
   .rank__meta { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+
+  /* 랭킹 페이지 (R-01, 시안 랭킹 B): 위에 내 순위 4칸, 아래에 부문별 TOP 5 보드 2×2 */
+  .ranking__mine { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  .ranking-stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 14px 16px; border-radius: 10px; background: var(--bg-soft); }
+  .ranking-stat__k { color: var(--muted); font-size: 12px; font-weight: 500; }
+  .ranking-stat__v { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .ranking-stat__s { color: var(--green-deep); font-size: 12px; font-weight: 600; }
+  .ranking-stat__s--muted { color: var(--muted); font-weight: 500; }
+  .ranking__boards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .ranking-board { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .ranking-board__head { display: flex; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .ranking-board__icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; }
+  .ranking-board__icon--gold { background: var(--gold-soft); color: var(--gold); }
+  .ranking-board__icon--blue { background: var(--blue-soft); color: var(--blue-dark); }
+  .ranking-board__icon--green { background: var(--green-soft); color: var(--green-deep); }
+  .ranking-board__icon--purple { background: var(--purple-soft); color: var(--purple); }
+  .ranking-board__title { margin: 0; font-size: 15px; font-weight: 700; }
+  .ranking-board__empty { margin: 0; padding: 28px 16px; color: var(--muted); font-size: 13px; text-align: center; }
+  .ranking-board__list { list-style: none; margin: 0; padding: 0; }
+  .ranking-row { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 44px; padding: 0 16px; border-bottom: 1px solid #f0f1f3; }
+  .ranking-board__list .ranking-row:last-child { border-bottom: 0; }
+  .ranking-row__no { color: var(--muted); font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
+  .ranking-row.is-top .ranking-row__no { color: #b0841f; }
+  .ranking-row__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+  .ranking-row__val { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .ranking-row--mine { background: var(--green-soft); color: var(--green-deep); }
+  .ranking-row--mine .ranking-row__no { color: var(--green-deep); }
+  .ranking-board > .ranking-row--mine { border-top: 1px dashed var(--line-strong); border-bottom: 0; }
   .rank__score { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
   .rank-gap { align-self: center; color: var(--muted); line-height: 1; letter-spacing: .3em; }
 
@@ -1221,6 +1269,11 @@
   .side-group--nav { order: -1; position: absolute; top: 12px; right: 16px; }
   .side-group--nav .side-list { margin: 0; padding: 0; }
   .side-me { order: 1; margin-top: 0; padding: 10px 0 0; }
+}
+
+@media (max-width: 900px) {
+  .ranking__boards { grid-template-columns: minmax(0, 1fr); }
+  .ranking__mine { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 640px) {

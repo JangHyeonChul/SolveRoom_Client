@@ -71,6 +71,9 @@ export default function Sidebar() {
           >
             문제만들기
           </Link>
+          <Link to="/ranking" className="side-link" aria-current={current(pathname === "/ranking")}>
+            랭킹
+          </Link>
         </div>
       </nav>
 

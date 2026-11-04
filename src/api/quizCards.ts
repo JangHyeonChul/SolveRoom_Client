@@ -5,6 +5,7 @@ import {
   type CardSummary,
   type Category,
   type ManagedCard,
+  type QuestionTypeCounts,
 } from "../types/card";
 import { readApiResponse } from "./apiResponse";
 import { manageTokens } from "./manageTokens";
@@ -26,6 +27,7 @@ interface QuizCardSearchResponse {
   likeCount: number;
   isPublic: boolean; // 관리자 목록에는 비공개 카드도 섞여 온다
   createdAt: string;
+  questionTypes: QuestionTypeCounts;
 }
 
 // 다음 페이지 위치. 서버가 준 값을 해석하지 않고 그대로 돌려보낸다
@@ -57,7 +59,22 @@ const toSummary = (c: QuizCardSearchResponse): CardSummary => ({
   likeCount: c.likeCount,
   isPublic: c.isPublic,
   createdAt: c.createdAt,
+  questionTypes: c.questionTypes,
 });
+
+// 서버 TodayCardResponse
+interface TodayCardResponse {
+  playCount: number;
+  card: QuizCardSearchResponse;
+}
+
+// 오늘(0시부터) 많이 풀린 공개 카드 최대 5장. 인기순 목록 앞에 Today 카드로 놓는다.
+// category가 없으면 전체에서 고르고, 오늘 판이 모자란 카드는 오지 않아 빈 목록일 수 있다
+export async function fetchTodayCards(category?: Category, signal?: AbortSignal): Promise<CardSummary[]> {
+  const qs = category ? `?category=${CATEGORY_CODES[category]}` : "";
+  const rows = await request<TodayCardResponse[]>(`/api/main/quiz-cards/today${qs}`, "오늘 인기 카드 조회", { signal });
+  return rows.map((row) => ({ ...toSummary(row.card), todayPlayCount: row.playCount }));
+}
 
 // 메인 상단 최신 카드. 관리자에게도 공개 카드만 최근 만든 순으로 온다 (size 1~30)
 export async function fetchLatestCards(size: number, signal?: AbortSignal): Promise<CardSummary[]> {

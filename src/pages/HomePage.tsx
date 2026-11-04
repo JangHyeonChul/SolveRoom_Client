@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { fetchQuizCards, type PageCursor, type QuizCardSort } from "../api/quizCards";
+import { fetchQuizCards, fetchTodayCards, type PageCursor, type QuizCardSort } from "../api/quizCards";
 import { useAuth } from "../app/auth";
 import CardItem from "../components/CardItem";
 import LatestCards from "../components/LatestCards";
@@ -42,19 +42,31 @@ export default function HomePage() {
   const sort: QuizCardSort = isSort(sortParam) ? sortParam : "popular";
 
   const [cards, setCards] = useState<CardSummary[]>([]);
+  const [todayCards, setTodayCards] = useState<CardSummary[]>([]);
   const [nextCursor, setNextCursor] = useState<PageCursor | null>(null);
   const [status, setStatus] = useState<"loading" | "error" | "done">("loading");
   const [loadingMore, setLoadingMore] = useState(false);
   const [retry, setRetry] = useState(0);
 
+  // 인기순(검색 아님)이면 오늘 많이 풀린 카드를 목록 앞에 Today로 놓는다. 카테고리를 고르면 그 카테고리 안에서 고른다
+  const withToday = !q && sort === "popular";
+
   // 조건이 바뀌면 첫 페이지부터 다시 읽는다. 늦게 도착한 이전 조건의 응답은 버린다.
   // 로그인 복원이 끝나야 관리자 토큰이 붙으므로 그 뒤에 읽고, 관리자로 바뀌거나 풀리면 다시 읽는다.
+  // Today를 못 읽어도 목록은 그대로 보여 준다
   useEffect(() => {
     if (!ready) return;
     const controller = new AbortController();
     setStatus("loading");
-    fetchQuizCards({ category: category || undefined, q, sort, signal: controller.signal })
-      .then((page) => {
+    const today = withToday
+      ? fetchTodayCards(category || undefined, controller.signal).catch((e) => {
+          if (!controller.signal.aborted) console.error(e);
+          return [];
+        })
+      : Promise.resolve([]);
+    Promise.all([fetchQuizCards({ category: category || undefined, q, sort, signal: controller.signal }), today])
+      .then(([page, todays]) => {
+        setTodayCards(todays);
         setCards(page.cards);
         setNextCursor(page.nextCursor);
         setStatus("done");
@@ -66,7 +78,11 @@ export default function HomePage() {
         }
       });
     return () => controller.abort();
-  }, [category, q, sort, retry, ready, isAdmin]);
+  }, [category, q, sort, withToday, retry, ready, isAdmin]);
+
+  // Today 카드는 인기순 목록에도 들어 있으므로 목록 쪽에서 뺀다 (더 보기로 붙는 페이지도)
+  const todayIds = new Set(todayCards.map((c) => c.id));
+  const shown = [...todayCards, ...cards.filter((c) => !todayIds.has(c.id))];
 
   const loadMore = async () => {
     if (!nextCursor || loadingMore) return;
@@ -140,7 +156,7 @@ export default function HomePage() {
               다시 시도
             </button>
           </div>
-        ) : cards.length === 0 ? (
+        ) : shown.length === 0 ? (
           <div className="empty">
             <span className="empty__title">조건에 맞는 문제 카드가 없어요</span>
             <span>다른 카테고리나 검색어로 찾아보세요.</span>
@@ -149,7 +165,7 @@ export default function HomePage() {
           <>
             {/* 조건이 바뀌면 key가 바뀌어 등장 애니메이션을 다시 재생한다 */}
             <div className="cards" key={`${q}|${category}|${sort}`}>
-              {cards.map((card, i) => (
+              {shown.map((card, i) => (
                 <CardItem
                   key={card.id}
                   card={card}

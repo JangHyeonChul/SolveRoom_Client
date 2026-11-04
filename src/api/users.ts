@@ -16,6 +16,33 @@ export function fetchPointRanking(signal?: AbortSignal) {
   return request<PointRank[]>("/api/main/users/ranking", "랭킹 조회", { signal });
 }
 
+// 랭킹 페이지 부문 (서버 RankingType). 보드는 이 순서로 온다
+export type RankingType = "POINT" | "SOLVED" | "CONQUEST" | "ACCURACY";
+
+// 서버 RankingRowResponse. value는 부문 값(정답률은 소수 첫째 자리 %), point는 칭호용 누적 포인트
+export interface RankingRow {
+  rank: number;
+  nickname: string;
+  nicknameColor: string | null;
+  nicknameEffect: string | null;
+  admin: boolean;
+  point: number;
+  value: number;
+}
+
+// 서버 RankingBoardResponse. mine은 비로그인이면 null, 그 부문 순위에 못 올랐으면 rank·value가 null
+export interface RankingBoard {
+  type: RankingType;
+  top: RankingRow[];
+  total: number;
+  mine: { rank: number | null; value: number | null } | null;
+}
+
+// 랭킹 페이지: 부문별 TOP 5와 내 순위. 서버가 10분마다 다시 센다
+export function fetchRankingBoards(signal?: AbortSignal) {
+  return request<RankingBoard[]>("/api/main/users/rankings", "랭킹 조회", { signal });
+}
+
 // 서버 MyQuizCardResponse. 회원으로 만든 카드만, 최근에 만든 것부터. 비공개 카드도 온다
 export interface MyQuizCard {
   cardId: number;

@@ -78,11 +78,21 @@ export interface ManagedCard {
   guestCard: boolean; // 비회원 카드면 수정·삭제할 때 비밀번호가 필요하다
 }
 
+// 카드에 든 문제 유형별 개수 (서버 QuestionTypeCountResponse). 목록 카드 표지의 유형 아이콘에 쓴다
+export interface QuestionTypeCounts {
+  image: number;
+  sound: number;
+  text: number;
+}
+
 // 목록의 카드 한 장에 필요한 값 (GET /api/main/quiz-cards)
 export type CardSummary = Pick<
   Card,
   "id" | "title" | "category" | "thumbnailUrl" | "questionCount" | "viewCount" | "likeCount" | "isPublic" | "createdAt"
->;
+> & {
+  questionTypes?: QuestionTypeCounts;
+  todayPlayCount?: number; // 오늘 많이 풀린 카드(Today)면 오늘 풀린 판 수
+};
 
 // 카드 표지(목록·문제 관리)의 가로세로 비율. 썸네일은 올릴 때 이 비율로 영역을 골라 자른다
 export const THUMBNAIL_ASPECT = 16 / 9;
