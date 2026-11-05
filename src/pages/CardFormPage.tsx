@@ -10,7 +10,7 @@ import ImageCropModal from "../components/ImageCropModal";
 import { useToast } from "../components/Toast";
 import { useManagedData } from "../components/useManagedData";
 import { trackEvent } from "../utils/analytics";
-import { CATEGORIES, THUMBNAIL_ASPECT, type Category, type ManagedCard } from "../types/card";
+import { CARD_DESCRIPTION_MAX, CATEGORIES, THUMBNAIL_ASPECT, type Category, type ManagedCard } from "../types/card";
 
 const MAX_THUMB_MB = 5;
 
@@ -270,15 +270,16 @@ function CardForm({ card, gate, onError }: FormProps) {
                 <label className="label" htmlFor="card-content">
                   설명 <small>선택</small>
                 </label>
-                <Counter value={content} max={200} />
+                <Counter value={content} max={CARD_DESCRIPTION_MAX} />
               </div>
               <textarea
                 id="card-content"
                 className="textarea"
-                maxLength={200}
+                rows={6}
+                maxLength={CARD_DESCRIPTION_MAX}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="예: 이미지에 나온 포켓몬의 이름을 맞혀요."
+                placeholder={"예: 이미지에 나온 포켓몬의 이름을 맞혀요.\n어떤 문제가 나오는지, 난이도나 풀이 요령도 적어 주면 좋아요. 줄을 바꿔 문단을 나눌 수 있어요."}
               />
             </div>
           </section>

@@ -15,6 +15,8 @@ export const CATEGORIES = [
 
 export type Category = (typeof CATEGORIES)[number];
 
+export const CARD_DESCRIPTION_MAX = 1000; // 서버 QuizCard.DESCRIPTION_MAX_LENGTH (V30)
+
 // 서버(Category enum)가 주고받는 카테고리 코드. 화면 주소(?category=게임)는 한글 이름을 그대로 쓴다.
 export const CATEGORY_CODES: Record<Category, string> = {
   게임: "GAME",

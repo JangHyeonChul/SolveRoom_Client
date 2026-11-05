@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { errorMessage, hasErrorCode } from "../api/apiResponse";
 import { startPlay } from "../api/plays";
@@ -15,7 +15,7 @@ import { useToast } from "../components/Toast";
 import type { CardDetail } from "../types/card";
 import type { PlayLocationState } from "../types/play";
 import { formatCount } from "../utils/format";
-import { usePageMeta } from "../utils/pageMeta";
+import { summarize, usePageMeta } from "../utils/pageMeta";
 import NotFoundPage from "./NotFoundPage";
 import { trackEvent } from "../utils/analytics";
 
@@ -80,7 +80,8 @@ function CardDetailLoader({ cardId }: { cardId: number }) {
 function CardDetailView({ card }: { card: CardDetail }) {
   const navigate = useNavigate();
   const sceneNavigate = useSceneNavigate();
-  usePageMeta(card.title, card.description || `${card.title} 퀴즈 ${card.questionCount}문제. 퀴즈체크에서 풀어 보세요.`);
+  // 카드 설명은 1000자까지라 검색 결과 설명에는 앞부분만 쓴다 (서버 CardPageService와 같은 길이)
+  usePageMeta(card.title, summarize(card.description || `${card.title} 퀴즈 ${card.questionCount}문제. 퀴즈체크에서 풀어 보세요.`));
 
   // 카드의 문제 수보다 적은 개수만 보여 준다. 기본은 10개, 문제가 10개 이하면 모두 푼다
   const presets = PRESET_COUNTS.filter((n) => n < card.questionCount);
@@ -133,7 +134,7 @@ function CardDetailView({ card }: { card: CardDetail }) {
             <div className="detail__info">
               <span className="badge badge--blue self-start">{card.category}</span>
               <h1 className="display detail-title">{card.title}</h1>
-              {card.description && <p className="panel__desc">{card.description}</p>}
+              {card.description && <CardDescription text={card.description} />}
               <p className="detail-meta">
                 <span>{card.questionCount}문제</span>
                 <span>
@@ -232,6 +233,37 @@ function CardDetailView({ card }: { card: CardDetail }) {
 
 // 좋아요 토글. 로그인 회원만 누를 수 있고, 비로그인이면 로그인 화면으로 보낸다.
 // 내가 눌렀는지는 로그인 상태를 확인한 뒤 따로 읽는다(상세 조회가 먼저 끝날 수 있다)
+// 카드 설명(1000자까지). 줄바꿈(문단)을 그대로 보여 주고, 네 줄을 넘으면 접어 두었다가 더보기로 펼친다.
+// 네 줄을 넘는지는 화면 너비에 따라 달라 그린 뒤에 잰다 (접힌 글도 DOM에는 그대로 있어 검색 로봇이 읽는다)
+function CardDescription({ text }: { text: string }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [overflowing, setOverflowing] = useState(false);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || expanded) return;
+    const measure = () => setOverflowing(el.scrollHeight > el.clientHeight + 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [text, expanded]);
+
+  return (
+    <div className="detail-desc">
+      <p ref={ref} className={`panel__desc detail-desc__text${expanded ? "" : " detail-desc__text--clamp"}`}>
+        {text}
+      </p>
+      {(overflowing || expanded) && (
+        <button type="button" className="text-btn self-start" aria-expanded={expanded} onClick={() => setExpanded((v) => !v)}>
+          {expanded ? "접기" : "더보기"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function LikeButton({ cardId, initialCount }: { cardId: number; initialCount: number }) {
   const { user, ready } = useAuth();
   const navigate = useNavigate();
