@@ -13,6 +13,23 @@ export interface CommentPage {
 
 const commentUrl = (commentId: number) => `/api/main/comments/${commentId}`;
 
+// 서버 RecentCommentResponse. 지웠거나 가려진 댓글은 오지 않아 content가 늘 있다
+export interface RecentComment {
+  id: number;
+  cardId: number;
+  cardTitle: string;
+  nickname: string;
+  admin: boolean;
+  content: string;
+  createdAt: string;
+}
+
+// 메인 상단 실시간 댓글. 공개 카드에 달린 최근 댓글·답글 10개를 최신순으로 준다
+export async function fetchRecentComments(signal?: AbortSignal): Promise<RecentComment[]> {
+  const res = await fetch("/api/main/comments/recent", { signal });
+  return (await readApiResponse<RecentComment[]>(res, "최근 댓글 조회")).data;
+}
+
 // 카드 상세 아래 댓글. 최신 댓글부터, 각 댓글 뒤에 그 답글을 등록순으로 세어 한 페이지(10개)를 읽는다.
 // 답글은 댓글의 replies로 묶여 오고, 페이지 경계에서 나뉜 답글은 다음 페이지의 continued 댓글 아래로 온다
 export async function fetchComments(cardId: number, page: number, signal?: AbortSignal): Promise<CommentPage> {
