@@ -6,7 +6,7 @@ import Icon from "./Icon";
 const TYPING_TAGS = ["INPUT", "TEXTAREA", "SELECT"];
 
 // 본문 위 상단 바. 사이드바에 있던 문제 카드 검색을 옮겨 왔다. 입력 중이 아닐 때 / 키를 누르면 검색칸으로 간다.
-// 메인(/)에서는 검색칸 오른쪽에 실시간 댓글을 띄운다
+// 메인(/)에서는 상단 바 오른쪽 끝에 실시간 댓글을 띄운다
 export default function Topbar() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
