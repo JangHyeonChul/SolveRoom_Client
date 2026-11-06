@@ -17,6 +17,8 @@ import MyPage from "../pages/MyPage";
 import RankingPage from "../pages/RankingPage";
 import TermsPage from "../pages/TermsPage";
 import PrivacyPage from "../pages/PrivacyPage";
+import AboutPage from "../pages/AboutPage";
+import ContactPage from "../pages/ContactPage";
 import AdminReportsPage from "../pages/AdminReportsPage";
 import NotFoundPage from "../pages/NotFoundPage";
 import ErrorPage from "../pages/ErrorPage";
@@ -50,6 +52,8 @@ export const router = createBrowserRouter([
               { path: "/ranking", element: <RankingPage /> }, // R-01 랭킹
               { path: "/terms", element: <TermsPage /> }, // 이용약관
               { path: "/privacy", element: <PrivacyPage /> }, // 개인정보처리방침
+              { path: "/about", element: <AboutPage /> }, // 사이트 소개
+              { path: "/contact", element: <ContactPage /> }, // 문의하기
               { path: "/admin/reports", element: <AdminReportsPage /> }, // AD-01 관리자 신고 목록
               { path: "*", element: <NotFoundPage /> },
             ],

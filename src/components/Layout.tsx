@@ -13,6 +13,10 @@ export default function Layout() {
           <div className="wrap footer__inner">
             <span>© 퀴즈 체크</span>
             <span>
+              <Link to="/about" className="footer__link">
+                소개
+              </Link>{" "}
+              ·{" "}
               <Link to="/terms" className="footer__link">
                 이용약관
               </Link>{" "}
@@ -20,10 +24,10 @@ export default function Layout() {
               <Link to="/privacy" className="footer__link">
                 개인정보처리방침
               </Link>{" "}
-              · 고객문의{" "}
-              <a href="mailto:wkdgus1139@gmail.com" className="footer__link">
-                wkdgus1139@gmail.com
-              </a>
+              ·{" "}
+              <Link to="/contact" className="footer__link">
+                문의하기
+              </Link>
             </span>
           </div>
         </footer>
