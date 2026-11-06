@@ -25,6 +25,7 @@ export interface Room {
   timeLimit: number; // 문제당 제한 시간(초)
   maxPlayers: number;
   teamMode: boolean;
+  bossMode: boolean;
   playerCount: number;
   hostNickname: string | null; // 만들고 아직 아무도 안 들어왔으면 null
   status: RoomStatus;
@@ -97,12 +98,14 @@ export interface RoomState {
   timeLimit: number;
   maxPlayers: number;
   teamMode: boolean;
+  bossMode: boolean;
   phase: RoomPhase;
   round: number;
   totalRounds: number;
   hostKey?: string;
   players: RoomPlayer[];
   teams?: TeamState[]; // 팀전 방에서만 온다 (블루, 레드 순)
+  boss?: BossState; // 보스잡기 방에서 게임을 시작한 뒤(결과 화면까지)만 온다
   cards: RoomCard[];
   question?: RoomQuestion;
   answer?: string; // 정답 공개(reveal) 단계에만 온다
@@ -152,7 +155,7 @@ export const TEAM_REWARD_RULE =
 export const rankOf = (players: RoomPlayer[], player: RoomPlayer) =>
   1 + players.filter((other) => other.points > player.points).length;
 
-// 방 만들기에서 서버로 보내는 값
+// 방 만들기에서 서버로 보내는 값. 보스잡기는 문제 수를 고르지 않는다 (서버가 BOSS_MAX_ROUNDS로 정한다)
 export interface RoomSettings {
   title: string;
   category: string;
@@ -160,7 +163,88 @@ export interface RoomSettings {
   timeLimit: number;
   maxPlayers: number;
   teamMode: boolean;
+  bossMode: boolean;
 }
+
+// ── 보스잡기 (멀티 서버 BossBattle) ──
+// 모두 한 편이 되어 문제를 맞혀 보스 체력을 깎는다. 문제를 푸는 동안은 맞힌 사람의 데미지를 모아(pendingDamage) 보여 주고,
+// 시간이 끝나거나 모두 맞히면(정답 공개) 한 번에 넣는다. 보스는 문제마다 인원에 맞춰 목표 데미지(target)를 무작위로 정하고,
+// 그 문제에 넣은 데미지가 목표보다 적으면 파티 하트를 깎는다 (강공격은 목표 1.5배, 하트 2개). 하트가 다 떨어지면 진다
+export type BossPattern = "shield" | "speed" | "seal";
+export type BossBonus = "none" | "coop" | "critical";
+export type BossAttack = "none" | "normal" | "charge" | "blocked";
+export type BossResult = "clear" | "fail" | "escape";
+
+export interface BossLastRound {
+  dealt: number; // 보스에 들어간 데미지
+  target: number; // 그 문제의 목표 데미지
+  bonus: BossBonus;
+  multiplier: number; // 보너스·기절·보호막을 모두 곱한 배수 (보호막에 막히면 0)
+  shield?: "broken" | "held"; // 보호막 문제에서만 온다
+  attack: BossAttack;
+  heartsLost: number;
+  stageUp: boolean; // 이번 공개로 페이즈가 올랐는지
+}
+
+export interface BossState {
+  maxHp: number;
+  hp: number;
+  maxHearts: number;
+  hearts: number;
+  stage: number; // 1~3. 체력 70%·35% 아래에서 오른다
+  pattern?: BossPattern; // 이번 문제에 걸린 패턴
+  hintSealed: boolean;
+  charging: boolean; // 이번 문제가 강공격
+  stunned: boolean; // 강공격을 막아 이번 문제 데미지 1.5배
+  chargeNext: boolean; // 다음 문제가 강공격 (정답 공개에서 예고)
+  target: number; // 이번 문제의 목표 데미지. 못 넣으면 하트가 깎인다
+  need: number; // 보호막을 깨는 데 필요한 정답 수
+  roundTimeLimit: number; // 이번 문제 제한 시간(초). 속공이면 절반
+  pendingDamage: number; // 문제를 푸는 동안: 지금까지 맞힌 사람으로 들어갈 데미지
+  lastRound?: BossLastRound; // 정답 공개·결과 화면에서 바로 앞 문제의 결과
+  result?: BossResult; // 끝났을 때만
+  lastHitKey?: string;
+  mvpKey?: string;
+}
+
+export const BOSS_MAX_ROUNDS = 30; // 멀티 서버 BossBattle.MAX_ROUNDS와 같다
+export const BOSS_MIN_ROUNDS = 10; // 멀티 서버 BossBattle.MIN_ROUNDS와 같다 (이만큼 있으면 시작할 수 있다)
+export const BOSS_STAGE_RATIOS = [0.7, 0.35]; // 페이즈가 오르는 체력 비율
+// 시작 인원으로 정하는 보스 체력과 파티 하트 (멀티 서버 BossBattle과 같다). 대기실에서 미리 보여 준다
+export const bossMaxHp = (players: number) => (players <= 1 ? 800 : 600 + 900 * players);
+export const bossHearts = (players: number) => (players <= 1 ? 10 : players === 2 ? 7 : players === 3 ? 6 : 5);
+export const BOSS_PATTERN_LABELS: Record<BossPattern, string> = { shield: "보호막", speed: "속공", seal: "힌트 봉인" };
+export const BOSS_RESULT_LABELS: Record<BossResult, string> = {
+  clear: "보스를 쓰러뜨렸어요!",
+  fail: "파티가 쓰러졌어요",
+  escape: "보스가 도망갔어요",
+};
+export const BOSS_REWARD_RULE =
+  "보스잡기는 인원·문제 수와 상관없이 누적 데미지 순위대로 회원 포인트를 줘요. " +
+  "1등은 인원 수(최대 4)만큼, 한 등수 내려갈 때마다 1씩 줄고 최소 1P예요. 0 데미지와 비로그인은 받지 않아요.";
+
+// 보스 이름과 색. 마스코트는 사이트 아이콘이고, 주제마다 이름과 색만 바꾼다
+const BOSS_COLORS: Record<string, string> = {
+  GAME: "#2f9e44",
+  MUSIC: "#7048a8",
+  CULTURE: "#c2410c",
+  BROADCAST: "#2f6fa3",
+  TRIVIA: "#0f766e",
+  COMIC: "#db2777",
+  FOOD: "#d97706",
+  PERSON: "#4b5563",
+  SPORTS: "#1d4ed8",
+  MEME: "#a21caf",
+  KOREAN_HISTORY: "#92400e",
+  SCIENCE: "#0891b2",
+  CUSTOM: "#1d2127",
+};
+export const bossColor = (category: string) => BOSS_COLORS[category] ?? "#2f9e44";
+
+// 방 방식. 개인전·팀전·보스잡기 중 하나다
+export type RoomMode = "solo" | "team" | "boss";
+export const roomModeOf = (room: { teamMode: boolean; bossMode: boolean }): RoomMode =>
+  room.bossMode ? "boss" : room.teamMode ? "team" : "solo";
 
 export const ROOM_BADGE_LABELS: Record<RoomBadge, string> = { wait: "대기 중", play: "게임 중", full: "가득 참" };
 

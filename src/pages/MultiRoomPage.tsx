@@ -1,18 +1,19 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useRoom } from "../api/room";
 import { useAuth } from "../app/auth";
 import BgmBar from "../components/BgmBar";
+import { BossBar, BossFinalStage, BossMascot, BossWaitChips, bossName } from "../components/BossBattle";
+import RoomSettingsModal from "../components/RoomSettingsModal";
 import ChatBox from "../components/ChatBox";
 import ConfirmModal from "../components/ConfirmModal";
 import Icon from "../components/Icon";
-import Modal from "../components/Modal";
 import Nickname from "../components/Nickname";
-import OptionSeg from "../components/OptionSeg";
 import { CardDeckModal, RoomCardsModal, RoomDeck } from "../components/RoomCards";
 import SoundPlayer, { type SoundPlayerHandle } from "../components/SoundPlayer";
 import { useToast } from "../components/Toast";
 import {
+  BOSS_MIN_ROUNDS,
   MAX_TEAM_GAP,
   REWARD_MIN_PLAYERS,
   REWARD_MIN_QUESTIONS,
@@ -21,7 +22,6 @@ import {
   TEAM_LABELS,
   TEAM_REWARD_RULE,
   TEAM_WIN_POINT,
-  TOPIC_OPTIONS,
   cardQuestionTotal,
   categoryLabel,
   isCustomTopic,
@@ -30,8 +30,10 @@ import {
   teamModeLabel,
   teamOf,
   teamSize,
+  bossColor,
   type RoomPlayer,
   type RoomQuestion,
+  type RoomSettings,
   type RoomState,
 } from "../types/multi";
 import { trackEvent } from "../utils/analytics";
@@ -90,7 +92,7 @@ function RoomView({ no }: { no: number }) {
   const room = useRoom({ no, userId: user?.id, ready, onError: toast });
   const [params, setParams] = useSearchParams();
   const [leaving, setLeaving] = useState(false);
-  const [changingTopic, setChangingTopic] = useState(false);
+  const [editingSettings, setEditingSettings] = useState(false);
   const [deckOpen, setDeckOpen] = useState(false);
   const state = room.room;
   const inGame = state?.phase === "play" || state?.phase === "reveal";
@@ -164,9 +166,9 @@ function RoomView({ no }: { no: number }) {
     if (!room.sendChat(message)) toast("방에 다시 연결하는 중이에요. 잠시 후 보내 주세요");
   };
 
-  // 문제가 모자란 주제면 서버가 error로 거절하고 이유는 토스트로 뜬다
-  const changeTopic = (category: string) => {
-    if (!room.changeTopic(category)) toast("방에 다시 연결하는 중이에요. 잠시 후 바꿔 주세요");
+  // 문제가 모자란 주제나 지금 인원보다 적은 최대 인원이면 서버가 error로 거절하고 이유는 토스트로 뜬다
+  const changeSettings = (settings: RoomSettings) => {
+    if (!room.changeSettings(settings)) toast("방에 다시 연결하는 중이에요. 잠시 후 바꿔 주세요");
   };
 
   // 담을 수 없는 카드(비공개·주관식 문제 없음 등)는 서버가 error로 거절하고 이유는 토스트로 뜬다
@@ -199,7 +201,8 @@ function RoomView({ no }: { no: number }) {
           <b>{state.no}</b>
           <h1 className="display">{state.title}</h1>
           <small>
-            {categoryLabel(state.category)} · {state.questionCount}문제 · 문제당 {state.timeLimit}초
+            {categoryLabel(state.category)} · {state.bossMode ? `보스잡기 · 최대 ${state.questionCount}` : state.questionCount}문제 · 문제당{" "}
+            {state.timeLimit}초
             {state.teamMode && ` · ${teamModeLabel(state.maxPlayers)}`}
           </small>
         </div>
@@ -208,7 +211,9 @@ function RoomView({ no }: { no: number }) {
             ? `${state.players.length}/${state.maxPlayers}명 · 대기 중`
             : state.phase === "end"
               ? "게임 끝"
-              : `문제 ${state.round} / ${state.totalRounds}`}
+              : state.bossMode
+                ? `문제 ${state.round}`
+                : `문제 ${state.round} / ${state.totalRounds}`}
         </span>
         <button type="button" className="btn btn--outline btn--sm" onClick={invite}>
           <Icon name="link" size={14} />
@@ -218,6 +223,7 @@ function RoomView({ no }: { no: number }) {
 
       <div className="mp-room__body">
         <div className="mp-room__main">
+          {inGame && state.boss && <BossBar state={state} />}
           <div className={`mp-stage ${cardTitle ? "has-card" : ""}`}>
             {/* 카테고리 문제를 섞어 내므로 어떤 카드의 문제인지 문제 중과 정답 공개 때 보여 준다 */}
             {cardTitle && (
@@ -234,7 +240,7 @@ function RoomView({ no }: { no: number }) {
               onStart={room.start}
               onAgain={room.again}
               onInvite={invite}
-              onChangeTopic={() => setChangingTopic(true)}
+              onChangeSettings={() => setEditingSettings(true)}
               onOpenDeck={() => setDeckOpen(true)}
               onSwitchTeam={switchTeam}
             />
@@ -287,8 +293,19 @@ function RoomView({ no }: { no: number }) {
         />
       )}
       {/* 그 사이 방장이 바뀌거나 게임이 시작되면 닫는다 */}
-      {changingTopic && isHost && state.phase === "wait" && (
-        <TopicModal current={state.category} onClose={() => setChangingTopic(false)} onChange={changeTopic} />
+      {editingSettings && isHost && state.phase === "wait" && (
+        <RoomSettingsModal
+          title="방 설정 바꾸기"
+          submitLabel="바꾸기"
+          initial={state}
+          minPlayers={state.players.length}
+          customNote={<p className="hint">바꾼 뒤 대기실의 카드 덱을 눌러 문제 카드를 담아요.</p>}
+          onClose={() => setEditingSettings(false)}
+          onSubmit={(settings) => {
+            changeSettings(settings);
+            setEditingSettings(false);
+          }}
+        />
       )}
       {/* 덱은 커스텀 주제 대기실에서만 연다. 방장이 바뀌면 열린 모달도 그 시점에 맞게 바뀐다 */}
       {deckOpen && state.phase === "wait" && isCustomTopic(state.category) &&
@@ -303,39 +320,6 @@ function RoomView({ no }: { no: number }) {
           <RoomCardsModal cards={state.cards} onClose={() => setDeckOpen(false)} />
         ))}
     </main>
-  );
-}
-
-// 대기실에서 방장이 주제를 바꾼다. 바꾸면 다른 사람의 준비가 풀리고, 담아 둔 커스텀 카드는 비워진다
-function TopicModal({ current, onClose, onChange }: { current: string; onClose: () => void; onChange: (category: string) => void }) {
-  const [category, setCategory] = useState(current);
-
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    if (category !== current) onChange(category);
-    onClose();
-  };
-
-  return (
-    <Modal title="주제 바꾸기" onClose={onClose}>
-      <form className="mp-form" onSubmit={onSubmit}>
-        <OptionSeg label="주제" options={TOPIC_OPTIONS} value={category} onChange={setCategory} format={categoryLabel} />
-        <p className="hint">
-          {isCustomTopic(category)
-            ? "바꾼 뒤 대기실의 카드 덱을 눌러 문제 카드를 담아요."
-            : "고른 주제의 공개 카드에서 주관식 문제가 무작위로 나와요."}{" "}
-          주제를 바꾸면 다른 사람은 다시 준비해야 해요.
-        </p>
-        <div className="modal__actions">
-          <button type="button" className="btn btn--outline btn--sm" onClick={onClose}>
-            취소
-          </button>
-          <button type="submit" className="btn btn--primary btn--sm" disabled={category === current}>
-            바꾸기
-          </button>
-        </div>
-      </form>
-    </Modal>
   );
 }
 
@@ -484,6 +468,7 @@ function TeamSeats({ state, me }: { state: RoomState; me: string | null }) {
 // 채팅 칸 안내. 문제 중에 맞혔으면(팀전은 팀원이 맞혔어도) 정답 대신 채팅만 친다
 function chatPlaceholder(state: RoomState, mine: RoomPlayer | undefined, teamDone: boolean) {
   if (state.phase !== "play" || !mine) return "채팅 입력";
+  if (mine.correct && state.bossMode) return "정답! 데미지를 모았어요. 다른 사람이 맞힐 때까지 채팅만 할 수 있어요";
   if (mine.correct) return `정답! 다른 ${state.teamMode ? "팀이" : "사람이"} 맞힐 때까지 채팅만 할 수 있어요`;
   if (teamDone) return "우리 팀이 맞혔어요! 이번 문제는 채팅만 할 수 있어요";
   return "정답 또는 채팅 입력 후 Enter";
@@ -494,8 +479,10 @@ function TimerRow({ state, now }: { state: RoomState; now: number }) {
   const length = state.question?.answerLength ?? 0;
   const hint = state.question?.hint;
   const letters = hint ? hint.split("") : Array.from({ length }, () => "");
-  // 소리 문제는 카운트다운 동안 마감이 제한 시간보다 뒤에 있어 제한 시간까지만 보여 준다
-  const left = Math.min(state.timeLimit, secondsUntil(state.deadlineAt, now));
+  // 소리 문제는 카운트다운 동안 마감이 제한 시간보다 뒤에 있어 제한 시간까지만 보여 준다. 보스 속공은 제한 시간이 절반이다
+  const limit = state.boss?.roundTimeLimit || state.timeLimit;
+  const sealed = !!state.boss?.hintSealed;
+  const left = Math.min(limit, secondsUntil(state.deadlineAt, now));
   const urgent = left <= 5;
   return (
     <div className="mp-timer">
@@ -507,11 +494,11 @@ function TimerRow({ state, now }: { state: RoomState; now: number }) {
           ))}
         </span>
         <span className="mp-hint__meta">
-          {length}글자{hint ? "" : ` · ${Math.floor(state.timeLimit / 2)}초 남으면 공개`}
+          {length}글자{hint ? "" : sealed ? " · 힌트 봉인" : ` · ${Math.floor(limit / 2)}초 남으면 공개`}
         </span>
       </div>
-      <div className={`mp-timer__bar ${urgent ? "is-urgent" : ""}`} role="progressbar" aria-label="남은 시간" aria-valuemin={0} aria-valuemax={state.timeLimit} aria-valuenow={left}>
-        <span style={{ width: `${Math.min(100, (left / state.timeLimit) * 100)}%` }} />
+      <div className={`mp-timer__bar ${urgent ? "is-urgent" : ""}`} role="progressbar" aria-label="남은 시간" aria-valuemin={0} aria-valuemax={limit} aria-valuenow={left}>
+        <span style={{ width: `${Math.min(100, (left / limit) * 100)}%` }} />
       </div>
       <b className={`mp-timer__sec ${urgent ? "is-urgent" : ""}`}>{left}</b>
     </div>
@@ -671,12 +658,12 @@ interface StageProps {
   onStart: () => void;
   onAgain: () => void;
   onInvite: () => void;
-  onChangeTopic: () => void;
+  onChangeSettings: () => void;
   onOpenDeck: () => void;
   onSwitchTeam: () => void;
 }
 
-function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, onChangeTopic, onOpenDeck, onSwitchTeam }: StageProps) {
+function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, onChangeSettings, onOpenDeck, onSwitchTeam }: StageProps) {
   const question = state.question;
   const image = question?.imageUrls[0];
   const topic = categoryLabel(state.category);
@@ -688,14 +675,16 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
     // 커스텀 주제는 카드를 담아야, 담은 카드의 문제가 방 문제 수보다 많아야 시작할 수 있다 (서버도 같은 조건으로 막는다)
     const custom = isCustomTopic(state.category);
     const cardTotal = cardQuestionTotal(state.cards);
+    // 보스잡기는 최대 30문제를 내지만 BOSS_MIN_ROUNDS개만 있어도 시작할 수 있다 (멀티 서버 RoomSettings.requiredQuestions)
+    const neededQuestions = state.bossMode ? BOSS_MIN_ROUNDS : state.questionCount;
     const cardBlocker = !custom
       ? null
       : !state.cards.length
         ? isHost
           ? "왼쪽 카드 덱을 눌러 문제 카드를 담아 주세요."
           : "방장이 문제 카드를 담으면 시작할 수 있어요."
-        : cardTotal < state.questionCount
-          ? `담은 카드의 문제가 ${cardTotal}개라 ${state.questionCount}문제를 낼 수 없어요.${isHost ? " 카드를 더 담아 주세요." : ""}`
+        : cardTotal < neededQuestions
+          ? `담은 카드의 문제가 ${cardTotal}개라 ${neededQuestions}문제를 낼 수 없어요.${isHost ? " 카드를 더 담아 주세요." : ""}`
           : null;
     // 팀전은 두 팀 모두 1명 이상이고 인원 차이가 MAX_TEAM_GAP명까지여야 시작할 수 있다 (서버도 같은 조건으로 막는다)
     const team = state.teamMode;
@@ -716,7 +705,9 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
     const readyNote =
       others.length === 0
         ? isHost
-          ? null
+          ? state.bossMode
+            ? "혼자서도 시작할 수 있어요. 사람이 많을수록 보스 체력도 늘어요."
+            : null
           : "방장을 기다리는 중이에요."
         : isHost
           ? allReady
@@ -728,13 +719,19 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
       <div className="mp-wait swap-in">
         {custom ? (
           <RoomDeck cards={state.cards} isHost={isHost} onOpen={onOpenDeck} />
+        ) : state.bossMode ? (
+          <div className="mp-wait__cover is-boss" style={{ background: `color-mix(in srgb, ${bossColor(state.category)} 14%, white)` }}>
+            <BossMascot category={state.category} />
+          </div>
         ) : (
           <div className="mp-wait__cover tone-2">{chosung(topic)}</div>
         )}
         <div className="mp-wait__body">
-          <span className="mp-wait__eyebrow">주제</span>
+          <span className="mp-wait__eyebrow" style={state.bossMode ? { color: bossColor(state.category), fontWeight: 800 } : undefined}>
+            {state.bossMode ? "보스잡기" : "주제"}
+          </span>
           <h2 className="display">
-            {topic}
+            {state.bossMode ? bossName(state.category) : topic}
             {custom && <small className="mp-wait__count">문제 카드 {state.cards.length}장</small>}
             {team && (
               <span className="mp-team-chip">
@@ -759,6 +756,17 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
                 {isHost ? "왼쪽 카드 덱을 눌러 담아요. 담은 카드의 주관식 문제에서만 나와요." : "방장이 카드를 고르고 있어요."}
               </div>
             ))}
+          {state.bossMode && <BossWaitChips state={state} />}
+          {state.bossMode ? (
+            <ul className="mp-rules">
+              <li className="is-key">모두 한 편 · 맞혀서 보스 체력을 깎아요</li>
+              <li>빨리 맞힐수록 큰 데미지, 여럿이 맞히면 보너스</li>
+              <li>데미지는 시간이 끝나거나 모두 맞히면 한 번에</li>
+              <li>문제마다 목표 데미지를 못 넣으면 하트가 깎여요</li>
+              <li>강공격은 목표 1.5배, 못 넣으면 하트 2개</li>
+              <li>체력이 줄면 보호막·속공·힌트 봉인</li>
+            </ul>
+          ) : (
           <ul className="mp-rules">
             <li>
               {custom ? `담은 카드의 문제 ${cardTotal}개` : `${topic} 문제`} 중 {state.questionCount}문제 무작위
@@ -769,10 +777,11 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
             <li>빨리 맞힐수록 높은 점수</li>
             {team ? <li className="is-key">팀에서 한 명만 맞혀도 팀 점수</li> : <li>맞혀도 정답은 다른 사람에게 안 보여요</li>}
           </ul>
+          )}
           <div className="mp-wait__actions">
             {isHost ? (
               <button type="button" className="btn btn--primary btn--lg" disabled={!allReady || !!blocker} onClick={onStart}>
-                게임 시작
+                {state.bossMode ? "보스 잡으러 가기" : "게임 시작"}
               </button>
             ) : (
               <button type="button" className={`btn btn--lg ${mine?.ready ? "btn--ready" : "btn--primary"}`} onClick={onReady}>
@@ -788,9 +797,9 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
             )}
             <span className="mp-wait__extras">
               {isHost && (
-                <button type="button" className="btn btn--outline btn--sm" onClick={onChangeTopic}>
+                <button type="button" className="btn btn--outline btn--sm" onClick={onChangeSettings}>
                   <Icon name="edit" size={13} />
-                  주제 바꾸기
+                  방 설정 바꾸기
                 </button>
               )}
               <button type="button" className="btn btn--outline btn--sm" onClick={onInvite}>
@@ -837,6 +846,7 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
   }
 
   if (state.phase === "end") {
+    if (state.boss) return <BossFinalStage state={state} mine={mine} onAgain={onAgain} />;
     return state.teamMode ? (
       <TeamFinalStage state={state} mine={mine} onAgain={onAgain} />
     ) : (

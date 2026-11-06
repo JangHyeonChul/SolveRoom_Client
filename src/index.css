@@ -1027,6 +1027,60 @@
   .mp-chat__log b.is-red, .mp-reveal__team.is-red { color: var(--red-dark); }
   .mp-reveal__team { font-weight: 700; }
   .mp-room__team { color: var(--ink); font-weight: 700; }
+  /* 방 만들기·방 설정 바꾸기의 방식 카드 (components/RoomSettingsModal.tsx, 시안 01) */
+  .mp-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .mp-mode { display: flex; flex-direction: column; gap: 4px; padding: 12px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--white); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: border-color .15s, background-color .15s; }
+  .mp-mode b { font-size: 14px; font-weight: 800; }
+  .mp-mode span { color: var(--muted); font-size: 12px; line-height: 1.45; }
+  .mp-mode[aria-checked="true"] { border-color: var(--green); background: var(--green-soft); box-shadow: inset 0 0 0 1px var(--green); }
+  .mp-mode.is-boss b { color: var(--red-dark); }
+  .mp-mode.is-boss[aria-checked="true"] { border-color: var(--red); background: var(--red-soft); box-shadow: inset 0 0 0 1px var(--red); }
+  .callout--boss { background: var(--red-soft); color: var(--red-dark); }
+  /* 보스잡기 (components/BossBattle.tsx). 마스코트는 사이트 아이콘을 주제색으로 */
+  .mp-room__boss { color: var(--red-dark); }
+  .boss-mascot { flex: none; filter: drop-shadow(0 4px 10px rgba(20, 24, 30, .18)); transform-origin: 50% 80%; }
+  .boss-mascot.is-hit { animation: boss-hit .45s var(--ease); }
+  .boss-mascot.is-charging { animation: boss-charge 1s ease-in-out infinite; }
+  .boss-mascot.is-stunned { animation: boss-stun 1.6s ease-in-out infinite; opacity: .8; }
+  .boss-mascot.is-down { transform: rotate(-90deg); opacity: .45; transition: transform .6s var(--ease), opacity .6s; }
+  /* 게임 중 문제 칸 위 보스 줄 (시안 02 + 03): 이름·하트, 체력(페이즈 눈금, 빗금은 모은/방금 들어간 데미지), 이번 문제 상태와 모은 데미지 */
+  .boss-bar { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--white); }
+  .boss-bar.is-stage-3 { border-color: var(--red-line); }
+  .boss-bar__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+  .boss-bar__row { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; row-gap: 6px; }
+  .boss-bar__name { font-size: 15px; font-weight: 800; }
+  .boss-hearts { display: inline-flex; gap: 3px; margin-left: auto; }
+  .boss-hearts svg { width: 15px; height: 14px; }
+  .boss-hearts .on { fill: var(--red); }
+  .boss-hearts .off { fill: var(--line-strong); }
+  .boss-hp { position: relative; height: 20px; border-radius: 6px; background: var(--bg-soft); overflow: hidden; box-shadow: inset 0 0 0 1px var(--line); }
+  .boss-hp__fill { position: absolute; top: 0; bottom: 0; left: 0; background: linear-gradient(90deg, var(--red-dark), var(--red)); transition: width .6s var(--ease); }
+  .boss-hp__ghost { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, #f08c8c 0 6px, #f6b3b3 6px 12px); transition: left .3s, width .3s; }
+  .boss-hp__tick { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: rgba(255, 255, 255, .9); }
+  .boss-hp__text { position: relative; display: block; color: var(--white); font-size: 11px; font-weight: 800; line-height: 20px; text-align: center; text-shadow: 0 1px 2px rgba(0, 0, 0, .45); font-variant-numeric: tabular-nums; }
+  .boss-chips { display: inline-flex; flex-wrap: wrap; gap: 5px; min-width: 0; }
+  .boss-chip { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 9px; border-radius: 999px; background: var(--bg-soft); color: var(--ink-sub); font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .boss-chip svg { fill: currentColor; }
+  .boss-chip.is-red { background: var(--red-soft); color: var(--red-dark); }
+  .boss-chip.is-live { animation: blink 1.2s ease-in-out infinite; }
+  .boss-chip.is-gold { background: var(--gold-soft); color: var(--gold); }
+  .boss-chip.is-blue { background: var(--blue-soft); color: var(--blue-dark); }
+  .boss-chip.is-purple { background: var(--purple-soft); color: var(--purple); }
+  .boss-chip.is-green { background: var(--green-soft); color: var(--green-deep); }
+  .boss-chip.is-ink { background: var(--ink); color: var(--white); }
+  .boss-dmg { margin-left: auto; display: inline-flex; align-items: baseline; gap: 6px; color: var(--muted); font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .boss-dmg b { color: var(--red-dark); font-size: 22px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .boss-dmg.is-zero b { color: var(--muted); }
+  .boss-dmg.is-result b { font-size: 26px; animation: rise .4s var(--ease) both; }
+  /* 대기실 보스 표지 (시안 09) */
+  .mp-wait__cover.is-boss svg { width: 72%; height: 72%; }
+  .boss-wait__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  /* 결과 (시안 10) */
+  .boss-final .boss-mascot { width: 72px; height: 72px; }
+  .boss-final__title { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.2; animation: rise .4s var(--ease) both; }
+  .boss-final__title.is-clear { color: var(--green-deep); }
+  .boss-final__title.is-lose { color: var(--red-dark); }
+  .boss-final__badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 0; }
   .mp-final__winner { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.2; animation: rise .4s var(--ease) both; }
   .mp-final__winner.is-blue { color: var(--blue-dark); }
   .mp-final__winner.is-red { color: var(--red-dark); }
@@ -1192,6 +1246,9 @@
 @keyframes ticker-out { to { opacity: 0; transform: translateY(-100%); } }
 @keyframes live-pulse { 0% { box-shadow: 0 0 0 0 rgba(47, 158, 68, .45); } 70% { box-shadow: 0 0 0 7px rgba(47, 158, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(47, 158, 68, 0); } }
 @keyframes blink { 50% { opacity: .3; } }
+@keyframes boss-hit { 20% { transform: translateX(-6px) rotate(-6deg) scale(.94); } 45% { transform: translateX(6px) rotate(5deg); } 70% { transform: translateX(-3px); } }
+@keyframes boss-charge { 50% { transform: scale(1.08); filter: drop-shadow(0 0 14px rgba(201, 42, 42, .7)); } }
+@keyframes boss-stun { 50% { transform: rotate(-8deg); } }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* 카드 한 줄 개수: 5개 → 4개 → 3개 (640px 이하는 2개) */
@@ -1329,6 +1386,10 @@
   .mp-room__heading small { display: none; }
   .mp-wait { grid-template-columns: minmax(0, 1fr); padding: 22px; }
   .mp-wait__cover { width: 88px; font-size: 18px; }
+  .mp-modes { grid-template-columns: minmax(0, 1fr); }
+  .boss-bar { gap: 10px; padding: 8px 10px; }
+  .boss-bar .boss-mascot { width: 40px; height: 40px; }
+  .boss-dmg b { font-size: 18px; }
   .mp-timer { flex-wrap: wrap; gap: 10px; }
   .mp-hint { width: 100%; }
   /* --- 모바일 멀티 방(클래식 컴팩트): 참가자 줄은 더 얇게, 채팅은 한 줄로 접고 눌러서 바텀시트 --- */

@@ -9,18 +9,14 @@ import ChatBox from "../components/ChatBox";
 import Icon from "../components/Icon";
 import Modal from "../components/Modal";
 import Nickname from "../components/Nickname";
-import OptionSeg from "../components/OptionSeg";
+import RoomSettingsModal from "../components/RoomSettingsModal";
 import { RoomCardList } from "../components/RoomCards";
 import { useSceneNavigate } from "../components/SceneRoot";
 import { useToast } from "../components/Toast";
 import { CATEGORIES, CATEGORY_CODES } from "../types/card";
 import {
   CUSTOM_TOPIC,
-  MAX_PLAYER_OPTIONS,
-  QUESTION_COUNT_OPTIONS,
   ROOM_BADGE_LABELS,
-  TIME_LIMIT_OPTIONS,
-  TOPIC_OPTIONS,
   cardQuestionTotal,
   categoryLabel,
   isCustomTopic,
@@ -48,7 +44,7 @@ const isOpen = (room: Room) => roomBadge(room) === "wait";
 const matches = (room: Room, filter: Filter, keyword: string) =>
   (filter === "all" || (filter === "wait" ? room.status === "wait" : isOpen(room))) &&
   (!keyword ||
-    `${room.no} ${room.title} ${categoryLabel(room.category)} ${room.teamMode ? "팀전" : ""} ${room.cards.map((c) => c.title).join(" ")}`
+    `${room.no} ${room.title} ${categoryLabel(room.category)} ${room.teamMode ? "팀전" : ""} ${room.bossMode ? "보스잡기" : ""} ${room.cards.map((c) => c.title).join(" ")}`
       .toLowerCase()
       .includes(keyword.toLowerCase()));
 
@@ -264,9 +260,10 @@ function RoomItem({ room, onClick }: { room: Room; onClick: () => void }) {
           주제 · {categoryLabel(room.category)}
           {isCustomTopic(room.category) && (room.cards.length ? ` · 카드 ${room.cards.length}장` : " · 카드 담는 중")}
           {room.teamMode && <b className="mp-room__team"> · {teamModeLabel(room.maxPlayers)}</b>}
+          {room.bossMode && <b className="mp-room__team mp-room__boss"> · 보스잡기</b>}
         </span>
         <span className="mp-room__meta">
-          <span><Icon name="list" size={13} />{room.questionCount}문제</span>
+          <span><Icon name="list" size={13} />{room.bossMode ? `최대 ${room.questionCount}` : room.questionCount}문제</span>
           <span><Icon name="clock" size={13} />{room.timeLimit}초</span>
           {room.hostNickname && <span><Icon name="crown" size={13} />{room.hostNickname}</span>}
         </span>
@@ -281,11 +278,9 @@ function RoomItem({ room, onClick }: { room: Room; onClick: () => void }) {
   );
 }
 
-type Mode = "solo" | "team";
-
-// 주제(카테고리)를 고르면 그 카테고리의 공개 카드 문제 중에서 무작위로 나온다.
-// 문제가 모자란 주제는 서버가 error로 알려 준다. 커스텀은 방을 만든 뒤 대기실에서 카드를 담는다.
-// 팀전은 최대 인원을 반씩 나눈 두 팀(4·6·8명 → 2:2·3:3·4:4)으로 겨룬다
+// 방 만들기 (시안 01). 방식·주제·시간·인원을 고르는 창은 대기실의 방 설정 바꾸기와 같이 쓴다 (components/RoomSettingsModal).
+// 주제를 고르면 그 카테고리의 공개 카드 문제 중에서 무작위로 나온다. 문제가 모자란 주제는 서버가 error로 알려 준다.
+// 커스텀은 방을 만든 뒤 대기실에서 카드를 담는다. 카드 상세의 같이하기로 열면 그 카드를 담을 커스텀 주제로 시작한다
 function CreateRoomModal({
   host,
   card,
@@ -299,70 +294,38 @@ function CreateRoomModal({
   onClose: () => void;
   onCreate: (settings: RoomSettings) => void;
 }) {
-  const [title, setTitle] = useState(card ? card.title.slice(0, 30) : `${host}님의 방`);
-  const [category, setCategory] = useState<string>(card ? CUSTOM_TOPIC : CATEGORY_CODES[CATEGORIES[0]]);
-  const [questionCount, setQuestionCount] = useState(10);
-  const [timeLimit, setTimeLimit] = useState(20);
-  const [maxPlayers, setMaxPlayers] = useState(8);
-  const [mode, setMode] = useState<Mode>("solo");
-  const invalid = !title.trim();
-
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    if (invalid || creating) return;
-    onCreate({ title: title.trim(), category, questionCount, timeLimit, maxPlayers, teamMode: mode === "team" });
-  };
-
   return (
-    <Modal title="방 만들기" onClose={onClose}>
-      <form className="mp-form" onSubmit={onSubmit}>
-        <label className="field">
-          <span className="label">방 제목</span>
-          <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={30} autoFocus />
-        </label>
-        <OptionSeg label="주제" options={TOPIC_OPTIONS} value={category} onChange={setCategory} format={categoryLabel} />
-        {isCustomTopic(category) ? (
-          <p className="callout callout--green">
-            <Icon name="cards" size={15} />
-            {card ? (
-              <span>
-                방을 만들면 <b>「{card.title}」 카드를 담아 둬요.</b> 대기실의 카드 덱에서 다른 카드를 더 담을 수도 있어요.
-              </span>
-            ) : (
-              <span>
-                방을 만든 뒤 <b>대기실의 카드 덱을 눌러 문제 카드를 담아요.</b> 담은 카드의 주관식 문제에서만 나오고, 들어온
-                사람도 어떤 카드인지 볼 수 있어요.
-              </span>
-            )}
-          </p>
-        ) : (
-          <p className="hint">고른 주제의 공개 카드에서 주관식 문제가 무작위로 나와요.</p>
-        )}
-        <OptionSeg label="문제 수" options={QUESTION_COUNT_OPTIONS} value={questionCount} onChange={setQuestionCount} />
-        <OptionSeg label="문제당 제한 시간" options={TIME_LIMIT_OPTIONS} value={timeLimit} onChange={setTimeLimit} format={(n) => `${n}초`} />
-        <OptionSeg label="최대 인원" options={MAX_PLAYER_OPTIONS} value={maxPlayers} onChange={setMaxPlayers} format={(n) => `${n}명`} />
-        <OptionSeg<Mode>
-          label="방식"
-          options={["solo", "team"]}
-          value={mode}
-          onChange={setMode}
-          format={(m) => (m === "team" ? teamModeLabel(maxPlayers) : "개인전")}
-        />
-        {mode === "team" && (
-          <p className="hint">
-            블루팀과 레드팀으로 나눠 겨뤄요. 팀에서 한 명만 맞혀도 팀 점수가 되고, 대기실에서 팀을 바꿀 수 있어요.
-          </p>
-        )}
-        <div className="modal__actions">
-          <button type="button" className="btn btn--outline btn--sm" onClick={onClose}>
-            취소
-          </button>
-          <button type="submit" className="btn btn--primary btn--sm" disabled={invalid || creating}>
-            {creating ? "만드는 중…" : "만들기"}
-          </button>
-        </div>
-      </form>
-    </Modal>
+    <RoomSettingsModal
+      title="방 만들기"
+      submitLabel={creating ? "만드는 중…" : "만들기"}
+      busy={creating}
+      initial={{
+        title: card ? card.title.slice(0, 30) : `${host}님의 방`,
+        category: card ? CUSTOM_TOPIC : CATEGORY_CODES[CATEGORIES[0]],
+        questionCount: 10,
+        timeLimit: 20,
+        maxPlayers: 8,
+        teamMode: false,
+        bossMode: false,
+      }}
+      customNote={
+        <p className="callout callout--green">
+          <Icon name="cards" size={15} />
+          {card ? (
+            <span>
+              방을 만들면 <b>「{card.title}」 카드를 담아 둬요.</b> 대기실의 카드 덱에서 다른 카드를 더 담을 수도 있어요.
+            </span>
+          ) : (
+            <span>
+              방을 만든 뒤 <b>대기실의 카드 덱을 눌러 문제 카드를 담아요.</b> 담은 카드의 주관식 문제에서만 나오고, 들어온 사람도 어떤
+              카드인지 볼 수 있어요.
+            </span>
+          )}
+        </p>
+      }
+      onClose={onClose}
+      onSubmit={onCreate}
+    />
   );
 }
 
@@ -432,8 +395,9 @@ function JoinModal({ room, onClose, onEnter }: { room: Room; onClose: () => void
           <dt>규칙</dt>
           <dd>
             {custom && room.cards.length ? `문제 ${cardQuestionTotal(room.cards)}개 중 ` : ""}
-            {room.questionCount}문제 · 문제당 {room.timeLimit}초 · 채팅으로 정답 입력
+            {room.bossMode ? `보스잡기 · 최대 ${room.questionCount}` : room.questionCount}문제 · 문제당 {room.timeLimit}초 · 채팅으로 정답 입력
             {room.teamMode && ` · ${teamModeLabel(room.maxPlayers)}, 팀에서 한 명만 맞혀도 팀 점수`}
+            {room.bossMode && " · 모두 한 편이 되어 보스를 잡아요"}
           </dd>
           <dt>인원</dt>
           <dd>

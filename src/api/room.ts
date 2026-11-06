@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ChatLine, RoomState, TeamCode } from "../types/multi";
+import type { ChatLine, RoomSettings, RoomState, TeamCode } from "../types/multi";
 import { accessToken, refreshAccessToken } from "./accessToken";
 
 // 멀티 서버 방 웹소켓. 방 번호마다 주소가 다르다 (/api/multi/ws/rooms/281)
@@ -176,6 +176,9 @@ export function useRoom({ no, userId, ready, onError }: { no: number; userId?: n
   const again = useCallback(() => send({ type: "again" }), [send]);
   // 대기실에서 방장만. 바꾸면 서버가 다른 사람의 준비를 풀고, 문제가 모자란 주제는 error로 거절한다
   const changeTopic = useCallback((category: string) => send({ type: "changeTopic", category }), [send]);
+  // 대기실에서 방장만 방 설정(방식·주제·문제 수·시간·인원·제목)을 바꾼다. 바꾸면 서버가 다른 사람의 준비를 풀고,
+  // 지금 인원보다 적은 최대 인원이나 문제가 모자란 주제는 error로 거절한다
+  const changeSettings = useCallback((settings: RoomSettings) => send({ type: "changeSettings", ...settings }), [send]);
   // 커스텀 주제 대기실에서 방장만. 담거나 빼면 서버가 다른 사람의 준비를 풀고, 담을 수 없는 카드는 error로 거절한다
   const addCard = useCallback((cardId: number) => send({ type: "addCard", cardId }), [send]);
   const removeCard = useCallback((cardId: number) => send({ type: "removeCard", cardId }), [send]);
@@ -183,5 +186,5 @@ export function useRoom({ no, userId, ready, onError }: { no: number; userId?: n
   const switchTeam = useCallback(() => send({ type: "switchTeam" }), [send]);
   const serverNow = useCallback(() => Date.now() + offsetRef.current, []);
 
-  return { status, me, room, chat, closedReason, serverNow, sendChat, toggleReady, start, again, changeTopic, addCard, removeCard, switchTeam };
+  return { status, me, room, chat, closedReason, serverNow, sendChat, toggleReady, start, again, changeTopic, changeSettings, addCard, removeCard, switchTeam };
 }
