@@ -32,7 +32,7 @@ export default function RankingPage() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [retry, setRetry] = useState(0);
 
-  usePageMeta("랭킹", "퀴즈체크 포인트·맞힌 문제 수·정복 카드·정답률 랭킹 TOP 5");
+  usePageMeta("퀴즈체크 랭킹", "퀴즈체크 포인트·맞힌 문제 수·정복 카드·정답률 랭킹 TOP 5");
 
   // 내 순위가 로그인 토큰에 달려 있어 로그인 복원이 끝난 뒤 읽고, 로그인·로그아웃하면 다시 읽는다
   const userId = user?.id;
