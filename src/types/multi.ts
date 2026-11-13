@@ -70,6 +70,7 @@ export interface RoomPlayer {
   points: number;
   correctCount: number; // 이번 판에 맞힌 문제 수
   correct: boolean; // 이번 문제를 맞혔는지
+  missed: boolean; // 이번 객관식 문제에서 틀린 보기를 골랐는지 (고른 보기는 본인에게만 picked로 온다)
   gain: number; // 이번 문제에서 얻은 점수
   order: number; // 이번 문제를 맞힌 순서
   reward?: number; // 게임이 끝나 최종 순위로 받은 회원 포인트. 받은 사람만 온다
@@ -87,6 +88,8 @@ export interface RoomQuestion {
   hint?: string;
   authorHint?: string;
   answerImageUrl?: string; // 정답 이미지. 정답 공개 때만 온다
+  // 객관식 보기. 객관식만 처음부터 온다. 객관식은 초성 힌트가 없어 answerLength가 0이고, 보기를 골라(choose) 한 번만 답한다
+  choices?: string[];
 }
 
 // 방 상태 전체. 멀티 서버 RoomStateResponse. 시각(deadlineAt·nextAt·serverNow)은 서버 시계 기준 epoch ms

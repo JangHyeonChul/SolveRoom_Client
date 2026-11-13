@@ -11,6 +11,7 @@ type RoomEvent =
   | { type: "state"; room: RoomState }
   | { type: "chat"; line: RoomChatResponse }
   | { type: "answer"; answer: string; gain: number }
+  | { type: "picked"; choiceIndex: number; correct: boolean }
   | { type: "error"; code: string; message: string };
 
 // 서버 RoomChatResponse. team은 팀전 방에서 사람이 쓴 줄에만 온다
@@ -37,6 +38,13 @@ const RETRY_BASE_MS = 1_000;
 const RETRY_MAX_MS = 30_000;
 
 export type RoomStatus = "connecting" | "open" | "reconnecting";
+
+// 객관식에서 내가 고른 보기 (서버 picked)
+export interface PickedChoice {
+  round: number;
+  choiceIndex: number;
+  correct: boolean;
+}
 
 const clock = (millis: number) => {
   const d = new Date(millis);
@@ -65,6 +73,9 @@ export function useRoom({ no, userId, ready, onError }: { no: number; userId?: n
   const [room, setRoom] = useState<RoomState | null>(null);
   const [chat, setChat] = useState<ChatLine[]>([]);
   const [closedReason, setClosedReason] = useState<string | null>(null);
+  // 이번 판에서 마지막으로 고른 객관식 보기. 어느 문제(round)에서 골랐는지 같이 두어 다음 문제에서는 쓰지 않는다
+  const [picked, setPicked] = useState<PickedChoice | null>(null);
+  const roundRef = useRef(0);
   const joinedRef = useRef<WebSocket | null>(null);
   const offsetRef = useRef(0);
   const localIdRef = useRef(0);
@@ -94,6 +105,9 @@ export function useRoom({ no, userId, ready, onError }: { no: number; userId?: n
           break;
         case "state":
           offsetRef.current = event.room.serverNow - Date.now();
+          // 문제가 바뀌면(다음 판 포함) 앞 문제에서 고른 보기를 지운다
+          if (event.room.round !== roundRef.current) setPicked(null);
+          roundRef.current = event.room.round;
           setRoom(event.room);
           break;
         case "chat":
@@ -102,6 +116,11 @@ export function useRoom({ no, userId, ready, onError }: { no: number; userId?: n
         // 내가 맞힌 답은 나에게만 보인다. 서버 채팅 id와 겹치지 않게 음수 id를 쓴다
         case "answer":
           addLines([{ id: --localIdRef.current, kind: "mine", message: `정답! 「${event.answer}」 +${event.gain}` }]);
+          break;
+        // 객관식에서 내가 고른 보기. 나에게만 오고, 맞혔으면 answer가 이어서 온다
+        case "picked":
+          setPicked({ round: roundRef.current, choiceIndex: event.choiceIndex, correct: event.correct });
+          if (!event.correct) addLines([{ id: --localIdRef.current, kind: "mine", message: "오답! 이번 문제는 더 고를 수 없어요" }]);
           break;
         case "error":
           onErrorRef.current(event.message);
@@ -171,6 +190,8 @@ export function useRoom({ no, userId, ready, onError }: { no: number; userId?: n
 
   // 문제 중에 보낸 글은 서버가 먼저 정답인지 본다. 정답은 다른 사람에게 보이지 않는다
   const sendChat = useCallback((message: string) => send({ type: "chat", message }), [send]);
+  // 객관식 문제에서 보기를 고른다(0부터). 한 문제에 한 번만 받고, 다시 고르면 서버가 error로 거절한다
+  const choose = useCallback((choiceIndex: number) => send({ type: "choose", choiceIndex }), [send]);
   const toggleReady = useCallback(() => send({ type: "ready" }), [send]);
   const start = useCallback(() => send({ type: "start" }), [send]);
   const again = useCallback(() => send({ type: "again" }), [send]);
@@ -186,5 +207,5 @@ export function useRoom({ no, userId, ready, onError }: { no: number; userId?: n
   const switchTeam = useCallback(() => send({ type: "switchTeam" }), [send]);
   const serverNow = useCallback(() => Date.now() + offsetRef.current, []);
 
-  return { status, me, room, chat, closedReason, serverNow, sendChat, toggleReady, start, again, changeTopic, changeSettings, addCard, removeCard, switchTeam };
+  return { status, me, room, chat, closedReason, picked, serverNow, sendChat, choose, toggleReady, start, again, changeTopic, changeSettings, addCard, removeCard, switchTeam };
 }

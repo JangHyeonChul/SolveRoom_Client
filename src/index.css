@@ -887,6 +887,9 @@
   .mp-timer__bar.is-urgent span { background: #e8590c; }
   .mp-timer__sec { width: 32px; text-align: right; font-size: 20px; font-variant-numeric: tabular-nums; }
   .mp-timer__sec.is-urgent { color: #e8590c; }
+  /* 멀티 객관식 보기. 단독 플레이 보기(.play__choice) 모양을 그대로 쓰고 넓으면 두 줄로 늘어놓는다 */
+  .mp-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
+  .mp-choices .play__choice { min-height: 44px; }
   .mp-chat--room { height: 260px; border: 1px solid var(--line); border-radius: 12px; background: var(--white); }
   .mp-chat--room.is-correct .input { border-color: var(--green-line); background: var(--green-soft); }
   /* 접이식 채팅(방): 넓은 화면에선 보통 채팅과 동일(peek·백드롭·시트 머리글 숨김). 좁은 화면 규칙은 @media 640 참고 */

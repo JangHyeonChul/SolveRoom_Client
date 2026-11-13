@@ -260,7 +260,7 @@ export function CardDeckModal({
             완료
           </button>
         </div>
-        <p className="hint">카드의 주관식 문제만 나와요. 담거나 빼면 다른 사람은 다시 준비해야 해요.</p>
+        <p className="hint">카드의 문제(주관식·객관식)가 나와요. 담거나 빼면 다른 사람은 다시 준비해야 해요.</p>
       </div>
     </Modal>
   );

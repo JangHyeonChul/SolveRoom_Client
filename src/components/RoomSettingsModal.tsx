@@ -112,7 +112,7 @@ export default function RoomSettingsModal({
         ) : mode === "team" ? (
           <p className="hint">블루팀과 레드팀으로 나눠 겨뤄요. 팀에서 한 명만 맞혀도 팀 점수가 되고, 대기실에서 팀을 바꿀 수 있어요.</p>
         ) : (
-          !isCustomTopic(category) && <p className="hint">고른 주제의 공개 카드에서 주관식 문제가 무작위로 나와요.</p>
+          !isCustomTopic(category) && <p className="hint">고른 주제의 공개 카드에서 주관식·객관식 문제가 무작위로 나와요.</p>
         )}
         {minPlayers > 0 && (
           <p className={`hint ${tooFew ? "error" : ""}`}>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useRoom } from "../api/room";
+import { useRoom, type PickedChoice } from "../api/room";
 import { useAuth } from "../app/auth";
 import BgmBar from "../components/BgmBar";
 import { BossBar, BossFinalStage, BossMascot, BossWaitChips, bossName } from "../components/BossBattle";
@@ -171,7 +171,7 @@ function RoomView({ no }: { no: number }) {
     if (!room.changeSettings(settings)) toast("방에 다시 연결하는 중이에요. 잠시 후 바꿔 주세요");
   };
 
-  // 담을 수 없는 카드(비공개·주관식 문제 없음 등)는 서버가 error로 거절하고 이유는 토스트로 뜬다
+  // 담을 수 없는 카드(비공개·낼 문제 없음 등)는 서버가 error로 거절하고 이유는 토스트로 뜬다
   const sendCard = (sent: boolean) => {
     if (!sent) toast("방에 다시 연결하는 중이에요. 잠시 후 다시 해 주세요");
     return sent;
@@ -182,11 +182,16 @@ function RoomView({ no }: { no: number }) {
     if (!room.switchTeam()) toast("방에 다시 연결하는 중이에요. 잠시 후 다시 해 주세요");
   };
 
-  // 팀전은 팀에서 누가 맞히면 팀 전체가 이번 문제를 마친다
+  // 팀전은 팀에서 누가 맞히면 팀 전체가 이번 문제를 마친다. 객관식은 틀린 보기를 골라도 이번 문제를 마친다
   const teamDone = state.teamMode && !!mine?.team && teamOf(state, mine.team).answered;
-  const done = !!mine && (mine.correct || teamDone);
+  const done = !!mine && (mine.correct || mine.missed || teamDone);
   const answering = state.phase === "play" && !!mine && !done;
+  const choices = inGame ? state.question?.choices : undefined;
   const placeholder = chatPlaceholder(state, mine, teamDone);
+
+  const choose = (index: number) => {
+    if (!room.choose(index)) toast("방에 다시 연결하는 중이에요. 잠시 후 골라 주세요");
+  };
 
   const cardTitle = state.phase === "play" || state.phase === "reveal" ? state.question?.cardTitle : undefined;
 
@@ -246,13 +251,22 @@ function RoomView({ no }: { no: number }) {
             />
           </div>
           {state.phase === "play" && <TimerRow state={state} now={now} />}
+          {choices && (
+            <ChoiceGrid
+              choices={choices}
+              answer={state.phase === "reveal" ? state.answer : undefined}
+              picked={room.picked?.round === state.round ? room.picked : null}
+              disabled={!answering || room.status !== "open"}
+              onChoose={choose}
+            />
+          )}
           <ChatBox
             className={`mp-chat--room ${state.phase === "play" && done ? "is-correct" : ""}`}
             lines={room.chat}
             placeholder={room.status === "open" ? placeholder : "연결이 끊겨 다시 연결하는 중…"}
             onSend={send}
             disabled={room.status !== "open"}
-            submitLabel={answering ? "제출" : "전송"}
+            submitLabel={answering && !choices ? "제출" : "전송"}
             captureTyping
             focusKey={state.phase === "play" ? state.round : null}
             collapsible
@@ -334,7 +348,11 @@ function Seat({ player: p, state, me }: { player: RoomPlayer; state: RoomState; 
       <span className="mp-tag">대기 중</span>
     )
   ) : state.phase === "play" ? (
-    p.correct && <span className="mp-tag mp-tag--ready"><Icon name="check" size={11} strokeWidth={3} />정답!</span>
+    p.correct ? (
+      <span className="mp-tag mp-tag--ready"><Icon name="check" size={11} strokeWidth={3} />정답!</span>
+    ) : (
+      p.missed && <span className="mp-tag">오답</span>
+    )
   ) : state.phase === "reveal" ? (
     <span className={`mp-tag ${p.gain ? "mp-tag--gain" : ""}`}>{p.gain ? `+${p.gain}` : "—"}</span>
   ) : (
@@ -465,16 +483,62 @@ function TeamSeats({ state, me }: { state: RoomState; me: string | null }) {
   );
 }
 
-// 채팅 칸 안내. 문제 중에 맞혔으면(팀전은 팀원이 맞혔어도) 정답 대신 채팅만 친다
+// 채팅 칸 안내. 문제 중에 맞혔으면(팀전은 팀원이 맞혔어도) 정답 대신 채팅만 친다. 객관식은 채팅으로 답하지 않고 보기를 고른다
 function chatPlaceholder(state: RoomState, mine: RoomPlayer | undefined, teamDone: boolean) {
   if (state.phase !== "play" || !mine) return "채팅 입력";
   if (mine.correct && state.bossMode) return "정답! 데미지를 모았어요. 다른 사람이 맞힐 때까지 채팅만 할 수 있어요";
   if (mine.correct) return `정답! 다른 ${state.teamMode ? "팀이" : "사람이"} 맞힐 때까지 채팅만 할 수 있어요`;
   if (teamDone) return "우리 팀이 맞혔어요! 이번 문제는 채팅만 할 수 있어요";
+  if (mine.missed) return "오답! 이번 문제는 채팅만 할 수 있어요";
+  if (state.question?.choices) return "보기를 골라 답해요 · 채팅 입력 후 Enter";
   return "정답 또는 채팅 입력 후 Enter";
 }
 
-// 초성 칸은 처음엔 비워 두고, 시간이 절반 지나 서버가 힌트를 보내면 채운다
+// 객관식 보기. 한 번만 고를 수 있고, 고른 보기는 맞으면 초록·틀리면 빨강으로 보인다.
+// 정답 공개 때는 정답 보기를 초록으로 알려 준다 (정답은 정답 보기의 내용이라 같은 내용의 보기가 있으면 같이 칠해진다)
+function ChoiceGrid({
+  choices,
+  answer,
+  picked,
+  disabled,
+  onChoose,
+}: {
+  choices: string[];
+  answer?: string;
+  picked: PickedChoice | null;
+  disabled: boolean;
+  onChoose: (index: number) => void;
+}) {
+  return (
+    <div className="mp-choices" role="group" aria-label="보기">
+      {choices.map((choice, i) => {
+        const mark =
+          picked?.choiceIndex === i
+            ? picked.correct
+              ? "is-right"
+              : "is-wrong"
+            : answer !== undefined && choice === answer
+              ? "is-right"
+              : "";
+        return (
+          <button
+            key={i}
+            type="button"
+            className={`play__choice ${mark}`}
+            disabled={disabled}
+            aria-pressed={picked?.choiceIndex === i}
+            onClick={() => onChoose(i)}
+          >
+            <b>{i + 1}</b>
+            {choice}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// 초성 칸은 처음엔 비워 두고, 시간이 절반 지나 서버가 힌트를 보내면 채운다. 객관식은 초성 칸 없이 시간만 보여 준다
 function TimerRow({ state, now }: { state: RoomState; now: number }) {
   const length = state.question?.answerLength ?? 0;
   const hint = state.question?.hint;
@@ -486,17 +550,20 @@ function TimerRow({ state, now }: { state: RoomState; now: number }) {
   const urgent = left <= 5;
   return (
     <div className="mp-timer">
-      <div className="mp-hint">
-        <span className="mp-hint__label">초성</span>
-        <span className="mp-hint__letters" aria-label={hint ? `초성 ${letters.join(" ")}` : `${length}글자`}>
-          {letters.map((c, i) => (
-            <i key={i} className={hint ? "" : "is-blank"}>{c}</i>
-          ))}
-        </span>
-        <span className="mp-hint__meta">
-          {length}글자{hint ? "" : sealed ? " · 힌트 봉인" : ` · ${Math.floor(limit / 2)}초 남으면 공개`}
-        </span>
-      </div>
+      {/* 객관식은 보기가 곧 힌트라 초성 칸이 없다 */}
+      {!state.question?.choices && (
+        <div className="mp-hint">
+          <span className="mp-hint__label">초성</span>
+          <span className="mp-hint__letters" aria-label={hint ? `초성 ${letters.join(" ")}` : `${length}글자`}>
+            {letters.map((c, i) => (
+              <i key={i} className={hint ? "" : "is-blank"}>{c}</i>
+            ))}
+          </span>
+          <span className="mp-hint__meta">
+            {length}글자{hint ? "" : sealed ? " · 힌트 봉인" : ` · ${Math.floor(limit / 2)}초 남으면 공개`}
+          </span>
+        </div>
+      )}
       <div className={`mp-timer__bar ${urgent ? "is-urgent" : ""}`} role="progressbar" aria-label="남은 시간" aria-valuemin={0} aria-valuemax={limit} aria-valuenow={left}>
         <span style={{ width: `${Math.min(100, (left / limit) * 100)}%` }} />
       </div>
@@ -753,7 +820,7 @@ function Stage({ state, now, mine, isHost, onReady, onStart, onAgain, onInvite, 
             ) : (
               <div className="mp-wait__nocards">
                 <b>문제 카드를 추가해 주세요</b>
-                {isHost ? "왼쪽 카드 덱을 눌러 담아요. 담은 카드의 주관식 문제에서만 나와요." : "방장이 카드를 고르고 있어요."}
+                {isHost ? "왼쪽 카드 덱을 눌러 담아요. 담은 카드의 문제에서만 나와요." : "방장이 카드를 고르고 있어요."}
               </div>
             ))}
           {state.bossMode && <BossWaitChips state={state} />}
