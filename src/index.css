@@ -703,6 +703,30 @@
   .comments-panel { position: relative; margin-top: 28px; background: var(--bg-soft); border-color: var(--line); }
   .comments-panel::before { content: ""; position: absolute; top: -15px; left: 0; right: 0; border-top: 1px dashed var(--line-strong); }
   .comment-list[aria-busy="true"] { opacity: .6; transition: opacity .15s; }
+  /* 카드 상세 인사이트 탭(CardInsightTabs). 고르지 않은 탭은 hidden으로 숨긴다 */
+  .insight { margin-top: 16px; gap: 18px; }
+  .insight [role="tabpanel"][hidden] { display: none; }
+  .insight-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
+  .insight-q { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .insight-q__text { margin: 0; font-size: 13px; font-weight: 600; color: var(--ink); word-break: keep-all; }
+  .insight-q__desc { margin: 0; font-size: 12px; color: var(--ink-sub); word-break: keep-all; }
+  .insight-img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; background: var(--bg-soft); display: block; }
+  .insight-img--sm { width: 72px; height: 48px; aspect-ratio: auto; flex: none; }
+  .insight-img--empty { border: 1px dashed var(--line-strong); }
+  .insight-hint summary { cursor: pointer; color: var(--blue); font-size: 12px; font-weight: 600; }
+  .insight-hint p { margin: 4px 0 0; font-size: 12px; color: var(--ink-sub); word-break: keep-all; }
+  .insight-hard { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+  .insight-hard__row { display: flex; align-items: center; gap: 14px; }
+  .insight-hard__rank { flex: none; width: 20px; font-weight: 700; font-size: 16px; color: var(--red-dark); text-align: center; }
+  .insight-hard__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .insight-hard__rate { flex: none; display: flex; flex-direction: column; align-items: flex-end; font-weight: 700; font-size: 13px; color: var(--red-dark); }
+  .insight-hard__rate small { font-weight: 500; font-size: 11px; color: var(--muted); }
+  .insight-stats { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+  .insight-stats div { padding: 14px 16px; border-radius: 10px; background: var(--bg-soft); }
+  .insight-stats dt { font-size: 12px; color: var(--ink-sub); }
+  .insight-stats dd { margin: 4px 0 0; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+  .insight-related { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+  .insight-related__link { display: inline-flex; align-items: center; text-decoration: none; }
   .pager { display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; }
   .pager__btn { min-width: 32px; height: 32px; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--white); color: var(--ink-sub); font: inherit; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; cursor: pointer; transition: border-color .15s, background-color .15s, color .15s; }
   .pager__btn:hover:not(:disabled) { border-color: #9aa0a7; }

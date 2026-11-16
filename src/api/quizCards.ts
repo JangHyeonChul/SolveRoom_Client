@@ -303,3 +303,29 @@ export interface CardReport {
 export function fetchCardReports(signal?: AbortSignal) {
   return request<CardReport[]>("/api/admin/quiz-cards/reports", "신고 목록 조회", { signal });
 }
+
+// 카드 상세 인사이트 탭 (서버 CardInsightResponse). 정답은 오지 않고 힌트만 온다.
+// stats는 끝까지 푼 판이 적으면 null, hardest는 충분히 풀린 문제가 없으면 빈 목록이다
+export interface CardInsight {
+  stats: { playCount: number; correctRate: number; avgSeconds: number } | null;
+  preview: {
+    questionId: number;
+    text: string | null;
+    description: string | null;
+    hint: string | null;
+    imageUrl: string | null;
+  }[];
+  hardest: {
+    questionId: number;
+    text: string | null;
+    hint: string | null;
+    imageUrl: string | null;
+    wrongRate: number;
+    attempts: number;
+  }[];
+  related: { id: number; title: string }[];
+}
+
+export function fetchCardInsight(cardId: number, signal?: AbortSignal) {
+  return request<CardInsight>(`/api/main/quiz-cards/${cardId}/insight`, "카드 인사이트 조회", { signal });
+}

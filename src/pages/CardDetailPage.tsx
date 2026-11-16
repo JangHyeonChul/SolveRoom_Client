@@ -5,6 +5,7 @@ import { startPlay } from "../api/plays";
 import { fetchCardDetail, fetchCardLike, setCardLike, type CardLike } from "../api/quizCards";
 import { useAuth } from "../app/auth";
 import CardCover from "../components/CardCover";
+import CardInsightTabs from "../components/CardInsightTabs";
 import CardRankingModal from "../components/CardRankingModal";
 import CommentSection from "../components/CommentSection";
 import Icon from "../components/Icon";
@@ -222,6 +223,8 @@ function CardDetailView({ card }: { card: CardDetail }) {
           </section>
         </aside>
       </div>
+
+      <CardInsightTabs cardId={card.id} />
 
       <CommentSection cardId={card.id} />
 
